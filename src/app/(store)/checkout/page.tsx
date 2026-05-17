@@ -1,0 +1,187 @@
+'use client'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { motion } from 'framer-motion'
+import { useCartStore } from '@/lib/store/cartStore'
+import toast from 'react-hot-toast'
+import Link from 'next/link'
+import { ArrowLeft, Loader2 } from 'lucide-react'
+
+const WILAYAS = [
+  'Adrar', 'Chlef', 'Laghouat', 'Oum El Bouaghi', 'Batna', 'Béjaïa', 'Biskra', 'Béchar',
+  'Blida', 'Bouira', 'Tamanrasset', 'Tébessa', 'Tlemcen', 'Tiaret', 'Tizi Ouzou', 'Alger',
+  'Djelfa', 'Jijel', 'Sétif', 'Saïda', 'Skikda', 'Sidi Bel Abbès', 'Annaba', 'Guelma',
+  'Constantine', 'Médéa', 'Mostaganem', 'M\'Sila', 'Mascara', 'Ouargla', 'Oran', 'El Bayadh',
+  'Illizi', 'Bordj Bou Arréridj', 'Boumerdès', 'El Tarf', 'Tindouf', 'Tissemsilt', 'El Oued',
+  'Khenchela', 'Souk Ahras', 'Tipaza', 'Mila', 'Aïn Defla', 'Naâma', 'Aïn Témouchent',
+  'Ghardaïa', 'Relizane', 'Timimoun', 'Bordj Badji Mokhtar', 'Ouled Djellal', 'Béni Abbès',
+  'In Salah', 'In Guezzam', 'Touggourt', 'Djanet', 'El M\'Ghair', 'El Meniaa',
+]
+
+export default function CheckoutPage() {
+  const router = useRouter()
+  const { items, total, clearCart } = useCartStore()
+  const [loading, setLoading] = useState(false)
+  const [form, setForm] = useState({
+    name: '', phone: '', email: '', address: '', city: '',
+  })
+
+  if (items.length === 0) {
+    return (
+      <div className="pt-20 min-h-screen flex items-center justify-center text-center px-4">
+        <div>
+          <h1 className="font-display text-3xl mb-4">Panier vide</h1>
+          <Link href="/products" className="text-brand-gold underline underline-offset-4">
+            Voir la collection
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!form.name || !form.phone || !form.address || !form.city) {
+      toast.error('Veuillez remplir tous les champs obligatoires')
+      return
+    }
+    setLoading(true)
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customer: form,
+          items: items.map((i) => ({
+            productId: i.productId,
+            name: i.name,
+            price: i.price,
+            quantity: i.quantity,
+            size: i.size,
+            image: i.image,
+          })),
+          total: total(),
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || 'Erreur')
+      clearCart()
+      router.push(`/order-confirmation?order=${data.orderNumber}`)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de la commande')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="pt-20 min-h-screen">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
+        <Link
+          href="/cart"
+          className="inline-flex items-center gap-2 text-xs tracking-widest uppercase text-brand-gray hover:text-brand-black transition-colors mb-8"
+        >
+          <ArrowLeft size={14} />
+          Retour au panier
+        </Link>
+
+        <h1 className="font-display text-3xl md:text-4xl text-brand-black mb-10">Finaliser la commande</h1>
+
+        <div className="grid lg:grid-cols-5 gap-10">
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="lg:col-span-3 space-y-5">
+            <div>
+              <p className="text-[10px] tracking-[0.3em] uppercase text-brand-gold mb-4">
+                Informations de livraison
+              </p>
+            </div>
+
+            {[
+              { id: 'name', label: 'Nom complet *', type: 'text', required: true },
+              { id: 'phone', label: 'Numéro de téléphone *', type: 'tel', required: true },
+              { id: 'email', label: 'Email (optionnel — pour confirmation)', type: 'email', required: false },
+              { id: 'address', label: 'Adresse complète *', type: 'text', required: true },
+            ].map((f) => (
+              <div key={f.id}>
+                <label className="block text-xs tracking-widest uppercase text-brand-gray mb-2">
+                  {f.label}
+                </label>
+                <input
+                  type={f.type}
+                  required={f.required}
+                  value={form[f.id as keyof typeof form]}
+                  onChange={(e) => setForm({ ...form, [f.id]: e.target.value })}
+                  className="w-full border border-brand-light-gray px-4 py-3 text-sm focus:outline-none focus:border-brand-black transition-colors bg-transparent"
+                />
+              </div>
+            ))}
+
+            <div>
+              <label className="block text-xs tracking-widest uppercase text-brand-gray mb-2">Wilaya *</label>
+              <select
+                required
+                value={form.city}
+                onChange={(e) => setForm({ ...form, city: e.target.value })}
+                className="w-full border border-brand-light-gray px-4 py-3 text-sm focus:outline-none focus:border-brand-black transition-colors bg-transparent"
+              >
+                <option value="">Choisir une wilaya</option>
+                {WILAYAS.map((w) => (
+                  <option key={w} value={w}>{w}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="bg-brand-light-gray p-4 mt-4">
+              <p className="text-xs text-brand-gray font-semibold mb-1 tracking-widest uppercase">
+                Mode de paiement
+              </p>
+              <p className="text-sm text-brand-black">💵 Paiement à la livraison (Cash on Delivery)</p>
+              <p className="text-xs text-brand-gray mt-1">
+                Vous payez uniquement à la réception de votre commande.
+              </p>
+            </div>
+
+            <motion.button
+              type="submit"
+              disabled={loading}
+              whileHover={{ scale: loading ? 1 : 1.01 }}
+              whileTap={{ scale: 0.99 }}
+              className="w-full flex items-center justify-center gap-3 bg-brand-black text-brand-white py-4 text-sm tracking-[0.2em] uppercase font-semibold hover:bg-brand-gold hover:text-brand-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? <Loader2 size={18} className="animate-spin" /> : null}
+              {loading ? 'Traitement...' : 'Confirmer la commande'}
+            </motion.button>
+          </form>
+
+          {/* Order summary */}
+          <div className="lg:col-span-2">
+            <div className="bg-brand-light-gray p-6 sticky top-24">
+              <p className="text-[10px] tracking-[0.3em] uppercase text-brand-gray mb-5">
+                Récapitulatif
+              </p>
+              <div className="space-y-3 mb-5">
+                {items.map((item) => (
+                  <div key={`${item.productId}-${item.size}`} className="flex justify-between text-sm">
+                    <span className="text-brand-gray truncate mr-2">
+                      {item.name} ×{item.quantity}
+                    </span>
+                    <span className="text-brand-black font-medium flex-shrink-0">
+                      {(item.price * item.quantity).toFixed(2)} DZD
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="border-t border-brand-beige pt-4">
+                <div className="flex justify-between">
+                  <span className="text-sm tracking-widest uppercase text-brand-gray">Total</span>
+                  <span className="text-xl font-semibold text-brand-black">{total().toFixed(2)} DZD</span>
+                </div>
+                <p className="text-xs text-brand-gray mt-1">+ Frais de livraison selon wilaya</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
