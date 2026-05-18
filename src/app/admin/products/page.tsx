@@ -51,8 +51,11 @@ export default function AdminProductsPage() {
   const openCreate = () => { setEditing(null); setForm(EMPTY); setModal(true) }
   const openEdit = (p: Product) => {
     setEditing(p)
+    const normalizedSizes = p.sizes.map((s) =>
+      typeof s === 'string' ? { size: s as string, stock: 0 } : s
+    )
     setForm({ name: p.name, price: p.price, originalPrice: p.originalPrice, category: p.category,
-      images: p.images, sizes: p.sizes, featured: p.featured, active: p.active, description: p.description })
+      images: p.images, sizes: normalizedSizes, featured: p.featured, active: p.active, description: p.description })
     setModal(true)
   }
 

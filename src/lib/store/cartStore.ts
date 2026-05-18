@@ -51,7 +51,7 @@ export const useCartStore = create<CartStore>()(
         }
         set({
           items: get().items.map((i) =>
-            i.productId === productId && i.size === size ? { ...i, quantity } : i
+            i.productId === productId && i.size === size ? { ...i, quantity: Math.min(quantity, i.stock) } : i
           ),
         })
       },

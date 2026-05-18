@@ -26,6 +26,22 @@ export async function POST(req: NextRequest) {
   try {
     await connectDB()
     const body = await req.json()
+
+    // Validate stock before creating order
+    if (Array.isArray(body.items)) {
+      for (const item of body.items as { productId: string; size: string; quantity: number; name: string }[]) {
+        const product = await Product.findById(item.productId).lean() as { sizes: { size: string; stock: number }[] } | null
+        if (!product) return NextResponse.json({ message: `Produit introuvable` }, { status: 400 })
+        const entry = product.sizes.find((s) => s.size === item.size)
+        if (!entry || entry.stock < item.quantity) {
+          return NextResponse.json(
+            { message: `Stock insuffisant pour ${item.name} taille ${item.size}` },
+            { status: 400 }
+          )
+        }
+      }
+    }
+
     const orderNumber = generateOrderNumber()
     const order = await Order.create({ ...body, orderNumber })
 
