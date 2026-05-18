@@ -12,7 +12,7 @@ export default function HomeHero({ title, subtitle }: Props) {
   return (
     <section
       className="relative bg-brand-black flex items-center justify-center overflow-hidden"
-      style={{ minHeight: '100svh' }}
+      style={{ minHeight: '70svh' }}
     >
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-brand-black via-brand-green/20 to-brand-black" />
@@ -42,7 +42,7 @@ export default function HomeHero({ title, subtitle }: Props) {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.1 }}
-          className="font-display text-5xl md:text-7xl lg:text-9xl text-brand-white leading-none mb-4 md:mb-6"
+          className="font-display text-4xl md:text-6xl lg:text-7xl text-brand-white leading-none mb-4 md:mb-6"
         >
           {title}
         </motion.h1>
