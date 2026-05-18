@@ -22,16 +22,17 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   try {
     await connectDB()
     const body = await req.json()
-    // Remove fields MongoDB won't allow in an update
-    const { _id, __v, createdAt, updatedAt, slug, ...updateData } = body
-    void _id; void __v; void createdAt; void updatedAt; void slug
-    const totalStock = Array.isArray(updateData.sizes)
-      ? updateData.sizes.reduce((s: number, i: { stock: number }) => s + i.stock, 0)
-      : 0
-    updateData.stock = totalStock
-    const product = await Product.findByIdAndUpdate(params.id, { $set: updateData }, { new: true, runValidators: false }).lean()
+    const product = await Product.findById(params.id)
     if (!product) return NextResponse.json({ message: 'Not found' }, { status: 404 })
-    return NextResponse.json(product)
+    const fields = ['name', 'price', 'originalPrice', 'category', 'description', 'images', 'sizes', 'featured', 'active']
+    for (const field of fields) {
+      if (body[field] !== undefined) (product as Record<string, unknown>)[field] = body[field]
+    }
+    product.stock = Array.isArray(product.sizes)
+      ? product.sizes.reduce((s: number, i: { stock: number }) => s + (i.stock || 0), 0)
+      : 0
+    await product.save()
+    return NextResponse.json(product.toObject())
   } catch (err) {
     console.error('PUT /api/products/[id] error:', err)
     return NextResponse.json({ message: String(err) }, { status: 500 })

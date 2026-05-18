@@ -110,7 +110,8 @@ export default function AdminProductsPage() {
       setModal(false)
       load()
     } else {
-      toast.error('Erreur lors de la sauvegarde')
+      const data = await res.json().catch(() => ({}))
+      toast.error(data.message || 'Erreur lors de la sauvegarde', { duration: 8000 })
     }
   }
 
