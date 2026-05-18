@@ -26,7 +26,7 @@ const swipeVariants = {
   exit: (dir: number) => ({ x: dir > 0 ? '-100%' : '100%', opacity: 0 }),
 }
 
-const swipeTransition = { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }
+const swipeTransition = { duration: 0.4, ease: 'easeInOut' as const }
 
 export default function ProductDetailClient({ product }: { product: Product }) {
   const [[imgIdx, dir], setPage] = useState([0, 0])
