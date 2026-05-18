@@ -16,12 +16,8 @@ export async function POST(req: NextRequest) {
   try {
     await connectDB()
     const { liveStatus, liveUrl } = await req.json()
-    const settings = await Settings.findOneAndUpdate(
-      {},
-      { liveStatus, liveUrl },
-      { upsert: true, new: true }
-    ).lean()
-    return NextResponse.json(settings)
+    await Settings.updateOne({}, { liveStatus, liveUrl }, { upsert: true })
+    return NextResponse.json({ ok: true })
   } catch {
     return NextResponse.json({ message: 'Server error' }, { status: 500 })
   }
