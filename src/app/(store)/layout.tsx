@@ -56,16 +56,17 @@ export default async function StoreLayout({ children }: { children: React.ReactN
 
       {/* Spacer so content isn't hidden under fixed header */}
       <div
+        className="bg-brand-black"
         style={{
           height: `${
             (s.announcementActive ? 32 : 0) +
-            (s.liveStatus ? 52 : 0) +
+            (s.liveStatus ? 56 : 0) +
             80
           }px`,
         }}
       />
 
-      <main className="flex-1">{children}</main>
+      <main className="flex-1 -mt-px">{children}</main>
       <Footer />
       <WhatsAppButton phone={s.whatsappNumber} />
     </div>
