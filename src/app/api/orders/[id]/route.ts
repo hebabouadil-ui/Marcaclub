@@ -54,8 +54,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       }
     }
 
-    sendOrderStatusEmail(order, status).catch(console.error)
-    return NextResponse.json(order.toObject())
+    const plainOrder = order.toObject()
+    await sendOrderStatusEmail(plainOrder, status).catch((err) => console.error('Status email error:', err))
+    return NextResponse.json(plainOrder)
   } catch {
     return NextResponse.json({ message: 'Server error' }, { status: 500 })
   }
