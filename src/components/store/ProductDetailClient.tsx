@@ -124,7 +124,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                       alt={product.name}
                       width={800}
                       height={1000}
-                      className="w-full h-auto block"
+                      className="w-full h-auto block md:max-h-[65vh] md:w-auto md:mx-auto"
                       sizes="(max-width: 768px) 100vw, 50vw"
                       quality={90}
                       priority
