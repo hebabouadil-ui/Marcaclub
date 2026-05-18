@@ -76,7 +76,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
         <div className="grid md:grid-cols-2 gap-8 lg:gap-12 items-start">
           {/* Images */}
           <div className="space-y-3">
-            <div className="relative overflow-hidden bg-brand-light-gray" style={{ paddingBottom: '115%' }}>
+            <div className="relative overflow-hidden bg-brand-light-gray md:max-w-sm mx-auto w-full" style={{ paddingBottom: '125%' }}>
               <AnimatePresence initial={false} custom={dir} mode="popLayout">
                 <motion.div
                   key={imgIdx}

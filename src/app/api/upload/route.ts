@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
 
     const result = await cloudinary.uploader.upload(base64, {
       folder: 'marcaclub/products',
-      transformation: [{ width: 1200, height: 1600, crop: 'limit', quality: 'auto:good' }],
+      transformation: [{ width: 1500, height: 2000, crop: 'limit', quality: 'auto:best' }],
     })
 
     return NextResponse.json({ url: result.secure_url, publicId: result.public_id })
