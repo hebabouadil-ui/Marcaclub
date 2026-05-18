@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/db'
 import Order from '@/lib/models/Order'
 import Product from '@/lib/models/Product'
 import Settings from '@/lib/models/Settings'
+import Blocklist from '@/lib/models/Blocklist'
 import { generateOrderNumber } from '@/lib/utils/generateOrderNumber'
 import { sendOrderConfirmationEmail, sendAdminOrderNotification } from '@/lib/utils/email'
 import { getServerSession } from 'next-auth'
@@ -105,12 +106,29 @@ export async function POST(req: NextRequest) {
       $or: baseQuery,
     }).select('orderNumber customer items total createdAt').lean() as DupOrder[]
 
+    // --- Blocklist check (always HIGH) ---
+    type BlockEntry = { phone?: string; name?: string; address?: string; city?: string; reason?: string }
+    const blocklistEntries = await Blocklist.find({}).lean() as BlockEntry[]
+    const addressTrimmed = body.customer.address?.trim().toLowerCase() || ''
+
+    const blockedBy: string[] = []
+    for (const entry of blocklistEntries) {
+      if (entry.phone && entry.phone === phone.slice(-entry.phone.length)) blockedBy.push('téléphone blacklisté')
+      else if (entry.name && entry.name.toLowerCase() === nameTrimmed.toLowerCase()) blockedBy.push('nom blacklisté')
+      else if (entry.address && addressTrimmed && addressTrimmed.includes(entry.address.toLowerCase())) blockedBy.push('adresse blacklistée')
+    }
+
     let flagged = false
     let flagSeverity: 'low' | 'medium' | 'high' | undefined
     let flagReason = ''
     const flaggedOrderNumbers: string[] = []
     const riskSignals: string[] = []
     let maxSeverity = 0 // 0=none,1=low,2=medium,3=high
+
+    if (blockedBy.length > 0) {
+      blockedBy.filter((v, i, a) => a.indexOf(v) === i).forEach((s) => riskSignals.push(s))
+      maxSeverity = 3
+    }
 
     const addSignal = (msg: string, level: 1 | 2 | 3) => {
       riskSignals.push(msg)

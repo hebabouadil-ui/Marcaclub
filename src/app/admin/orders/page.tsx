@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
-import { ChevronDown, Search, AlertTriangle, ShieldCheck, Flag } from 'lucide-react'
+import { ChevronDown, Search, AlertTriangle, ShieldCheck, Flag, Ban, Trash2 } from 'lucide-react'
 
 const STATUSES = ['all', 'flagged', 'pending', 'confirmed', 'shipped', 'delivered', 'cancelled']
 const STATUS_LABELS: Record<string, string> = {
@@ -30,6 +30,16 @@ interface Order {
   createdAt: string
 }
 
+interface BlocklistEntry {
+  _id: string
+  phone?: string
+  name?: string
+  address?: string
+  city?: string
+  reason?: string
+  createdAt: string
+}
+
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [filtered, setFiltered] = useState<Order[]>([])
@@ -37,6 +47,8 @@ export default function AdminOrdersPage() {
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [blocklist, setBlocklist] = useState<BlocklistEntry[]>([])
+  const [showBlocklist, setShowBlocklist] = useState(false)
 
   useEffect(() => {
     fetch('/api/orders', { credentials: 'include' })
@@ -47,6 +59,9 @@ export default function AdminOrdersPage() {
         setFiltered(data)
       })
       .finally(() => setLoading(false))
+    fetch('/api/blocklist', { credentials: 'include' })
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data)) setBlocklist(data) })
   }, [])
 
   useEffect(() => {
@@ -91,18 +106,64 @@ export default function AdminOrdersPage() {
     }
   }
 
+  const blacklistOrder = async (order: Order) => {
+    const res = await fetch('/api/blocklist', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        phone: order.customer.phone.replace(/\D/g, ''),
+        name: order.customer.name,
+        address: order.customer.address || undefined,
+        city: order.customer.city,
+        reason: `Blacklisté depuis commande ${order.orderNumber}`,
+      }),
+    })
+    if (res.ok) {
+      const entry = await res.json()
+      setBlocklist((prev) => [entry, ...prev])
+      toast.success('Client blacklisté')
+    } else {
+      toast.error('Erreur')
+    }
+  }
+
+  const removeBlock = async (id: string) => {
+    const res = await fetch('/api/blocklist', {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
+    if (res.ok) {
+      setBlocklist((prev) => prev.filter((e) => e._id !== id))
+      toast.success('Entrée supprimée')
+    }
+  }
+
   const flaggedCount = orders.filter((o) => o.flagged).length
 
   return (
     <div className="p-6 md:p-8 max-w-6xl">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-white text-2xl font-semibold">Commandes</h1>
-        {flaggedCount > 0 && (
-          <div className="flex items-center gap-2 bg-red-500/20 border border-red-500/30 px-4 py-2 rounded">
-            <AlertTriangle size={14} className="text-red-400" />
-            <span className="text-red-400 text-sm font-semibold">{flaggedCount} doublon{flaggedCount > 1 ? 's' : ''} à vérifier</span>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {flaggedCount > 0 && (
+            <div className="flex items-center gap-2 bg-red-500/20 border border-red-500/30 px-4 py-2">
+              <AlertTriangle size={14} className="text-red-400" />
+              <span className="text-red-400 text-sm font-semibold">{flaggedCount} doublon{flaggedCount > 1 ? 's' : ''} à vérifier</span>
+            </div>
+          )}
+          <button
+            onClick={() => setShowBlocklist((v) => !v)}
+            className={`flex items-center gap-2 px-4 py-2 text-xs tracking-widest uppercase font-semibold transition-colors border ${
+              showBlocklist ? 'bg-red-500 text-white border-red-500' : 'bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20'
+            }`}
+          >
+            <Ban size={12} />
+            Blacklist{blocklist.length > 0 ? ` (${blocklist.length})` : ''}
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -169,13 +230,22 @@ export default function AdminOrdersPage() {
                       <p className={`${colors.text} text-xs font-semibold uppercase tracking-widest mb-0.5`}>{colors.label} — confirmation requise</p>
                       <p className={`${colors.sub} text-xs`}>{order.flagReason}</p>
                     </div>
-                    <button
-                      onClick={() => unflag(order._id)}
-                      className="flex items-center gap-1.5 bg-green-500/20 hover:bg-green-500/30 text-green-400 px-3 py-1.5 text-xs font-semibold tracking-widest uppercase transition-colors flex-shrink-0"
-                    >
-                      <ShieldCheck size={12} />
-                      Valider
-                    </button>
+                    <div className="flex flex-col gap-1.5 flex-shrink-0">
+                      <button
+                        onClick={() => unflag(order._id)}
+                        className="flex items-center gap-1.5 bg-green-500/20 hover:bg-green-500/30 text-green-400 px-3 py-1.5 text-xs font-semibold tracking-widest uppercase transition-colors"
+                      >
+                        <ShieldCheck size={12} />
+                        Valider
+                      </button>
+                      <button
+                        onClick={() => blacklistOrder(order)}
+                        className="flex items-center gap-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 px-3 py-1.5 text-xs font-semibold tracking-widest uppercase transition-colors"
+                      >
+                        <Ban size={12} />
+                        Blacklister
+                      </button>
+                    </div>
                   </div>
                 )
               })()}
@@ -260,6 +330,42 @@ export default function AdminOrdersPage() {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Blocklist panel */}
+      {showBlocklist && (
+        <div className="mt-8 border border-red-500/20 bg-red-500/5">
+          <div className="flex items-center gap-2 px-5 py-3 border-b border-red-500/20">
+            <Ban size={14} className="text-red-400" />
+            <h2 className="text-red-400 text-sm font-semibold uppercase tracking-widest">Clients blacklistés</h2>
+          </div>
+          {blocklist.length === 0 ? (
+            <p className="text-white/30 text-sm px-5 py-6 text-center">Aucun client blacklisté</p>
+          ) : (
+            <div className="divide-y divide-red-500/10">
+              {blocklist.map((entry) => (
+                <div key={entry._id} className="flex items-start justify-between px-5 py-3 gap-4">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap gap-x-4 gap-y-1">
+                      {entry.name && <span className="text-white text-sm font-medium">{entry.name}</span>}
+                      {entry.phone && <span className="text-white/50 text-sm">📞 {entry.phone}</span>}
+                      {entry.city && <span className="text-white/40 text-xs">{entry.city}</span>}
+                    </div>
+                    {entry.address && <p className="text-white/30 text-xs mt-0.5">{entry.address}</p>}
+                    {entry.reason && <p className="text-red-400/50 text-xs mt-0.5 italic">{entry.reason}</p>}
+                  </div>
+                  <button
+                    onClick={() => removeBlock(entry._id)}
+                    className="flex-shrink-0 text-white/30 hover:text-red-400 transition-colors p-1"
+                    title="Supprimer"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
