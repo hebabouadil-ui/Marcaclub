@@ -34,7 +34,8 @@ export async function POST(req: NextRequest) {
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
       + '-' + Date.now()
-    const product = await Product.create({ ...body, slug })
+    const totalStock = Array.isArray(body.sizes) ? body.sizes.reduce((s: number, i: { stock: number }) => s + i.stock, 0) : 0
+    const product = await Product.create({ ...body, slug, stock: totalStock })
     return NextResponse.json(product, { status: 201 })
   } catch (err) {
     return NextResponse.json({ message: String(err) }, { status: 500 })

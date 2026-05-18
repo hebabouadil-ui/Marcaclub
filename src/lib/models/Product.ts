@@ -9,7 +9,7 @@ export interface IProduct extends Document {
   images: string[]
   originalImages: string[]
   category: string
-  sizes: string[]
+  sizes: Array<{ size: string; stock: number }>
   stock: number
   featured: boolean
   active: boolean
@@ -27,7 +27,7 @@ const ProductSchema = new Schema<IProduct>(
     images: [{ type: String }],
     originalImages: [{ type: String }],
     category: { type: String, required: true },
-    sizes: [{ type: String }],
+    sizes: [{ size: { type: String }, stock: { type: Number, default: 0 } }],
     stock: { type: Number, default: 0 },
     featured: { type: Boolean, default: false },
     active: { type: Boolean, default: true },

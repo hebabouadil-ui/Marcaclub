@@ -14,7 +14,7 @@ interface Props {
     originalPrice?: number
     images: string[]
     stock: number
-    sizes: string[]
+    sizes: Array<{ size: string; stock: number }>
     category: string
   }
 }
@@ -107,7 +107,7 @@ export default function ProductCard({ product }: Props) {
           )}
         </div>
         <div className="flex gap-1 mt-2 flex-wrap">
-          {product.sizes.slice(0, 4).map((s) => (
+          {product.sizes.filter(s => s.stock > 0).slice(0, 4).map(({ size: s }) => (
             <span key={s} className="text-[9px] tracking-wider border border-brand-light-gray text-brand-gray px-1.5 py-0.5 uppercase">
               {s}
             </span>

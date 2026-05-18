@@ -29,14 +29,29 @@ export async function POST(req: NextRequest) {
     const orderNumber = generateOrderNumber()
     const order = await Order.create({ ...body, orderNumber })
 
-    // Decrement stock for each ordered item
+    // Decrement per-size stock for each ordered item
     if (Array.isArray(body.items)) {
       await Promise.all(
-        body.items.map((item: { productId: string; quantity: number }) =>
-          Product.updateOne(
-            { _id: item.productId },
-            { $inc: { stock: -item.quantity } }
-          )
+        body.items.map((item: { productId: string; size: string; quantity: number }) =>
+          Product.updateOne({ _id: item.productId }, [
+            {
+              $set: {
+                sizes: {
+                  $map: {
+                    input: '$sizes', as: 'sz',
+                    in: {
+                      $cond: [
+                        { $eq: ['$$sz.size', item.size] },
+                        { size: '$$sz.size', stock: { $max: [0, { $subtract: ['$$sz.stock', item.quantity] }] } },
+                        '$$sz'
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            { $set: { stock: { $sum: '$sizes.stock' } } }
+          ])
         )
       )
     }

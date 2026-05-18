@@ -34,17 +34,53 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     order.status = status
     await order.save()
 
-    // Restore stock when cancelling, re-deduct if un-cancelling
+    // Restore stock when cancelling, re-deduct if un-cancelling (per-size)
     if (status === 'cancelled' && previousStatus !== 'cancelled') {
       await Promise.all(
-        order.items.map((item: { productId: string; quantity: number }) =>
-          Product.updateOne({ _id: item.productId }, { $inc: { stock: item.quantity } })
+        order.items.map((item: { productId: string; size: string; quantity: number }) =>
+          Product.updateOne({ _id: item.productId }, [
+            {
+              $set: {
+                sizes: {
+                  $map: {
+                    input: '$sizes', as: 'sz',
+                    in: {
+                      $cond: [
+                        { $eq: ['$$sz.size', item.size] },
+                        { size: '$$sz.size', stock: { $add: ['$$sz.stock', item.quantity] } },
+                        '$$sz'
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            { $set: { stock: { $sum: '$sizes.stock' } } }
+          ])
         )
       )
     } else if (previousStatus === 'cancelled' && status !== 'cancelled') {
       await Promise.all(
-        order.items.map((item: { productId: string; quantity: number }) =>
-          Product.updateOne({ _id: item.productId }, { $inc: { stock: -item.quantity } })
+        order.items.map((item: { productId: string; size: string; quantity: number }) =>
+          Product.updateOne({ _id: item.productId }, [
+            {
+              $set: {
+                sizes: {
+                  $map: {
+                    input: '$sizes', as: 'sz',
+                    in: {
+                      $cond: [
+                        { $eq: ['$$sz.size', item.size] },
+                        { size: '$$sz.size', stock: { $max: [0, { $subtract: ['$$sz.stock', item.quantity] }] } },
+                        '$$sz'
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            { $set: { stock: { $sum: '$sizes.stock' } } }
+          ])
         )
       )
     }

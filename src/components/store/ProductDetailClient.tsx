@@ -16,7 +16,7 @@ interface Product {
   originalPrice?: number
   images: string[]
   stock: number
-  sizes: string[]
+  sizes: Array<{ size: string; stock: number }>
   category: string
 }
 
@@ -35,6 +35,10 @@ export default function ProductDetailClient({ product }: { product: Product }) {
   const [added, setAdded] = useState(false)
   const addItem = useCartStore((s) => s.addItem)
 
+  const selectedSizeEntry = product.sizes.find((s) => s.size === selectedSize)
+  const selectedStock = selectedSizeEntry?.stock ?? 0
+  const totalStock = product.sizes.reduce((s, i) => s + i.stock, 0)
+
   const discount = product.originalPrice
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : null
@@ -48,7 +52,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
 
   const handleAddToCart = () => {
     if (!selectedSize) { toast.error('Veuillez choisir une taille'); return }
-    if (product.stock === 0) { toast.error('Produit épuisé'); return }
+    if (selectedStock === 0) { toast.error('Taille épuisée'); return }
     addItem({
       productId: product._id,
       name: product.name,
@@ -56,7 +60,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
       quantity: qty,
       size: selectedSize,
       image: product.images[0] || '',
-      stock: product.stock,
+      stock: selectedStock,
     })
     setAdded(true)
     toast.success('Ajouté au panier')
@@ -176,10 +180,16 @@ export default function ProductDetailClient({ product }: { product: Product }) {
               </div>
 
               <div className="mb-6">
-                {product.stock === 0 ? (
+                {totalStock === 0 ? (
                   <span className="text-sm text-brand-gray tracking-widest uppercase">Épuisé</span>
-                ) : product.stock <= 5 ? (
-                  <span className="text-sm text-amber-600 tracking-widest uppercase">Plus que {product.stock} en stock</span>
+                ) : selectedSize ? (
+                  selectedStock === 0 ? (
+                    <span className="text-sm text-red-500 tracking-widest uppercase">Taille épuisée</span>
+                  ) : selectedStock <= 5 ? (
+                    <span className="text-sm text-amber-600 tracking-widest uppercase">Plus que {selectedStock} en stock</span>
+                  ) : (
+                    <span className="text-sm text-green-600 tracking-widest uppercase">{selectedStock} en stock</span>
+                  )
                 ) : (
                   <span className="text-sm text-green-600 tracking-widest uppercase">En stock</span>
                 )}
@@ -191,12 +201,15 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                     Taille — <span className="text-brand-black">{selectedSize || 'Choisir'}</span>
                   </p>
                   <div className="flex gap-2 flex-wrap">
-                    {product.sizes.map((s) => (
+                    {product.sizes.map(({ size: s, stock: sStock }) => (
                       <button
                         key={s}
-                        onClick={() => setSelectedSize(s)}
-                        className={`w-11 h-11 text-sm border-2 transition-all duration-200 ${
-                          selectedSize === s
+                        onClick={() => { setSelectedSize(s); setQty(1) }}
+                        disabled={sStock === 0}
+                        className={`w-11 h-11 text-sm border-2 transition-all duration-200 relative ${
+                          sStock === 0
+                            ? 'border-brand-light-gray text-brand-gray/40 cursor-not-allowed line-through'
+                            : selectedSize === s
                             ? 'border-brand-black bg-brand-black text-brand-white'
                             : 'border-brand-light-gray text-brand-black hover:border-brand-black'
                         }`}
@@ -213,15 +226,15 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                 <div className="flex items-center border border-brand-light-gray w-fit">
                   <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-10 h-10 flex items-center justify-center text-brand-gray hover:text-brand-black hover:bg-brand-light-gray transition-colors">−</button>
                   <span className="w-10 h-10 flex items-center justify-center text-sm font-medium">{qty}</span>
-                  <button onClick={() => setQty((q) => Math.min(product.stock, q + 1))} className="w-10 h-10 flex items-center justify-center text-brand-gray hover:text-brand-black hover:bg-brand-light-gray transition-colors">+</button>
+                  <button onClick={() => setQty((q) => Math.min(selectedStock || 1, q + 1))} className="w-10 h-10 flex items-center justify-center text-brand-gray hover:text-brand-black hover:bg-brand-light-gray transition-colors">+</button>
                 </div>
               </div>
 
               <button
                 onClick={handleAddToCart}
-                disabled={product.stock === 0}
+                disabled={totalStock === 0 || (!!selectedSize && selectedStock === 0)}
                 className={`w-full flex items-center justify-center gap-3 py-4 text-sm tracking-[0.2em] uppercase font-semibold transition-all duration-300 ${
-                  product.stock === 0
+                  totalStock === 0 || (!!selectedSize && selectedStock === 0)
                     ? 'bg-brand-light-gray text-brand-gray cursor-not-allowed'
                     : added
                     ? 'bg-green-600 text-white'
@@ -229,7 +242,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                 }`}
               >
                 {added ? <Check size={18} /> : <ShoppingBag size={18} />}
-                {product.stock === 0 ? 'Épuisé' : added ? 'Ajouté !' : 'Ajouter au panier'}
+                {totalStock === 0 ? 'Épuisé' : added ? 'Ajouté !' : 'Ajouter au panier'}
               </button>
 
               <Link href="/cart" className="flex items-center justify-center gap-1.5 mt-3 text-xs tracking-widest uppercase text-brand-gray hover:text-brand-black hover:gap-2.5 transition-all">

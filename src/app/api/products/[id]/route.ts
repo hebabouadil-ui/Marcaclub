@@ -22,6 +22,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   try {
     await connectDB()
     const body = await req.json()
+    const totalStock = Array.isArray(body.sizes) ? body.sizes.reduce((s: number, i: { stock: number }) => s + i.stock, 0) : undefined
+    if (totalStock !== undefined) body.stock = totalStock
     const product = await Product.findByIdAndUpdate(params.id, body, { new: true }).lean()
     if (!product) return NextResponse.json({ message: 'Not found' }, { status: 404 })
     return NextResponse.json(product)

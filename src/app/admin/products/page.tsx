@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { Plus, Pencil, Trash2, X, Loader2, Upload } from 'lucide-react'
 
+interface SizeStock { size: string; stock: number }
+
 interface Product {
   _id: string
   name: string
@@ -13,15 +15,17 @@ interface Product {
   category: string
   stock: number
   images: string[]
-  sizes: string[]
+  sizes: SizeStock[]
   featured: boolean
   active: boolean
   description: string
 }
 
-const EMPTY: Omit<Product, '_id'> = {
+type ProductForm = Omit<Product, '_id' | 'stock'>
+
+const EMPTY: ProductForm = {
   name: '', price: 0, originalPrice: undefined, category: 'femme',
-  stock: 0, images: [], sizes: [], featured: false, active: true, description: '',
+  images: [], sizes: [], featured: false, active: true, description: '',
 }
 const CATEGORIES = ['femme', 'homme', 'accessoires', 'enfant']
 const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '36', '37', '38', '39', '40', '41', '42', '43', 'Unique']
@@ -31,7 +35,7 @@ export default function AdminProductsPage() {
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState<Product | null>(null)
-  const [form, setForm] = useState<Omit<Product, '_id'>>(EMPTY)
+  const [form, setForm] = useState<ProductForm>(EMPTY)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
 
@@ -48,7 +52,7 @@ export default function AdminProductsPage() {
   const openEdit = (p: Product) => {
     setEditing(p)
     setForm({ name: p.name, price: p.price, originalPrice: p.originalPrice, category: p.category,
-      stock: p.stock, images: p.images, sizes: p.sizes, featured: p.featured, active: p.active, description: p.description })
+      images: p.images, sizes: p.sizes, featured: p.featured, active: p.active, description: p.description })
     setModal(true)
   }
 
@@ -78,10 +82,16 @@ export default function AdminProductsPage() {
   }
 
   const toggleSize = (s: string) =>
-    setForm((f) => ({
-      ...f,
-      sizes: f.sizes.includes(s) ? f.sizes.filter((x) => x !== s) : [...f.sizes, s],
-    }))
+    setForm((f) => {
+      const exists = f.sizes.find((x) => x.size === s)
+      return {
+        ...f,
+        sizes: exists ? f.sizes.filter((x) => x.size !== s) : [...f.sizes, { size: s, stock: 0 }],
+      }
+    })
+
+  const setSizeStock = (s: string, stock: number) =>
+    setForm((f) => ({ ...f, sizes: f.sizes.map((x) => x.size === s ? { ...x, stock } : x) }))
 
   const handleSave = async () => {
     if (!form.name || !form.price) { toast.error('Nom et prix requis'); return }
@@ -156,7 +166,7 @@ export default function AdminProductsPage() {
               <div className="p-3">
                 <p className="text-white text-sm font-medium truncate">{p.name}</p>
                 <p className="text-brand-gold text-sm">{p.price.toFixed(0)} MAD</p>
-                <p className="text-white/40 text-xs">Stock: {p.stock}</p>
+                <p className="text-white/40 text-xs">Stock total: {p.sizes.reduce((s, i) => s + i.stock, 0)}</p>
                 <div className="flex gap-2 mt-3">
                   <button
                     onClick={() => openEdit(p)}
@@ -236,27 +246,16 @@ export default function AdminProductsPage() {
                   </div>
                 </div>
 
-                {/* Category + Stock */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Catégorie</label>
-                    <select
-                      value={form.category}
-                      onChange={(e) => setForm({ ...form, category: e.target.value })}
-                      className="w-full bg-white/5 border border-white/10 text-white px-4 py-2.5 text-sm focus:outline-none focus:border-brand-gold"
-                    >
-                      {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Stock</label>
-                    <input
-                      type="number"
-                      value={form.stock}
-                      onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })}
-                      className="w-full bg-white/5 border border-white/10 text-white px-4 py-2.5 text-sm focus:outline-none focus:border-brand-gold"
-                    />
-                  </div>
+                {/* Category */}
+                <div>
+                  <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Catégorie</label>
+                  <select
+                    value={form.category}
+                    onChange={(e) => setForm({ ...form, category: e.target.value })}
+                    className="w-full bg-white/5 border border-white/10 text-white px-4 py-2.5 text-sm focus:outline-none focus:border-brand-gold"
+                  >
+                    {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
                 </div>
 
                 {/* Description */}
@@ -270,25 +269,47 @@ export default function AdminProductsPage() {
                   />
                 </div>
 
-                {/* Sizes */}
+                {/* Sizes + per-size stock */}
                 <div>
-                  <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Tailles</label>
+                  <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">
+                    Tailles & stock par taille
+                  </label>
                   <div className="flex flex-wrap gap-2">
-                    {SIZES.map((s) => (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => toggleSize(s)}
-                        className={`px-3 py-1 text-xs transition-colors ${
-                          form.sizes.includes(s)
-                            ? 'bg-brand-gold text-brand-black'
-                            : 'bg-white/5 text-white/50 hover:bg-white/10'
-                        }`}
-                      >
-                        {s}
-                      </button>
-                    ))}
+                    {SIZES.map((s) => {
+                      const entry = form.sizes.find((x) => x.size === s)
+                      return (
+                        <div key={s} className="flex flex-col items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => toggleSize(s)}
+                            className={`px-3 py-1.5 text-xs transition-colors min-w-[40px] ${
+                              entry
+                                ? 'bg-brand-gold text-brand-black font-semibold'
+                                : 'bg-white/5 text-white/50 hover:bg-white/10'
+                            }`}
+                          >
+                            {s}
+                          </button>
+                          {entry && (
+                            <input
+                              type="number"
+                              min="0"
+                              value={entry.stock}
+                              onChange={(e) => setSizeStock(s, Math.max(0, Number(e.target.value)))}
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-12 bg-white/10 border border-white/20 text-white text-center text-xs px-1 py-1 focus:outline-none focus:border-brand-gold"
+                              placeholder="Qté"
+                            />
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
+                  {form.sizes.length > 0 && (
+                    <p className="text-white/30 text-xs mt-2">
+                      Stock total: {form.sizes.reduce((s, i) => s + i.stock, 0)} pièces
+                    </p>
+                  )}
                 </div>
 
                 {/* Images */}
