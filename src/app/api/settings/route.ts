@@ -16,12 +16,12 @@ export async function PUT(req: NextRequest) {
   try {
     await connectDB()
     const body = await req.json()
-    const settings = await Settings.findOneAndUpdate(
+    await Settings.findOneAndUpdate(
       {},
       { $set: body },
-      { upsert: true, returnDocument: 'after', lean: true }
+      { upsert: true }
     )
-    return NextResponse.json(settings)
+    return NextResponse.json({ ok: true })
   } catch (err) {
     console.error('PUT /api/settings error:', err)
     return NextResponse.json({ message: String(err) }, { status: 500 })
