@@ -75,10 +75,10 @@ export default function ProductDetailClient({ product }: { product: Product }) {
           <span className="text-brand-black truncate max-w-[160px]">{product.name}</span>
         </div>
 
-        <div className="grid md:grid-cols-[300px_1fr] gap-8 lg:gap-10 items-start">
+        <div className="grid md:grid-cols-[280px_1fr] gap-6 lg:gap-10 items-start">
           {/* Images */}
           <div className="space-y-3">
-            <div className="relative overflow-hidden bg-brand-light-gray w-full" style={{ paddingBottom: '110%' }}>
+            <div className="relative overflow-hidden bg-brand-light-gray w-full max-w-[280px] mx-auto md:max-w-none" style={{ paddingBottom: '110%' }}>
               <AnimatePresence initial={false} custom={dir}>
                 <motion.div
                   key={imgIdx}
