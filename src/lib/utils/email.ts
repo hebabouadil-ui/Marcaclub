@@ -44,14 +44,14 @@ export async function sendOrderConfirmationEmail(order: IOrder, emailNote?: stri
 
     <div style="background: #0a0a0a; padding: 40px; text-align: center;">
       <h1 style="color: #c9a84c; margin: 0; font-size: 28px; letter-spacing: 4px; text-transform: uppercase;">MARCACLUB</h1>
-      <p style="color: #6b6b6b; margin: 8px 0 0; font-size: 12px; letter-spacing: 2px; text-transform: uppercase;">Commande Confirmée</p>
+      <p style="color: #6b6b6b; margin: 8px 0 0; font-size: 12px; letter-spacing: 2px; text-transform: uppercase;">Commande Reçue</p>
     </div>
 
     <div style="padding: 40px;">
       <p style="color: #0a0a0a; font-size: 16px;">Bonjour <strong>${order.customer.name}</strong>,</p>
       <p style="color: #6b6b6b; line-height: 1.6;">
-        Votre commande a été confirmée avec succès. La livraison prendra
-        <strong>2 jours environ</strong> selon votre localisation.
+        Merci pour votre commande ! Nous l'avons bien reçue.<br/>
+        Un de nos agents vous contactera <strong>très prochainement</strong> pour confirmer votre commande et les détails de livraison.
       </p>
 
       <div style="background: #f0ede8; padding: 20px; border-radius: 4px; margin: 24px 0; text-align: center;">
@@ -101,7 +101,7 @@ export async function sendOrderConfirmationEmail(order: IOrder, emailNote?: stri
   await transporter.sendMail({
     from: process.env.EMAIL_FROM || 'Marcaclub <noreply@marcaclub.com>',
     to: order.customer.email,
-    subject: `✅ Commande confirmée — ${order.orderNumber} | Marcaclub`,
+    subject: `📦 Commande reçue — ${order.orderNumber} | Marcaclub`,
     html,
   })
 }
@@ -113,7 +113,7 @@ export async function sendOrderStatusEmail(order: IOrder, status: string) {
     confirmed: {
       subject: `✅ Commande confirmée — ${order.orderNumber}`,
       title: 'Commande Confirmée',
-      message: 'Votre commande a été confirmée et sera bientôt expédiée.',
+      message: 'Bonne nouvelle ! Votre commande a été confirmée par notre équipe et sera préparée pour l\'expédition très prochainement.',
       color: '#3b82f6',
     },
     shipped: {
@@ -125,7 +125,7 @@ export async function sendOrderStatusEmail(order: IOrder, status: string) {
     delivered: {
       subject: `🎉 Commande livrée — ${order.orderNumber}`,
       title: 'Commande Livrée',
-      message: 'Votre commande a été livrée. Merci pour votre achat chez Marcaclub !',
+      message: 'DELIVERED_SPECIAL',
       color: '#22c55e',
     },
     cancelled: {
@@ -151,7 +151,13 @@ export async function sendOrderStatusEmail(order: IOrder, status: string) {
     </div>
     <div style="padding: 40px;">
       <p style="color: #0a0a0a; font-size: 16px;">Bonjour <strong>${order.customer.name}</strong>,</p>
-      <p style="color: #6b6b6b; line-height: 1.6;">${cfg.message}</p>
+      ${cfg.message === 'DELIVERED_SPECIAL' ? `
+      <p style="color: #6b6b6b; line-height: 1.6;">Votre commande a bien été livrée. Nous espérons que vous êtes satisfait(e) de votre achat !</p>
+      <div style="background: #f9f6f0; border: 1px solid #c9a84c33; padding: 24px; border-radius: 4px; margin: 20px 0; text-align: center; direction: rtl;">
+        <p style="margin: 0 0 8px; color: #c9a84c; font-size: 22px;">شكراً جزيلاً</p>
+        <p style="margin: 0; color: #555; font-size: 15px; line-height: 1.8;">ثقتكم فينا هي أغلى شيء نملكه<br/>في انتظار لقائكم مجدداً 🤍</p>
+      </div>
+      ` : `<p style="color: #6b6b6b; line-height: 1.6;">${cfg.message}</p>`}
       <div style="background: #f0ede8; padding: 20px; border-radius: 4px; margin: 24px 0; text-align: center;">
         <p style="margin: 0; color: #6b6b6b; font-size: 12px; letter-spacing: 2px; text-transform: uppercase;">Numéro de commande</p>
         <p style="margin: 8px 0 0; color: #0a0a0a; font-size: 24px; font-weight: bold; letter-spacing: 2px;">${order.orderNumber}</p>
