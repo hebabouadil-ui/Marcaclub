@@ -2,10 +2,11 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ShoppingBag, Check, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ShoppingBag, Check, ChevronLeft, ChevronRight, ArrowRight, ShoppingCart } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cartStore'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 interface Product {
   _id: string
@@ -34,6 +35,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
   const [qty, setQty] = useState(1)
   const [added, setAdded] = useState(false)
   const addItem = useCartStore((s) => s.addItem)
+  const router = useRouter()
 
   const selectedSizeEntry = product.sizes.find((s) => s.size === selectedSize)
   const selectedStock = selectedSizeEntry?.stock ?? 0
@@ -63,8 +65,23 @@ export default function ProductDetailClient({ product }: { product: Product }) {
       stock: selectedStock,
     })
     setAdded(true)
-    toast.success('Ajouté au panier')
-    setTimeout(() => setAdded(false), 2000)
+  }
+
+  const handleGoToCart = () => {
+    if (!selectedSize) { toast.error('Veuillez choisir une taille'); return }
+    if (selectedStock === 0) { toast.error('Taille épuisée'); return }
+    if (!added) {
+      addItem({
+        productId: product._id,
+        name: product.name,
+        price: product.price,
+        quantity: qty,
+        size: selectedSize,
+        image: product.images[0] || '',
+        stock: selectedStock,
+      })
+    }
+    router.push('/cart')
   }
 
   return (
@@ -230,24 +247,44 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                 </div>
               </div>
 
-              <button
-                onClick={handleAddToCart}
-                disabled={totalStock === 0 || (!!selectedSize && selectedStock === 0)}
-                className={`w-full flex items-center justify-center gap-3 py-4 text-sm tracking-[0.2em] uppercase font-semibold transition-all duration-300 ${
-                  totalStock === 0 || (!!selectedSize && selectedStock === 0)
-                    ? 'bg-brand-light-gray text-brand-gray cursor-not-allowed'
-                    : added
-                    ? 'bg-green-600 text-white'
-                    : 'bg-brand-black text-brand-white hover:bg-brand-gold hover:text-brand-black'
-                }`}
-              >
-                {added ? <Check size={18} /> : <ShoppingBag size={18} />}
-                {totalStock === 0 ? 'Épuisé' : added ? 'Ajouté !' : 'Ajouter au panier'}
-              </button>
-
-              <Link href="/cart" className="flex items-center justify-center gap-1.5 mt-3 text-xs tracking-widest uppercase text-brand-gray hover:text-brand-black hover:gap-2.5 transition-all">
-                Voir mon panier →
-              </Link>
+              {totalStock === 0 ? (
+                <button disabled className="w-full flex items-center justify-center gap-3 py-4 text-sm tracking-[0.2em] uppercase font-semibold bg-brand-light-gray text-brand-gray cursor-not-allowed">
+                  <ShoppingBag size={18} /> Épuisé
+                </button>
+              ) : !added ? (
+                <button
+                  onClick={handleAddToCart}
+                  disabled={!!selectedSize && selectedStock === 0}
+                  className="w-full flex items-center justify-center gap-3 py-4 text-sm tracking-[0.2em] uppercase font-semibold transition-all duration-300 bg-brand-black text-brand-white hover:bg-brand-gold hover:text-brand-black disabled:bg-brand-light-gray disabled:text-brand-gray disabled:cursor-not-allowed"
+                >
+                  <ShoppingBag size={18} />
+                  Ajouter au panier
+                </button>
+              ) : (
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key="added-state"
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex flex-col gap-3"
+                  >
+                    <button
+                      onClick={handleGoToCart}
+                      className="w-full flex items-center justify-center gap-3 py-4 text-sm tracking-[0.2em] uppercase font-semibold bg-brand-gold text-brand-black hover:bg-brand-black hover:text-brand-white transition-all duration-300"
+                    >
+                      <ShoppingCart size={18} />
+                      Aller au panier
+                    </button>
+                    <button
+                      onClick={() => setAdded(false)}
+                      className="w-full flex items-center justify-center gap-3 py-3 text-xs tracking-[0.2em] uppercase border border-brand-light-gray text-brand-gray hover:border-brand-black hover:text-brand-black transition-all duration-300"
+                    >
+                      <ArrowRight size={14} />
+                      Continuer mes achats
+                    </button>
+                  </motion.div>
+                </AnimatePresence>
+              )}
 
               {product.description && (
                 <div className="mt-8 pt-6 border-t border-brand-light-gray">
