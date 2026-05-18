@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { useCartStore } from '@/lib/store/cartStore'
+import { useCartStore, cartTotal } from '@/lib/store/cartStore'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
 import { ArrowLeft, Loader2 } from 'lucide-react'
@@ -19,7 +19,7 @@ const WILAYAS = [
 
 export default function CheckoutPage() {
   const router = useRouter()
-  const { items, total, clearCart } = useCartStore()
+  const { items, clearCart } = useCartStore()
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({
     name: '', phone: '', email: '', address: '', city: '',
@@ -59,7 +59,7 @@ export default function CheckoutPage() {
             size: i.size,
             image: i.image,
           })),
-          total: total(),
+          total: cartTotal(items),
         }),
       })
       const data = await res.json()
@@ -173,7 +173,7 @@ export default function CheckoutPage() {
               <div className="border-t border-brand-beige pt-4">
                 <div className="flex justify-between">
                   <span className="text-sm tracking-widest uppercase text-brand-gray">Total</span>
-                  <span className="text-xl font-semibold text-brand-black">{total().toFixed(2)} MAD</span>
+                  <span className="text-xl font-semibold text-brand-black">{cartTotal(items).toFixed(2)} MAD</span>
                 </div>
                 <p className="text-xs text-brand-gray mt-1">+ Frais de livraison selon ville</p>
               </div>

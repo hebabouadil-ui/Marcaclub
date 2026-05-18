@@ -18,8 +18,6 @@ interface CartStore {
   removeItem: (productId: string, size: string) => void
   updateQuantity: (productId: string, size: string, quantity: number) => void
   clearCart: () => void
-  total: () => number
-  count: () => number
 }
 
 export const useCartStore = create<CartStore>()(
@@ -56,9 +54,15 @@ export const useCartStore = create<CartStore>()(
         })
       },
       clearCart: () => set({ items: [] }),
-      total: () => get().items.reduce((sum, i) => sum + i.price * i.quantity, 0),
-      count: () => get().items.reduce((sum, i) => sum + i.quantity, 0),
     }),
     { name: 'marcaclub-cart' }
   )
 )
+
+export function cartTotal(items: CartItem[]) {
+  return items.reduce((sum, i) => sum + i.price * i.quantity, 0)
+}
+
+export function cartCount(items: CartItem[]) {
+  return items.reduce((sum, i) => sum + i.quantity, 0)
+}

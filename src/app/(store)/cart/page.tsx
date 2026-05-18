@@ -2,11 +2,11 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useCartStore } from '@/lib/store/cartStore'
+import { useCartStore, cartTotal } from '@/lib/store/cartStore'
 import { Trash2, ShoppingBag, ArrowRight } from 'lucide-react'
 
 export default function CartPage() {
-  const { items, removeItem, updateQuantity, total } = useCartStore()
+  const { items, removeItem, updateQuantity } = useCartStore()
 
   if (items.length === 0) {
     return (
@@ -113,7 +113,7 @@ export default function CartPage() {
               <div className="border-t border-brand-beige pt-4 mb-6">
                 <div className="flex justify-between">
                   <span className="text-sm tracking-widest uppercase text-brand-gray">Total</span>
-                  <span className="text-lg font-semibold text-brand-black">{total().toFixed(2)} MAD</span>
+                  <span className="text-lg font-semibold text-brand-black">{cartTotal(items).toFixed(2)} MAD</span>
                 </div>
                 <p className="text-xs text-brand-gray mt-1">+ Frais de livraison selon ville</p>
               </div>
