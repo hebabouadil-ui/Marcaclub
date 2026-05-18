@@ -13,6 +13,8 @@ export async function GET() {
   }
 }
 
+export const dynamic = 'force-dynamic'
+
 export async function PUT(req: NextRequest) {
   try {
     await connectDB()
