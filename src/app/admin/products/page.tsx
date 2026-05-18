@@ -65,7 +65,8 @@ export default function AdminProductsPage() {
         if (res.ok && data.url) {
           urls.push(data.url)
         } else {
-          toast.error(`Erreur: ${data.message || 'Upload échoué'}`)
+          const msg = typeof data.message === 'string' ? data.message : JSON.stringify(data.message || data)
+          toast.error(`Erreur upload: ${msg}`, { duration: 8000 })
         }
       } catch (err) {
         toast.error(`Erreur réseau: ${String(err)}`)
