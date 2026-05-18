@@ -39,7 +39,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     product.sizes = rawSizes.map((s: unknown) =>
       typeof s === 'string' ? { size: s, stock: 0 } : (s as { size: string; stock: number })
     )
-    product.stock = product.sizes.reduce((sum: number, i) => sum + (i.stock || 0), 0)
+    product.stock = product.sizes.reduce((sum: number, i: { size: string; stock: number }) => sum + (i.stock || 0), 0)
     await product.save()
     return NextResponse.json(product.toObject())
   } catch (err) {
