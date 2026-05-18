@@ -106,7 +106,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
         <div className="grid md:grid-cols-[1fr_420px] gap-8 lg:gap-12 items-start">
           {/* Images */}
           <div className="space-y-3">
-            <div className="relative overflow-hidden bg-brand-light-gray w-full pb-[120%] md:pb-[90%]">
+            <div className="relative overflow-hidden bg-brand-light-gray w-full">
               <AnimatePresence initial={false} custom={dir}>
                 <motion.div
                   key={imgIdx}
@@ -116,20 +116,21 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                   animate="center"
                   exit="exit"
                   transition={swipeTransition}
-                  className="absolute inset-0 will-change-transform"
+                  className="will-change-transform"
                 >
                   {product.images[imgIdx] ? (
                     <Image
                       src={product.images[imgIdx]}
                       alt={product.name}
-                      fill
-                      className="object-cover object-top"
+                      width={800}
+                      height={1000}
+                      className="w-full h-auto block"
                       sizes="(max-width: 768px) 100vw, 50vw"
                       quality={90}
                       priority
                     />
                   ) : (
-                    <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="flex items-center justify-center h-96">
                       <span className="text-brand-gray text-xs tracking-widest uppercase">Marcaclub</span>
                     </div>
                   )}
