@@ -42,7 +42,9 @@ export default function DashboardPage() {
           totalOrders: orders.length,
           pendingOrders: orders.filter((o: { status: string }) => o.status === 'pending').length,
           totalProducts: products.length,
-          totalRevenue: orders.reduce((sum: number, o: { total: number }) => sum + o.total, 0),
+          totalRevenue: orders
+            .filter((o: { status: string }) => ['confirmed', 'shipped', 'delivered'].includes(o.status))
+            .reduce((sum: number, o: { total: number }) => sum + o.total, 0),
           recentOrders: orders.slice(0, 5),
           liveStatus: live.liveStatus,
         })

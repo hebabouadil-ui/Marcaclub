@@ -106,6 +106,80 @@ export async function sendOrderConfirmationEmail(order: IOrder, emailNote?: stri
   })
 }
 
+export async function sendOrderStatusEmail(order: IOrder, status: string) {
+  if (!order.customer.email) return
+
+  const statusConfig: Record<string, { subject: string; title: string; message: string; color: string }> = {
+    confirmed: {
+      subject: `✅ Commande confirmée — ${order.orderNumber}`,
+      title: 'Commande Confirmée',
+      message: 'Votre commande a été confirmée et sera bientôt expédiée.',
+      color: '#3b82f6',
+    },
+    shipped: {
+      subject: `🚚 Commande expédiée — ${order.orderNumber}`,
+      title: 'Commande Expédiée',
+      message: 'Votre commande est en route ! La livraison prendra 24-48h.',
+      color: '#8b5cf6',
+    },
+    delivered: {
+      subject: `🎉 Commande livrée — ${order.orderNumber}`,
+      title: 'Commande Livrée',
+      message: 'Votre commande a été livrée. Merci pour votre achat chez Marcaclub !',
+      color: '#22c55e',
+    },
+    cancelled: {
+      subject: `❌ Commande annulée — ${order.orderNumber}`,
+      title: 'Commande Annulée',
+      message: 'Votre commande a été annulée. Pour toute question, contactez-nous sur WhatsApp.',
+      color: '#ef4444',
+    },
+  }
+
+  const cfg = statusConfig[status]
+  if (!cfg) return
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+<body style="margin: 0; padding: 0; background-color: #f0ede8; font-family: Arial, sans-serif;">
+  <div style="max-width: 600px; margin: 40px auto; background: #fafafa; border-radius: 4px; overflow: hidden;">
+    <div style="background: #0a0a0a; padding: 40px; text-align: center;">
+      <h1 style="color: #c9a84c; margin: 0; font-size: 28px; letter-spacing: 4px; text-transform: uppercase;">MARCACLUB</h1>
+      <p style="color: #6b6b6b; margin: 8px 0 0; font-size: 12px; letter-spacing: 2px; text-transform: uppercase;">${cfg.title}</p>
+    </div>
+    <div style="padding: 40px;">
+      <p style="color: #0a0a0a; font-size: 16px;">Bonjour <strong>${order.customer.name}</strong>,</p>
+      <p style="color: #6b6b6b; line-height: 1.6;">${cfg.message}</p>
+      <div style="background: #f0ede8; padding: 20px; border-radius: 4px; margin: 24px 0; text-align: center;">
+        <p style="margin: 0; color: #6b6b6b; font-size: 12px; letter-spacing: 2px; text-transform: uppercase;">Numéro de commande</p>
+        <p style="margin: 8px 0 0; color: #0a0a0a; font-size: 24px; font-weight: bold; letter-spacing: 2px;">${order.orderNumber}</p>
+      </div>
+      <div style="background: ${cfg.color}18; border-left: 4px solid ${cfg.color}; padding: 16px; margin-top: 20px; border-radius: 2px; text-align: center;">
+        <p style="margin: 0; color: ${cfg.color}; font-size: 16px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase;">${cfg.title}</p>
+      </div>
+      <div style="background: #fff8e7; border-left: 4px solid #c9a84c; padding: 16px; margin-top: 20px; border-radius: 2px;">
+        <p style="margin: 0; color: #333; font-size: 14px; line-height: 1.6;">
+          📞 Pour toute question, contactez-nous sur WhatsApp au +212695504949.
+        </p>
+      </div>
+    </div>
+    <div style="background: #f0ede8; padding: 24px; text-align: center;">
+      <p style="color: #6b6b6b; font-size: 12px; margin: 0;">© 2025 Marcaclub — Mode exclusive importée d'Espagne</p>
+    </div>
+  </div>
+</body>
+</html>`
+
+  await transporter.sendMail({
+    from: process.env.EMAIL_FROM || 'Marcaclub <noreply@marcaclub.com>',
+    to: order.customer.email,
+    subject: cfg.subject,
+    html,
+  })
+}
+
 export async function sendAdminOrderNotification(order: IOrder) {
   const adminEmail = process.env.ADMIN_EMAIL
   if (!adminEmail) return

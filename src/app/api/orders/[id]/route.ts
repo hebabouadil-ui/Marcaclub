@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/db'
 import Order from '@/lib/models/Order'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/authOptions'
+import { sendOrderStatusEmail } from '@/lib/utils/email'
 
 export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
@@ -25,9 +26,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   try {
     await connectDB()
     const { status } = await req.json()
-    const order = await Order.findByIdAndUpdate(params.id, { status }, { new: true }).lean()
+    const order = await Order.findByIdAndUpdate(params.id, { status }, { new: true })
     if (!order) return NextResponse.json({ message: 'Not found' }, { status: 404 })
-    return NextResponse.json(order)
+    sendOrderStatusEmail(order, status).catch(console.error)
+    return NextResponse.json(order.toObject())
   } catch {
     return NextResponse.json({ message: 'Server error' }, { status: 500 })
   }
