@@ -81,14 +81,22 @@ export default function HomeHero({ title, subtitle }: Props) {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 1.2 }}
-          className="mt-16 flex justify-center"
+          transition={{ delay: 1.4 }}
+          className="mt-14 flex flex-col items-center gap-1"
         >
-          <motion.div
-            animate={{ y: [0, 8, 0] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-            className="w-px h-12 bg-gradient-to-b from-brand-gold to-transparent"
-          />
+          {[0, 1, 2].map((i) => (
+            <motion.svg
+              key={i}
+              width="20"
+              height="12"
+              viewBox="0 0 20 12"
+              fill="none"
+              animate={{ opacity: [0.2, 1, 0.2] }}
+              transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2, ease: 'easeInOut' }}
+            >
+              <path d="M1 1L10 10L19 1" stroke="#C9A84C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </motion.svg>
+          ))}
         </motion.div>
       </div>
 
