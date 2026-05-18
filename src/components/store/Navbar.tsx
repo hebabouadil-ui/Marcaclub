@@ -44,15 +44,17 @@ export default function Navbar() {
   return (
     <>
       <nav
-        className={`transition-all duration-300 ${
-          scrolled ? 'bg-brand-black/95 backdrop-blur-md shadow-lg' : 'bg-brand-black'
+        className={`transition-all duration-300 border-b ${
+          scrolled
+            ? 'bg-brand-black/95 backdrop-blur-md border-white/10'
+            : 'bg-brand-black border-white/5'
         }`}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-3 items-center h-16 md:h-20">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16 md:h-18">
             {/* Left — logo */}
-            <Link href="/" className="flex flex-col leading-none">
-              <span className="text-brand-gold font-display font-bold text-xl md:text-2xl tracking-widest uppercase">
+            <Link href="/" className="flex flex-col leading-none flex-shrink-0">
+              <span className="text-brand-gold font-display font-bold text-xl tracking-widest uppercase">
                 MARCACLUB
               </span>
               <span className="text-brand-white/40 text-[8px] tracking-[0.3em] uppercase">
@@ -60,13 +62,13 @@ export default function Navbar() {
               </span>
             </Link>
 
-            {/* Center — nav links */}
-            <div className="hidden md:flex items-center justify-center gap-10">
+            {/* Center — nav links absolutely centered */}
+            <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-12">
               {links.map((l) => (
                 <Link
                   key={l.href}
                   href={l.href}
-                  className="text-brand-white/70 hover:text-brand-gold text-xs tracking-[0.2em] uppercase transition-colors duration-200"
+                  className="text-brand-white/60 hover:text-brand-gold text-[11px] tracking-[0.25em] uppercase transition-colors duration-200"
                 >
                   {l.label}
                 </Link>
@@ -74,7 +76,7 @@ export default function Navbar() {
             </div>
 
             {/* Right — icons */}
-            <div className="flex items-center justify-end gap-5">
+            <div className="flex items-center gap-5 flex-shrink-0">
               <a
                 href="https://instagram.com/marcaclub"
                 target="_blank"
