@@ -7,7 +7,8 @@ export async function GET() {
     await connectDB()
     const settings = await Settings.findOne().lean()
     return NextResponse.json(settings || {})
-  } catch {
+  } catch (err) {
+    console.error('GET /api/settings error:', err)
     return NextResponse.json({})
   }
 }
@@ -16,11 +17,13 @@ export async function PUT(req: NextRequest) {
   try {
     await connectDB()
     const body = await req.json()
-    await Settings.findOneAndUpdate(
-      {},
-      { $set: body },
-      { upsert: true }
-    )
+    const existing = await Settings.findOne()
+    if (existing) {
+      Object.assign(existing, body)
+      await existing.save()
+    } else {
+      await Settings.create(body)
+    }
     return NextResponse.json({ ok: true })
   } catch (err) {
     console.error('PUT /api/settings error:', err)
