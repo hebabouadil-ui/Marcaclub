@@ -28,7 +28,7 @@ export default function HomeHero({ title, subtitle }: Props) {
       />
 
       {/* Content */}
-      <div className="relative z-10 text-center px-4 max-w-5xl mx-auto py-24">
+      <div className="relative z-10 text-center px-4 max-w-5xl mx-auto py-12">
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
