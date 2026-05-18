@@ -11,6 +11,8 @@ export interface ISettings extends Document {
   tiktokUrl: string
   whatsappNumber: string
   emailNote: string
+  contactEmail: string
+  contactPhone: string
 }
 
 const SettingsSchema = new Schema<ISettings>({
@@ -30,6 +32,8 @@ const SettingsSchema = new Schema<ISettings>({
   tiktokUrl: { type: String, default: 'https://tiktok.com/@marcaclub' },
   whatsappNumber: { type: String, default: '+213000000000' },
   emailNote: { type: String, default: 'Notre équipe vous appellera pour confirmer votre commande. Pour toute question, contactez-nous sur WhatsApp au +212695504949.' },
+  contactEmail: { type: String, default: '' },
+  contactPhone: { type: String, default: '' },
 })
 
 export default mongoose.models.Settings ||

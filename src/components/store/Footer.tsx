@@ -9,39 +9,35 @@ function TikTokIcon() {
   )
 }
 
-export default function Footer() {
+interface FooterProps {
+  instagramUrl?: string
+  tiktokUrl?: string
+  contactEmail?: string
+  contactPhone?: string
+  whatsappNumber?: string
+}
+
+export default function Footer({ instagramUrl, tiktokUrl, contactEmail, contactPhone, whatsappNumber }: FooterProps) {
+  const ig = instagramUrl || 'https://instagram.com/marcaclub'
+  const tt = tiktokUrl || 'https://tiktok.com/@marcaclub'
+
   return (
     <footer className="bg-brand-black text-brand-white/70">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 py-16">
           <div className="col-span-2 md:col-span-1">
             <div className="mb-4">
-              <h3 className="text-brand-gold font-display font-bold text-xl tracking-widest uppercase">
-                MARCACLUB
-              </h3>
-              <p className="text-[9px] tracking-[0.3em] uppercase text-brand-white/30 mt-0.5">
-                Mode Exclusive
-              </p>
+              <h3 className="text-brand-gold font-display font-bold text-xl tracking-widest uppercase">MARCACLUB</h3>
+              <p className="text-[9px] tracking-[0.3em] uppercase text-brand-white/30 mt-0.5">Mode Exclusive</p>
             </div>
             <p className="text-sm leading-relaxed text-brand-white/50 max-w-xs">
-              Vêtements et accessoires exclusifs importés directement de Primark Espagne.
-              Drops limités, qualité premium.
+              Vêtements et accessoires exclusifs importés directement de Primark Espagne. Drops limités, qualité premium.
             </p>
             <div className="flex gap-3 mt-5">
-              <a
-                href="https://instagram.com/marcaclub"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2 border border-white/10 hover:border-brand-gold hover:text-brand-gold transition-colors"
-              >
+              <a href={ig} target="_blank" rel="noopener noreferrer" className="p-2 border border-white/10 hover:border-brand-gold hover:text-brand-gold transition-colors">
                 <InstagramIcon size={16} />
               </a>
-              <a
-                href="https://tiktok.com/@marcaclub"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2 border border-white/10 hover:border-brand-gold hover:text-brand-gold transition-colors"
-              >
+              <a href={tt} target="_blank" rel="noopener noreferrer" className="p-2 border border-white/10 hover:border-brand-gold hover:text-brand-gold transition-colors">
                 <TikTokIcon />
               </a>
             </div>
@@ -66,34 +62,49 @@ export default function Footer() {
           <div>
             <h4 className="text-[10px] tracking-[0.2em] uppercase text-brand-white/40 mb-4">Informations</h4>
             <ul className="space-y-3 text-sm">
-              {[
-                { href: '/#live', label: 'Live Sessions' },
-                { href: '/cart', label: 'Mon Panier' },
-              ].map((l) => (
-                <li key={l.href}>
-                  <Link href={l.href} className="hover:text-brand-gold transition-colors">{l.label}</Link>
-                </li>
-              ))}
+              <li><Link href="/#live" className="hover:text-brand-gold transition-colors">Live Sessions</Link></li>
+              <li><Link href="/cart" className="hover:text-brand-gold transition-colors">Mon Panier</Link></li>
+              <li className="text-brand-white/40 text-xs leading-relaxed pt-1">
+                Paiement à la livraison<br />Livraison 24-48h
+              </li>
             </ul>
           </div>
 
           <div>
-            <h4 className="text-[10px] tracking-[0.2em] uppercase text-brand-white/40 mb-4">Contact</h4>
+            <h4 className="text-[10px] tracking-[0.2em] uppercase text-brand-white/40 mb-4">Nous contacter</h4>
             <ul className="space-y-3 text-sm">
               <li>
-                <a href="https://instagram.com/marcaclub" target="_blank" rel="noopener noreferrer" className="hover:text-brand-gold transition-colors">
-                  @marcaclub
+                <a href={ig} target="_blank" rel="noopener noreferrer" className="hover:text-brand-gold transition-colors">
+                  Instagram @marcaclub
                 </a>
               </li>
-              <li className="text-brand-white/40 text-xs leading-relaxed">
-                Paiement à la livraison<br />Livraison 24-48h
-              </li>
+              {whatsappNumber && (
+                <li>
+                  <a href={`https://wa.me/${whatsappNumber.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-brand-gold transition-colors">
+                    WhatsApp {whatsappNumber}
+                  </a>
+                </li>
+              )}
+              {contactPhone && (
+                <li>
+                  <a href={`tel:${contactPhone}`} className="hover:text-brand-gold transition-colors">
+                    📞 {contactPhone}
+                  </a>
+                </li>
+              )}
+              {contactEmail && (
+                <li>
+                  <a href={`mailto:${contactEmail}`} className="hover:text-brand-gold transition-colors">
+                    ✉️ {contactEmail}
+                  </a>
+                </li>
+              )}
             </ul>
           </div>
         </div>
 
         <div className="border-t border-white/5 py-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-brand-white/30">
-          <p>© 2024 Marcaclub. Tous droits réservés.</p>
+          <p>© 2025 Marcaclub. Tous droits réservés.</p>
           <p>Mode importée d&apos;Espagne — Livraison dans tout le Maroc</p>
         </div>
       </div>

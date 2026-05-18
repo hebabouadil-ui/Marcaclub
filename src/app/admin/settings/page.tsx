@@ -12,6 +12,8 @@ interface SettingsForm {
   tiktokUrl: string
   whatsappNumber: string
   emailNote: string
+  contactEmail: string
+  contactPhone: string
 }
 
 const DEFAULT: SettingsForm = {
@@ -23,6 +25,8 @@ const DEFAULT: SettingsForm = {
   tiktokUrl: 'https://tiktok.com/@marcaclub',
   whatsappNumber: '+212695504949',
   emailNote: 'Notre équipe vous appellera pour confirmer votre commande. Pour toute question, contactez-nous sur WhatsApp au +212695504949.',
+  contactEmail: '',
+  contactPhone: '',
 }
 
 const inputClass = 'w-full bg-white/5 border border-white/10 text-white px-4 py-2.5 text-sm focus:outline-none focus:border-brand-gold'
@@ -108,6 +112,14 @@ export default function AdminSettingsPage() {
           <div>
             <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Numéro WhatsApp</label>
             <input className={inputClass} value={form.whatsappNumber} onChange={set('whatsappNumber')} placeholder="+212XXXXXXXXX" />
+          </div>
+          <div>
+            <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Téléphone contact</label>
+            <input className={inputClass} value={form.contactPhone} onChange={set('contactPhone')} placeholder="+212XXXXXXXXX" />
+          </div>
+          <div>
+            <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Email contact</label>
+            <input className={inputClass} value={form.contactEmail} onChange={set('contactEmail')} placeholder="contact@marcaclub.com" />
           </div>
         </div>
 

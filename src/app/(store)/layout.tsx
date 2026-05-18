@@ -39,6 +39,8 @@ export default async function StoreLayout({ children }: { children: React.ReactN
     instagramUrl: string
     tiktokUrl: string
     whatsappNumber: string
+    contactEmail: string
+    contactPhone: string
   }
 
   return (
@@ -67,7 +69,13 @@ export default async function StoreLayout({ children }: { children: React.ReactN
       />
 
       <main className="flex-1 -mt-px">{children}</main>
-      <Footer />
+      <Footer
+        instagramUrl={s.instagramUrl}
+        tiktokUrl={s.tiktokUrl}
+        whatsappNumber={s.whatsappNumber}
+        contactEmail={s.contactEmail}
+        contactPhone={s.contactPhone}
+      />
       <WhatsAppButton phone={s.whatsappNumber} />
     </div>
   )
