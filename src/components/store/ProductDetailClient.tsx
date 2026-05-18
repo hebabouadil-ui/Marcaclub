@@ -65,7 +65,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
 
   return (
     <div className="min-h-screen">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-xs tracking-widest uppercase text-brand-gray mb-8">
           <Link href="/" className="hover:text-brand-black transition-colors">Accueil</Link>
@@ -75,10 +75,10 @@ export default function ProductDetailClient({ product }: { product: Product }) {
           <span className="text-brand-black truncate max-w-[160px]">{product.name}</span>
         </div>
 
-        <div className="grid md:grid-cols-[280px_1fr] gap-6 lg:gap-10 items-start">
+        <div className="grid md:grid-cols-[1fr_420px] gap-8 lg:gap-12 items-start">
           {/* Images */}
           <div className="space-y-3">
-            <div className="relative overflow-hidden bg-brand-light-gray w-full max-w-[280px] mx-auto md:max-w-none" style={{ paddingBottom: '110%' }}>
+            <div className="relative overflow-hidden bg-brand-light-gray w-full" style={{ paddingBottom: '120%' }}>
               <AnimatePresence initial={false} custom={dir}>
                 <motion.div
                   key={imgIdx}
