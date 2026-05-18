@@ -124,7 +124,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                       alt={product.name}
                       width={800}
                       height={1000}
-                      className="w-full h-auto block transition-transform duration-500 ease-out group-hover:scale-110"
+                      className="w-full h-auto block md:max-h-[55vh] md:object-cover md:object-top transition-transform duration-500 ease-out group-hover:scale-110"
                       sizes="(max-width: 768px) 100vw, 50vw"
                       quality={90}
                       priority
