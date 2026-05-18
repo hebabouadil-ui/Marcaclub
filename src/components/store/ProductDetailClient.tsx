@@ -64,7 +64,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
   }
 
   return (
-    <div className="pt-20 min-h-screen">
+    <div className="min-h-screen">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-xs tracking-widest uppercase text-brand-gray mb-8">

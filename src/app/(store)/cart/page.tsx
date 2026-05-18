@@ -10,7 +10,7 @@ export default function CartPage() {
 
   if (items.length === 0) {
     return (
-      <div className="pt-20 min-h-screen flex flex-col items-center justify-center text-center px-4">
+      <div className="min-h-screen flex flex-col items-center justify-center text-center px-4">
         <ShoppingBag size={48} className="text-brand-light-gray mb-6" strokeWidth={1} />
         <h1 className="font-display text-3xl text-brand-black mb-3">Votre panier est vide</h1>
         <p className="text-brand-gray text-sm mb-8">Découvrez notre collection et ajoutez vos pièces favorites.</p>
@@ -25,7 +25,7 @@ export default function CartPage() {
   }
 
   return (
-    <div className="pt-20 min-h-screen">
+    <div className="min-h-screen">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
         <h1 className="font-display text-3xl md:text-4xl text-brand-black mb-10">Mon Panier</h1>
 

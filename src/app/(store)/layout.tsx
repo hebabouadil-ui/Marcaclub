@@ -32,22 +32,42 @@ async function getSettings() {
 
 export default async function StoreLayout({ children }: { children: React.ReactNode }) {
   const settings = await getSettings()
+  const s = settings as {
+    liveStatus: boolean
+    announcementActive: boolean
+    announcementBar: string
+    instagramUrl: string
+    tiktokUrl: string
+    whatsappNumber: string
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
-      <AnnouncementBar
-        text={(settings as { announcementBar: string }).announcementBar}
-        active={(settings as { announcementActive: boolean }).announcementActive}
+      {/* Fixed header: announcement + live + navbar stacked together */}
+      <div className="fixed top-0 left-0 right-0 z-50 flex flex-col">
+        <AnnouncementBar text={s.announcementBar} active={s.announcementActive} />
+        <LiveBanner
+          liveStatus={s.liveStatus}
+          instagramUrl={s.instagramUrl}
+          tiktokUrl={s.tiktokUrl}
+        />
+        <Navbar />
+      </div>
+
+      {/* Spacer so content isn't hidden under fixed header */}
+      <div
+        style={{
+          height: `${
+            (s.announcementActive ? 32 : 0) +
+            (s.liveStatus ? 52 : 0) +
+            80
+          }px`,
+        }}
       />
-      <LiveBanner
-        liveStatus={(settings as { liveStatus: boolean }).liveStatus}
-        instagramUrl={(settings as { instagramUrl: string }).instagramUrl}
-        tiktokUrl={(settings as { tiktokUrl: string }).tiktokUrl}
-      />
-      <Navbar />
+
       <main className="flex-1">{children}</main>
       <Footer />
-      <WhatsAppButton phone={(settings as { whatsappNumber: string }).whatsappNumber} />
+      <WhatsAppButton phone={s.whatsappNumber} />
     </div>
   )
 }

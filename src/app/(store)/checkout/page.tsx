@@ -27,7 +27,7 @@ export default function CheckoutPage() {
 
   if (items.length === 0) {
     return (
-      <div className="pt-20 min-h-screen flex items-center justify-center text-center px-4">
+      <div className="min-h-screen flex items-center justify-center text-center px-4">
         <div>
           <h1 className="font-display text-3xl mb-4">Panier vide</h1>
           <Link href="/products" className="text-brand-gold underline underline-offset-4">
@@ -74,7 +74,7 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="pt-20 min-h-screen">
+    <div className="min-h-screen">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
         <Link
           href="/cart"

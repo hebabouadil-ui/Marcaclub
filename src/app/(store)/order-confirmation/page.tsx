@@ -11,7 +11,7 @@ function ConfirmationContent() {
   const orderNumber = params.get('order')
 
   return (
-    <div className="pt-20 min-h-screen flex items-center justify-center px-4">
+    <div className="min-h-screen flex items-center justify-center px-4">
       <div className="max-w-xl w-full text-center">
         <motion.div
           initial={{ scale: 0 }}
