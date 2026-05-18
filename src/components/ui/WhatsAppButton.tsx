@@ -17,7 +17,7 @@ export default function WhatsAppButton({ phone }: Props) {
       transition={{ delay: 1, type: 'spring' }}
       whileHover={{ scale: 1.1 }}
       whileTap={{ scale: 0.95 }}
-      className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-[#25D366] rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow"
+      className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-50 w-12 h-12 md:w-14 md:h-14 bg-[#25D366] rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow"
       aria-label="Contact WhatsApp"
     >
       <svg viewBox="0 0 24 24" fill="white" className="w-7 h-7">

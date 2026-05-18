@@ -18,7 +18,7 @@ export default function LiveBanner({ liveStatus, liveUrl, instagramUrl }: Props)
       animate={{ opacity: 1, y: 0 }}
       className="bg-gradient-to-r from-red-600 via-red-500 to-red-600 text-white"
     >
-      <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-center gap-4">
+      <div className="max-w-7xl mx-auto px-4 h-12 flex items-center justify-center gap-4">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 bg-white rounded-full live-dot" />
           <span className="text-sm font-semibold tracking-widest uppercase">

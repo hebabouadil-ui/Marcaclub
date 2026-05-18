@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { ShoppingBag, Menu, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useCartStore } from '@/lib/store/cartStore'
@@ -9,14 +10,30 @@ import InstagramIcon from '@/components/ui/InstagramIcon'
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const pathname = usePathname()
   const items = useCartStore((s) => s.items)
   const cartCount = items.reduce((sum, i) => sum + i.quantity, 0)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)
-    window.addEventListener('scroll', onScroll)
+    window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
+
+  // Close menu on route change
+  useEffect(() => {
+    setMenuOpen(false)
+  }, [pathname])
+
+  // Prevent body scroll when menu is open
+  useEffect(() => {
+    if (menuOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [menuOpen])
 
   const links = [
     { href: '/products', label: 'Collection' },
@@ -26,10 +43,7 @@ export default function Navbar() {
 
   return (
     <>
-      <motion.nav
-        initial={{ y: -80 }}
-        animate={{ y: 0 }}
-        transition={{ duration: 0.5, ease: 'easeOut' }}
+      <nav
         className={`transition-all duration-300 ${
           scrolled ? 'bg-brand-black/95 backdrop-blur-md shadow-lg' : 'bg-brand-black'
         }`}
@@ -87,31 +101,33 @@ export default function Navbar() {
 
               <button
                 onClick={() => setMenuOpen(!menuOpen)}
-                className="md:hidden text-brand-white hover:text-brand-gold transition-colors"
+                className="md:hidden text-brand-white hover:text-brand-gold transition-colors p-1"
+                aria-label="Menu"
               >
                 {menuOpen ? <X size={22} /> : <Menu size={22} />}
               </button>
             </div>
           </div>
         </div>
-      </motion.nav>
+      </nav>
 
+      {/* Mobile menu — rendered as full-screen overlay, outside the fixed header flow */}
       <AnimatePresence>
         {menuOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="bg-brand-black border-t border-white/10"
+            className="fixed inset-0 z-40 bg-brand-black flex flex-col pt-24 px-8 md:hidden"
           >
-            <div className="flex flex-col py-6 px-6 gap-6">
+            <div className="flex flex-col gap-8">
               {links.map((l) => (
                 <Link
                   key={l.href}
                   href={l.href}
                   onClick={() => setMenuOpen(false)}
-                  className="text-brand-white/80 hover:text-brand-gold text-sm tracking-widest uppercase transition-colors"
+                  className="text-brand-white/80 hover:text-brand-gold text-lg tracking-widest uppercase transition-colors border-b border-white/10 pb-4"
                 >
                   {l.label}
                 </Link>
@@ -120,9 +136,9 @@ export default function Navbar() {
                 href="https://instagram.com/marcaclub"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 text-brand-white/60 hover:text-brand-gold text-sm tracking-widest uppercase transition-colors"
+                className="flex items-center gap-2 text-brand-white/60 hover:text-brand-gold text-lg tracking-widest uppercase transition-colors"
               >
-                <InstagramIcon size={16} />
+                <InstagramIcon size={18} />
                 Instagram
               </a>
             </div>

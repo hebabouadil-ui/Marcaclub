@@ -10,7 +10,10 @@ interface Props {
 
 export default function HomeHero({ title, subtitle }: Props) {
   return (
-    <section className="relative bg-brand-black flex items-center justify-center overflow-hidden" style={{ minHeight: '100dvh' }}>
+    <section
+      className="relative bg-brand-black flex items-center justify-center overflow-hidden"
+      style={{ minHeight: '100svh' }}
+    >
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-brand-black via-brand-green/20 to-brand-black" />
 
@@ -25,7 +28,7 @@ export default function HomeHero({ title, subtitle }: Props) {
       />
 
       {/* Content */}
-      <div className="relative z-10 text-center px-4 max-w-5xl mx-auto">
+      <div className="relative z-10 text-center px-4 max-w-5xl mx-auto py-24">
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -79,12 +82,12 @@ export default function HomeHero({ title, subtitle }: Props) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.2 }}
-          className="absolute bottom-8 left-1/2 -translate-x-1/2"
+          className="mt-16 flex justify-center"
         >
           <motion.div
             animate={{ y: [0, 8, 0] }}
             transition={{ duration: 1.5, repeat: Infinity }}
-            className="w-px h-12 bg-gradient-to-b from-brand-gold to-transparent mx-auto"
+            className="w-px h-12 bg-gradient-to-b from-brand-gold to-transparent"
           />
         </motion.div>
       </div>

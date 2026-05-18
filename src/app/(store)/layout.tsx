@@ -43,9 +43,22 @@ export default async function StoreLayout({ children }: { children: React.ReactN
     contactPhone: string
   }
 
+  // navbar is always h-16 (64px) on mobile, h-20 (80px) on md+
+  // announcement bar is 36px when active
+  // live banner is 48px when active
+  const spacerMobile =
+    (s.announcementActive ? 36 : 0) +
+    (s.liveStatus ? 48 : 0) +
+    64
+
+  const spacerDesktop =
+    (s.announcementActive ? 36 : 0) +
+    (s.liveStatus ? 48 : 0) +
+    80
+
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Fixed header: announcement + live + navbar stacked together */}
+      {/* Fixed header */}
       <div className="fixed top-0 left-0 right-0 z-50 flex flex-col">
         <AnnouncementBar text={s.announcementBar} active={s.announcementActive} />
         <LiveBanner
@@ -56,19 +69,21 @@ export default async function StoreLayout({ children }: { children: React.ReactN
         <Navbar />
       </div>
 
-      {/* Spacer so content isn't hidden under fixed header */}
+      {/* Spacer that matches the fixed header height exactly */}
       <div
-        className="bg-brand-black"
         style={{
-          height: `${
-            (s.announcementActive ? 32 : 0) +
-            (s.liveStatus ? 56 : 0) +
-            80
-          }px`,
+          height: `${spacerMobile}px`,
         }}
+        className="md:hidden bg-brand-black"
+      />
+      <div
+        style={{
+          height: `${spacerDesktop}px`,
+        }}
+        className="hidden md:block bg-brand-black"
       />
 
-      <main className="flex-1 -mt-px">{children}</main>
+      <main className="flex-1">{children}</main>
       <Footer
         instagramUrl={s.instagramUrl}
         tiktokUrl={s.tiktokUrl}
