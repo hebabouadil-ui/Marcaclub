@@ -6,7 +6,7 @@ const categories = [
   { label: 'Femme', value: 'femme', description: 'Robes, tops, pantalons' },
   { label: 'Homme', value: 'homme', description: 'T-shirts, jeans, vestes' },
   { label: 'Accessoires', value: 'accessoires', description: 'Sacs, bijoux, ceintures' },
-  { label: 'Nouveautés', value: '', description: 'Derniers arrivages' },
+  { label: 'Nouveautés', value: 'featured=true', description: 'Derniers arrivages' },
 ]
 
 export default function HomeCategories() {
@@ -33,7 +33,7 @@ export default function HomeCategories() {
               transition={{ delay: i * 0.1 }}
             >
               <Link
-                href={`/products${cat.value ? `?category=${cat.value}` : ''}`}
+                href={`/products${cat.value ? `?${cat.value.includes('=') ? cat.value : `category=${cat.value}`}` : ''}`}
                 className="group block bg-brand-light-gray hover:bg-brand-black transition-colors duration-300 p-8 md:p-10 text-center"
               >
                 <p className="font-display text-xl md:text-2xl text-brand-black group-hover:text-brand-gold transition-colors mb-1">

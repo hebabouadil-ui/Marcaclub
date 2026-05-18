@@ -27,6 +27,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   try {
     await connectDB()
     const { status } = await req.json()
+    const VALID_STATUSES = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled']
+    if (!VALID_STATUSES.includes(status)) {
+      return NextResponse.json({ message: 'Statut invalide' }, { status: 400 })
+    }
     const order = await Order.findById(params.id)
     if (!order) return NextResponse.json({ message: 'Not found' }, { status: 404 })
 

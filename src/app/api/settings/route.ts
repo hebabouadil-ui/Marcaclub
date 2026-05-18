@@ -24,9 +24,13 @@ export async function PUT(req: NextRequest) {
   try {
     await connectDB()
     const body = await req.json()
+    const ALLOWED = ['heroTitle','heroSubtitle','announcementBar','announcementActive',
+      'instagramUrl','tiktokUrl','whatsappNumber','emailNote','contactEmail','contactPhone',
+      'liveStatus','liveUrl']
+    const sanitized = Object.fromEntries(Object.entries(body).filter(([k]) => ALLOWED.includes(k)))
     const existing = await Settings.findOne()
     if (existing) {
-      Object.assign(existing, body)
+      Object.assign(existing, sanitized)
       await existing.save()
     } else {
       await Settings.create(body)

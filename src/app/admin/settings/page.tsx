@@ -53,6 +53,7 @@ export default function AdminSettingsPage() {
     const res = await fetch('/api/settings', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(form),
     })
     setSaving(false)

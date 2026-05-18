@@ -7,9 +7,11 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/authOptions'
 export async function GET(req: NextRequest) {
   try {
     await connectDB()
+    const session = await getServerSession(authOptions)
     const { searchParams } = new URL(req.url)
     const query: Record<string, unknown> = {}
-    if (!searchParams.get('all')) query.active = true
+    // Only admins can request inactive products
+    if (!searchParams.get('all') || !session) query.active = true
     if (searchParams.get('category')) query.category = searchParams.get('category')
     if (searchParams.get('featured')) query.featured = true
     if (searchParams.get('q')) query.name = { $regex: searchParams.get('q'), $options: 'i' }

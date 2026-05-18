@@ -25,6 +25,7 @@ export default function AdminLivePage() {
     const res = await fetch('/api/live', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ liveStatus: status, liveUrl }),
     })
     setSaving(false)

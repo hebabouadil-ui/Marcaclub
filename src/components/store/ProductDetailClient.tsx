@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ShoppingBag, Check, ChevronLeft, ChevronRight, ArrowRight, ShoppingCart } from 'lucide-react'
@@ -36,6 +36,13 @@ export default function ProductDetailClient({ product }: { product: Product }) {
   const [added, setAdded] = useState(false)
   const addItem = useCartStore((s) => s.addItem)
   const router = useRouter()
+
+  // Reset state when navigating between products
+  useEffect(() => {
+    setAdded(false)
+    setSelectedSize('')
+    setQty(1)
+  }, [product._id])
 
   const selectedSizeEntry = product.sizes.find((s) => s.size === selectedSize)
   const selectedStock = selectedSizeEntry?.stock ?? 0
@@ -221,7 +228,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                     {product.sizes.map(({ size: s, stock: sStock }) => (
                       <button
                         key={s}
-                        onClick={() => { setSelectedSize(s); setQty(1) }}
+                        onClick={() => { setSelectedSize(s); setQty(1); setAdded(false) }}
                         disabled={sStock === 0}
                         className={`w-11 h-11 text-sm border-2 transition-all duration-200 relative ${
                           sStock === 0
@@ -243,7 +250,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                 <div className="flex items-center border border-brand-light-gray w-fit">
                   <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-10 h-10 flex items-center justify-center text-brand-gray hover:text-brand-black hover:bg-brand-light-gray transition-colors">−</button>
                   <span className="w-10 h-10 flex items-center justify-center text-sm font-medium">{qty}</span>
-                  <button onClick={() => setQty((q) => Math.min(selectedStock || 1, q + 1))} className="w-10 h-10 flex items-center justify-center text-brand-gray hover:text-brand-black hover:bg-brand-light-gray transition-colors">+</button>
+                  <button onClick={() => setQty((q) => selectedSize ? Math.min(selectedStock, q + 1) : q + 1)} className="w-10 h-10 flex items-center justify-center text-brand-gray hover:text-brand-black hover:bg-brand-light-gray transition-colors">+</button>
                 </div>
               </div>
 

@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { Download, TrendingUp, ShoppingBag, XCircle } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 interface OrderRow {
   _id: string
@@ -38,10 +39,11 @@ export default function ReportsPage() {
 
   useEffect(() => {
     setLoading(true)
-    fetch(`/api/orders?month=${month}&year=${year}`, { credentials: 'include' })
+    fetch('/api/orders', { credentials: 'include' })
       .then((r) => r.json())
-      .then((data: OrderRow[]) => {
-        const filtered = data.filter((o) => {
+      .then((data: unknown) => {
+        if (!Array.isArray(data)) return
+        const filtered = (data as OrderRow[]).filter((o) => {
           const d = new Date(o.createdAt)
           return d.getMonth() + 1 === month && d.getFullYear() === year
         })
@@ -57,6 +59,7 @@ export default function ReportsPage() {
   const handleExport = async () => {
     setDownloading(true)
     const res = await fetch(`/api/reports?month=${month}&year=${year}`, { credentials: 'include' })
+    if (!res.ok) { toast.error('Erreur lors de l\'export'); setDownloading(false); return }
     const blob = await res.blob()
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
