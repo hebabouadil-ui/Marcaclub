@@ -97,6 +97,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                       fill
                       className="object-cover object-top"
                       sizes="(max-width: 768px) 100vw, 50vw"
+                      quality={90}
                       priority
                     />
                   ) : (
