@@ -67,7 +67,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
     setAdded(true)
   }
 
-  const handleGoToCart = () => {
+  const handleGoToCheckout = () => {
     if (!selectedSize) { toast.error('Veuillez choisir une taille'); return }
     if (selectedStock === 0) { toast.error('Taille épuisée'); return }
     if (!added) {
@@ -81,7 +81,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
         stock: selectedStock,
       })
     }
-    router.push('/cart')
+    router.push('/checkout')
   }
 
   return (
@@ -269,11 +269,11 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                     className="flex flex-col gap-3"
                   >
                     <button
-                      onClick={handleGoToCart}
+                      onClick={handleGoToCheckout}
                       className="w-full flex items-center justify-center gap-3 py-4 text-sm tracking-[0.2em] uppercase font-semibold bg-brand-gold text-brand-black hover:bg-brand-black hover:text-brand-white transition-all duration-300"
                     >
                       <ShoppingCart size={18} />
-                      Aller au panier
+                      Commander maintenant
                     </button>
                     <button
                       onClick={() => setAdded(false)}
