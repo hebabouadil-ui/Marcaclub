@@ -106,7 +106,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
         <div className="grid md:grid-cols-[1fr_420px] gap-8 lg:gap-12 items-start">
           {/* Images */}
           <div className="space-y-3">
-            <div className="relative overflow-hidden bg-brand-light-gray w-full group cursor-zoom-in">
+            <div className="relative overflow-hidden bg-brand-light-gray w-full md:max-w-[420px] group cursor-zoom-in">
               <AnimatePresence initial={false} custom={dir}>
                 <motion.div
                   key={imgIdx}
@@ -124,7 +124,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                       alt={product.name}
                       width={800}
                       height={1000}
-                      className="w-full h-auto block md:max-h-[55vh] md:object-cover md:object-top transition-transform duration-500 ease-out group-hover:scale-110"
+                      className="w-full h-auto block transition-transform duration-500 ease-out group-hover:scale-110"
                       sizes="(max-width: 768px) 100vw, 50vw"
                       quality={90}
                       priority
