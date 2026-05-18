@@ -9,7 +9,8 @@ import InstagramIcon from '@/components/ui/InstagramIcon'
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-  const count = useCartStore((s) => s.count)
+  const items = useCartStore((s) => s.items)
+  const cartCount = items.reduce((sum, i) => sum + i.quantity, 0)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)
@@ -68,15 +69,20 @@ export default function Navbar() {
 
               <Link href="/cart" className="relative">
                 <ShoppingBag size={20} className="text-brand-white hover:text-brand-gold transition-colors" />
-                {count() > 0 && (
-                  <motion.span
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="absolute -top-2 -right-2 bg-brand-gold text-brand-black text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center"
-                  >
-                    {count()}
-                  </motion.span>
-                )}
+                <AnimatePresence>
+                  {cartCount > 0 && (
+                    <motion.span
+                      key={cartCount}
+                      initial={{ scale: 0, y: -4 }}
+                      animate={{ scale: 1, y: 0 }}
+                      exit={{ scale: 0 }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+                      className="absolute -top-2 -right-2 bg-brand-gold text-brand-black text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center"
+                    >
+                      {cartCount}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </Link>
 
               <button
