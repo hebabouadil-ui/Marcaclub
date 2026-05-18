@@ -39,7 +39,7 @@ export default function AdminProductsPage() {
     setLoading(true)
     fetch('/api/products', { credentials: 'include' })
       .then((r) => r.json())
-      .then(setProducts)
+      .then((data) => { if (Array.isArray(data)) setProducts(data) })
       .finally(() => setLoading(false))
   }
   useEffect(load, [])

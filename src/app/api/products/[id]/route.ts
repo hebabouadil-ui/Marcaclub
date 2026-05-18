@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/db'
 import Product from '@/lib/models/Product'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/admin/auth/[...nextauth]/authOptions'
+import { authOptions } from '@/app/api/auth/[...nextauth]/authOptions'
 
 export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
   try {

@@ -37,7 +37,7 @@ export default function AdminOrdersPage() {
   useEffect(() => {
     fetch('/api/orders', { credentials: 'include' })
       .then((r) => r.json())
-      .then((data) => {
+      .then((data) => { if (!Array.isArray(data)) return;
         setOrders(data)
         setFiltered(data)
       })
