@@ -4,12 +4,18 @@ import Product from '@/lib/models/Product'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/authOptions'
 
+function normalizeSizes(sizes: unknown[]): { size: string; stock: number }[] {
+  return sizes.map((s) => typeof s === 'string' ? { size: s, stock: 0 } : (s as { size: string; stock: number }))
+}
+
 export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
   try {
     await connectDB()
     const product = await Product.findById(params.id).lean()
     if (!product) return NextResponse.json({ message: 'Not found' }, { status: 404 })
-    return NextResponse.json(product)
+    const p = product as Record<string, unknown>
+    if (Array.isArray(p.sizes)) p.sizes = normalizeSizes(p.sizes as unknown[])
+    return NextResponse.json(p)
   } catch {
     return NextResponse.json({ message: 'Server error' }, { status: 500 })
   }
@@ -24,13 +30,16 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const body = await req.json()
     const product = await Product.findById(params.id)
     if (!product) return NextResponse.json({ message: 'Not found' }, { status: 404 })
-    const fields = ['name', 'price', 'originalPrice', 'category', 'description', 'images', 'sizes', 'featured', 'active']
+    const fields = ['name', 'price', 'originalPrice', 'category', 'description', 'images', 'featured', 'active']
     for (const field of fields) {
       if (body[field] !== undefined) (product as Record<string, unknown>)[field] = body[field]
     }
-    product.stock = Array.isArray(product.sizes)
-      ? product.sizes.reduce((s: number, i: { stock: number }) => s + (i.stock || 0), 0)
-      : 0
+    // Normalize sizes: migrate old string[] format to {size, stock}[]
+    const rawSizes: unknown[] = Array.isArray(body.sizes) ? body.sizes : product.sizes
+    product.sizes = rawSizes.map((s: unknown) =>
+      typeof s === 'string' ? { size: s, stock: 0 } : (s as { size: string; stock: number })
+    )
+    product.stock = product.sizes.reduce((sum, i) => sum + (i.stock || 0), 0)
     await product.save()
     return NextResponse.json(product.toObject())
   } catch (err) {

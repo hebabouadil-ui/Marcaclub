@@ -14,7 +14,13 @@ export async function GET(req: NextRequest) {
     if (searchParams.get('featured')) query.featured = true
     if (searchParams.get('q')) query.name = { $regex: searchParams.get('q'), $options: 'i' }
     const products = await Product.find(query).sort({ createdAt: -1 }).lean()
-    return NextResponse.json(products)
+    const normalized = products.map((p) => ({
+      ...p,
+      sizes: (p.sizes as unknown[]).map((s) =>
+        typeof s === 'string' ? { size: s, stock: 0 } : s
+      ),
+    }))
+    return NextResponse.json(normalized)
   } catch (err) {
     console.error('GET /api/products error:', err)
     return NextResponse.json({ message: String(err) }, { status: 500 })
