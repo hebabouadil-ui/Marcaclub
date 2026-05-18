@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/db'
 import Settings from '@/lib/models/Settings'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/app/api/auth/[...nextauth]/authOptions'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
@@ -13,9 +17,10 @@ export async function GET() {
   }
 }
 
-export const dynamic = 'force-dynamic'
-
 export async function PUT(req: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+
   try {
     await connectDB()
     const body = await req.json()
@@ -29,6 +34,6 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ ok: true })
   } catch (err) {
     console.error('PUT /api/settings error:', err)
-    return NextResponse.json({ message: String(err) }, { status: 500 })
+    return NextResponse.json({ message: 'Server error' }, { status: 500 })
   }
 }

@@ -44,6 +44,15 @@ export default function CheckoutPage() {
       toast.error('Veuillez remplir tous les champs obligatoires')
       return
     }
+    const phoneDigits = form.phone.replace(/\D/g, '')
+    if (phoneDigits.length < 9 || phoneDigits.length > 15) {
+      toast.error('Numéro de téléphone invalide')
+      return
+    }
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      toast.error('Adresse email invalide')
+      return
+    }
     setLoading(true)
     try {
       const res = await fetch('/api/orders', {

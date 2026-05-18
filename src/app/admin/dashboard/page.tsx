@@ -61,6 +61,7 @@ export default function DashboardPage() {
     await fetch('/api/live', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ liveStatus: newStatus }),
     })
   }
@@ -83,6 +84,13 @@ export default function DashboardPage() {
     shipped: 'text-purple-400 bg-purple-400/10',
     delivered: 'text-green-400 bg-green-400/10',
     cancelled: 'text-red-400 bg-red-400/10',
+  }
+  const statusLabels: Record<string, string> = {
+    pending: 'En attente',
+    confirmed: 'Confirmé',
+    shipped: 'Expédié',
+    delivered: 'Livré',
+    cancelled: 'Annulé',
   }
 
   return (
@@ -157,7 +165,7 @@ export default function DashboardPage() {
                 <div className="text-right">
                   <p className="text-white text-sm">{order.total.toFixed(0)} MAD</p>
                   <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider ${statusColors[order.status] || 'text-white/40'}`}>
-                    {order.status}
+                    {statusLabels[order.status] || order.status}
                   </span>
                 </div>
               </div>
