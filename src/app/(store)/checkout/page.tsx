@@ -179,7 +179,7 @@ export default function CheckoutPage() {
                     className="flex gap-3 mb-4 pb-4 border-b border-brand-beige last:border-0"
                   >
                     {/* Image */}
-                    <div className="relative w-14 h-18 flex-shrink-0 bg-white overflow-hidden" style={{ height: '72px' }}>
+                    <div className="relative w-14 flex-shrink-0 bg-white overflow-hidden" style={{ height: '72px' }}>
                       {item.image ? (
                         <Image src={item.image} alt={item.name} fill className="object-cover object-top" sizes="56px" />
                       ) : (

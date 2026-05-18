@@ -57,6 +57,7 @@ const OrderSchema = new Schema<IOrder>(
       default: 'pending',
     },
     flagged: { type: Boolean, default: false },
+    flagSeverity: { type: String, enum: ['low', 'medium', 'high'] },
     flagReason: { type: String },
     flaggedOrderNumbers: [{ type: String }],
     notes: { type: String },

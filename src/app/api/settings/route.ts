@@ -33,7 +33,7 @@ export async function PUT(req: NextRequest) {
       Object.assign(existing, sanitized)
       await existing.save()
     } else {
-      await Settings.create(body)
+      await Settings.create(sanitized)
     }
     return NextResponse.json({ ok: true })
   } catch (err) {

@@ -17,6 +17,15 @@ export async function POST(req: NextRequest) {
     const file = formData.get('file') as File
     if (!file) return NextResponse.json({ message: 'No file provided' }, { status: 400 })
 
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      return NextResponse.json({ message: 'Type de fichier non supporté. Utilisez JPEG, PNG ou WEBP.' }, { status: 400 })
+    }
+    const MAX_SIZE = 10 * 1024 * 1024 // 10 MB
+    if (file.size > MAX_SIZE) {
+      return NextResponse.json({ message: 'Fichier trop volumineux (max 10 Mo)' }, { status: 400 })
+    }
+
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
     const base64 = `data:${file.type};base64,${buffer.toString('base64')}`

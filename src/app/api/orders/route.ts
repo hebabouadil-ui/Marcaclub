@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
 
     const blockedBy: string[] = []
     for (const entry of blocklistEntries) {
-      if (entry.phone && entry.phone === phone.slice(-entry.phone.length)) blockedBy.push('téléphone blacklisté')
+      if (entry.phone && phone.slice(-9) === entry.phone.replace(/\D/g, '').slice(-9)) blockedBy.push('téléphone blacklisté')
       else if (entry.name && entry.name.toLowerCase() === nameTrimmed.toLowerCase()) blockedBy.push('nom blacklisté')
       else if (entry.address && addressTrimmed && addressTrimmed.includes(entry.address.toLowerCase())) blockedBy.push('adresse blacklistée')
     }

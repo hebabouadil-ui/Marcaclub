@@ -51,7 +51,7 @@ export default function Navbar() {
         }`}
       >
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 md:h-18">
+          <div className="flex items-center justify-between h-16 md:h-20">
             {/* Left — logo */}
             <Link href="/" className="flex flex-col leading-none flex-shrink-0">
               <span className="text-brand-gold font-display font-bold text-xl tracking-widest uppercase">
