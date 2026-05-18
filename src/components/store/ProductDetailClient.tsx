@@ -21,10 +21,12 @@ interface Product {
 }
 
 const swipeVariants = {
-  enter: (dir: number) => ({ x: dir > 0 ? 400 : -400, opacity: 0, scale: 1.05 }),
-  center: { x: 0, opacity: 1, scale: 1, transition: { duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] } },
-  exit: (dir: number) => ({ x: dir > 0 ? -200 : 200, opacity: 0, scale: 0.92, transition: { duration: 0.3, ease: [0.55, 0, 1, 0.45] } }),
+  enter: (dir: number) => ({ x: dir > 0 ? '100%' : '-100%', opacity: 0 }),
+  center: { x: 0, opacity: 1 },
+  exit: (dir: number) => ({ x: dir > 0 ? '-100%' : '100%', opacity: 0 }),
 }
+
+const swipeTransition = { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }
 
 export default function ProductDetailClient({ product }: { product: Product }) {
   const [[imgIdx, dir], setPage] = useState([0, 0])
@@ -73,11 +75,11 @@ export default function ProductDetailClient({ product }: { product: Product }) {
           <span className="text-brand-black truncate max-w-[160px]">{product.name}</span>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 lg:gap-12 items-start">
+        <div className="grid md:grid-cols-[380px_1fr] gap-8 lg:gap-14 items-start">
           {/* Images */}
           <div className="space-y-3">
-            <div className="relative overflow-hidden bg-brand-light-gray md:max-w-sm mx-auto w-full" style={{ paddingBottom: '125%' }}>
-              <AnimatePresence initial={false} custom={dir} mode="popLayout">
+            <div className="relative overflow-hidden bg-brand-light-gray w-full" style={{ paddingBottom: '125%' }}>
+              <AnimatePresence initial={false} custom={dir}>
                 <motion.div
                   key={imgIdx}
                   custom={dir}
@@ -85,7 +87,8 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                   initial="enter"
                   animate="center"
                   exit="exit"
-                  className="absolute inset-0"
+                  transition={swipeTransition}
+                  className="absolute inset-0 will-change-transform"
                 >
                   {product.images[imgIdx] ? (
                     <Image
