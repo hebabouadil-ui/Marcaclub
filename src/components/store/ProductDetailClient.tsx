@@ -106,7 +106,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
         <div className="grid md:grid-cols-[1fr_420px] gap-8 lg:gap-12 items-start">
           {/* Images */}
           <div className="space-y-3">
-            <div className="relative overflow-hidden bg-brand-light-gray w-full pb-[120%] md:pb-0 md:h-[75vh]">
+            <div className="relative overflow-hidden bg-brand-light-gray w-full pb-[120%] md:pb-[90%]">
               <AnimatePresence initial={false} custom={dir}>
                 <motion.div
                   key={imgIdx}
@@ -123,7 +123,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                       src={product.images[imgIdx]}
                       alt={product.name}
                       fill
-                      className="object-cover object-top md:object-contain md:object-center"
+                      className="object-cover object-top"
                       sizes="(max-width: 768px) 100vw, 50vw"
                       quality={90}
                       priority
