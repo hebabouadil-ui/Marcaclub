@@ -90,6 +90,7 @@ export default function AdminProductsPage() {
     const method = editing ? 'PUT' : 'POST'
     const res = await fetch(url, {
       method,
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form),
     })
@@ -105,7 +106,7 @@ export default function AdminProductsPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Supprimer ce produit ?')) return
-    const res = await fetch(`/api/products/${id}`, { method: 'DELETE' })
+    const res = await fetch(`/api/products/${id}`, { method: 'DELETE', credentials: 'include' })
     if (res.ok) { toast.success('Produit supprimé'); load() }
     else toast.error('Erreur')
   }

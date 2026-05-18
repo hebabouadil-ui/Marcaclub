@@ -1,17 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/db'
 import Order from '@/lib/models/Order'
+import Product from '@/lib/models/Product'
 import Settings from '@/lib/models/Settings'
 import { generateOrderNumber } from '@/lib/utils/generateOrderNumber'
 import { sendOrderConfirmationEmail, sendAdminOrderNotification } from '@/lib/utils/email'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/app/api/auth/[...nextauth]/authOptions'
 
-export async function GET(req: NextRequest) {
+export async function GET() {
+  const session = await getServerSession(authOptions)
+  if (!session) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+
   try {
     await connectDB()
-    const { searchParams } = new URL(req.url)
-    const status = searchParams.get('status')
-    const query = status ? { status } : {}
-    const orders = await Order.find(query).sort({ createdAt: -1 }).lean()
+    const orders = await Order.find({}).sort({ createdAt: -1 }).lean()
     return NextResponse.json(orders)
   } catch (err) {
     console.error('GET /api/orders error:', err)
@@ -25,6 +28,18 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const orderNumber = generateOrderNumber()
     const order = await Order.create({ ...body, orderNumber })
+
+    // Decrement stock for each ordered item
+    if (Array.isArray(body.items)) {
+      await Promise.all(
+        body.items.map((item: { productId: string; quantity: number }) =>
+          Product.updateOne(
+            { _id: item.productId },
+            { $inc: { stock: -item.quantity } }
+          )
+        )
+      )
+    }
 
     const settings = await Settings.findOne().lean() as { emailNote?: string } | null
     const emailNote = settings?.emailNote
