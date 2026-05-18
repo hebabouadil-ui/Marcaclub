@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: 'Marcaclub — Mode Exclusive d\'Espagne',
   description:
     'Marcaclub — Vêtements et accessoires exclusifs importés de Primark Espagne. Drops limités, qualité premium.',
-  keywords: 'marcaclub, mode, vêtements, Primark, Espagne, algérie, livraison',
+  keywords: 'marcaclub, mode, vêtements, Primark, Espagne, maroc, livraison',
   openGraph: {
     title: 'Marcaclub',
     description: 'Mode exclusive importée d\'Espagne',

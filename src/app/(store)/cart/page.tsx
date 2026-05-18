@@ -60,7 +60,7 @@ export default function CartPage() {
                       Taille: {item.size}
                     </p>
                     <p className="text-sm font-semibold text-brand-black mt-2">
-                      {item.price.toFixed(2)} DZD
+                      {item.price.toFixed(2)} MAD
                     </p>
 
                     <div className="flex items-center justify-between mt-3">
@@ -104,7 +104,7 @@ export default function CartPage() {
                       {item.name} ×{item.quantity}
                     </span>
                     <span className="text-brand-black font-medium flex-shrink-0">
-                      {(item.price * item.quantity).toFixed(2)} DZD
+                      {(item.price * item.quantity).toFixed(2)} MAD
                     </span>
                   </div>
                 ))}
@@ -113,9 +113,9 @@ export default function CartPage() {
               <div className="border-t border-brand-beige pt-4 mb-6">
                 <div className="flex justify-between">
                   <span className="text-sm tracking-widest uppercase text-brand-gray">Total</span>
-                  <span className="text-lg font-semibold text-brand-black">{total().toFixed(2)} DZD</span>
+                  <span className="text-lg font-semibold text-brand-black">{total().toFixed(2)} MAD</span>
                 </div>
-                <p className="text-xs text-brand-gray mt-1">+ Frais de livraison selon wilaya</p>
+                <p className="text-xs text-brand-gray mt-1">+ Frais de livraison selon ville</p>
               </div>
 
               <div className="bg-brand-black/5 p-3 mb-6 text-xs text-brand-gray">

@@ -124,10 +124,10 @@ export default function ProductDetailClient({ product }: { product: Product }) {
               </h1>
 
               <div className="flex items-center gap-3 mb-6">
-                <span className="text-2xl font-semibold text-brand-black">{product.price.toFixed(2)} DZD</span>
+                <span className="text-2xl font-semibold text-brand-black">{product.price.toFixed(2)} MAD</span>
                 {product.originalPrice && (
                   <>
-                    <span className="text-brand-gray line-through text-lg">{product.originalPrice.toFixed(2)} DZD</span>
+                    <span className="text-brand-gray line-through text-lg">{product.originalPrice.toFixed(2)} MAD</span>
                     <span className="bg-brand-gold text-brand-black text-xs font-bold px-2 py-0.5">-{discount}%</span>
                   </>
                 )}
@@ -222,7 +222,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
               {/* Delivery info */}
               <div className="mt-6 bg-brand-light-gray p-4 space-y-2">
                 <p className="text-xs text-brand-gray">✓ Paiement à la livraison</p>
-                <p className="text-xs text-brand-gray">✓ Livraison 24-48h selon votre wilaya</p>
+                <p className="text-xs text-brand-gray">✓ Livraison 24-48h selon votre ville</p>
                 <p className="text-xs text-brand-gray">✓ Importé directement d'Espagne</p>
               </div>
             </motion.div>

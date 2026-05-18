@@ -124,7 +124,7 @@ export default function AdminOrdersPage() {
                 </div>
                 <div className="flex items-center gap-4 flex-shrink-0 ml-4">
                   <span className="text-white text-sm hidden sm:block">
-                    {order.total.toFixed(0)} DZD
+                    {order.total.toFixed(0)} MAD
                   </span>
                   <span className={`text-[10px] px-2 py-1 rounded-full uppercase tracking-wider ${statusColors[order.status] || 'text-white/40'}`}>
                     {STATUS_LABELS[order.status] || order.status}
@@ -152,7 +152,7 @@ export default function AdminOrdersPage() {
                           {item.name} — {item.size} × {item.quantity}
                         </p>
                       ))}
-                      <p className="text-brand-gold font-semibold mt-2">Total: {order.total.toFixed(0)} DZD</p>
+                      <p className="text-brand-gold font-semibold mt-2">Total: {order.total.toFixed(0)} MAD</p>
                     </div>
                   </div>
 

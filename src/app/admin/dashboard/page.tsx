@@ -69,7 +69,7 @@ export default function DashboardPage() {
     { label: 'Produits', value: stats?.totalProducts ?? 0, icon: Package, color: 'text-blue-400' },
     {
       label: 'Chiffre d\'affaires',
-      value: `${(stats?.totalRevenue ?? 0).toFixed(0)} DZD`,
+      value: `${(stats?.totalRevenue ?? 0).toFixed(0)} MAD`,
       icon: TrendingUp,
       color: 'text-green-400',
     },
@@ -153,7 +153,7 @@ export default function DashboardPage() {
                   <p className="text-white/40 text-xs mt-0.5">{order.customer.name}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-white text-sm">{order.total.toFixed(0)} DZD</p>
+                  <p className="text-white text-sm">{order.total.toFixed(0)} MAD</p>
                   <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider ${statusColors[order.status] || 'text-white/40'}`}>
                     {order.status}
                   </span>

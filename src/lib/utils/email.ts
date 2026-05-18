@@ -23,7 +23,7 @@ export async function sendOrderConfirmationEmail(order: IOrder) {
         <span style="color: #6b6b6b; font-size: 14px;">Taille: ${item.size} • Qté: ${item.quantity}</span>
       </td>
       <td style="padding: 12px; border-bottom: 1px solid #f0ede8; text-align: right;">
-        ${(item.price * item.quantity).toFixed(2)} DZD
+        ${(item.price * item.quantity).toFixed(2)} MAD
       </td>
     </tr>
   `
@@ -65,7 +65,7 @@ export async function sendOrderConfirmationEmail(order: IOrder) {
         ${itemsHtml}
         <tr>
           <td style="padding: 16px 12px; font-weight: bold; font-size: 16px;">Total</td>
-          <td style="padding: 16px 12px; font-weight: bold; font-size: 16px; text-align: right; color: #c9a84c;">${order.total.toFixed(2)} DZD</td>
+          <td style="padding: 16px 12px; font-weight: bold; font-size: 16px; text-align: right; color: #c9a84c;">${order.total.toFixed(2)} MAD</td>
         </tr>
       </table>
 

@@ -94,7 +94,7 @@ export default function Footer() {
 
         <div className="border-t border-white/5 py-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-brand-white/30">
           <p>© 2024 Marcaclub. Tous droits réservés.</p>
-          <p>Mode importée d&apos;Espagne — Livraison dans toute l&apos;Algérie</p>
+          <p>Mode importée d&apos;Espagne — Livraison dans tout le Maroc</p>
         </div>
       </div>
     </footer>

@@ -147,7 +147,7 @@ export default function AdminProductsPage() {
               </div>
               <div className="p-3">
                 <p className="text-white text-sm font-medium truncate">{p.name}</p>
-                <p className="text-brand-gold text-sm">{p.price.toFixed(0)} DZD</p>
+                <p className="text-brand-gold text-sm">{p.price.toFixed(0)} MAD</p>
                 <p className="text-white/40 text-xs">Stock: {p.stock}</p>
                 <div className="flex gap-2 mt-3">
                   <button
@@ -209,7 +209,7 @@ export default function AdminProductsPage() {
                 {/* Price + Original */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Prix * (DZD)</label>
+                    <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Prix * (MAD)</label>
                     <input
                       type="number"
                       value={form.price}
@@ -218,7 +218,7 @@ export default function AdminProductsPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Prix barré (DZD)</label>
+                    <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Prix barré (MAD)</label>
                     <input
                       type="number"
                       value={form.originalPrice || ''}

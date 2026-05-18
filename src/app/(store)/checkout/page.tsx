@@ -8,14 +8,13 @@ import Link from 'next/link'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 
 const WILAYAS = [
-  'Adrar', 'Chlef', 'Laghouat', 'Oum El Bouaghi', 'Batna', 'Béjaïa', 'Biskra', 'Béchar',
-  'Blida', 'Bouira', 'Tamanrasset', 'Tébessa', 'Tlemcen', 'Tiaret', 'Tizi Ouzou', 'Alger',
-  'Djelfa', 'Jijel', 'Sétif', 'Saïda', 'Skikda', 'Sidi Bel Abbès', 'Annaba', 'Guelma',
-  'Constantine', 'Médéa', 'Mostaganem', 'M\'Sila', 'Mascara', 'Ouargla', 'Oran', 'El Bayadh',
-  'Illizi', 'Bordj Bou Arréridj', 'Boumerdès', 'El Tarf', 'Tindouf', 'Tissemsilt', 'El Oued',
-  'Khenchela', 'Souk Ahras', 'Tipaza', 'Mila', 'Aïn Defla', 'Naâma', 'Aïn Témouchent',
-  'Ghardaïa', 'Relizane', 'Timimoun', 'Bordj Badji Mokhtar', 'Ouled Djellal', 'Béni Abbès',
-  'In Salah', 'In Guezzam', 'Touggourt', 'Djanet', 'El M\'Ghair', 'El Meniaa',
+  'Casablanca', 'Rabat', 'Marrakech', 'Fès', 'Tanger', 'Agadir', 'Meknès', 'Oujda',
+  'Kenitra', 'Tétouan', 'Safi', 'El Jadida', 'Béni Mellal', 'Nador', 'Mohammedia',
+  'Khouribga', 'Errachidia', 'Taza', 'Settat', 'Larache', 'Khémisset', 'Guelmim',
+  'Berrechid', 'Khénifra', 'Taourirt', 'Tiznit', 'Essaouira', 'Ifrane', 'Ouarzazate',
+  'Laâyoune', 'Dakhla', 'Al Hoceima', 'Azrou', 'Chefchaouen', 'Midelt', 'Taroudant',
+  'Sidi Kacem', 'Sidi Slimane', 'Berkane', 'Youssoufia', 'Benslimane', 'Fnideq',
+  'Martil', 'M\'diq', 'Aïn Harrouda', 'Bouskoura', 'Temara', 'Salé',
 ]
 
 export default function CheckoutPage() {
@@ -117,14 +116,14 @@ export default function CheckoutPage() {
             ))}
 
             <div>
-              <label className="block text-xs tracking-widest uppercase text-brand-gray mb-2">Wilaya *</label>
+              <label className="block text-xs tracking-widest uppercase text-brand-gray mb-2">Ville *</label>
               <select
                 required
                 value={form.city}
                 onChange={(e) => setForm({ ...form, city: e.target.value })}
                 className="w-full border border-brand-light-gray px-4 py-3 text-sm focus:outline-none focus:border-brand-black transition-colors bg-transparent"
               >
-                <option value="">Choisir une wilaya</option>
+                <option value="">Choisir une ville</option>
                 {WILAYAS.map((w) => (
                   <option key={w} value={w}>{w}</option>
                 ))}
@@ -166,7 +165,7 @@ export default function CheckoutPage() {
                       {item.name} ×{item.quantity}
                     </span>
                     <span className="text-brand-black font-medium flex-shrink-0">
-                      {(item.price * item.quantity).toFixed(2)} DZD
+                      {(item.price * item.quantity).toFixed(2)} MAD
                     </span>
                   </div>
                 ))}
@@ -174,9 +173,9 @@ export default function CheckoutPage() {
               <div className="border-t border-brand-beige pt-4">
                 <div className="flex justify-between">
                   <span className="text-sm tracking-widest uppercase text-brand-gray">Total</span>
-                  <span className="text-xl font-semibold text-brand-black">{total().toFixed(2)} DZD</span>
+                  <span className="text-xl font-semibold text-brand-black">{total().toFixed(2)} MAD</span>
                 </div>
-                <p className="text-xs text-brand-gray mt-1">+ Frais de livraison selon wilaya</p>
+                <p className="text-xs text-brand-gray mt-1">+ Frais de livraison selon ville</p>
               </div>
             </div>
           </div>

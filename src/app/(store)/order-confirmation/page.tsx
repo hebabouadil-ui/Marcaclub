@@ -42,7 +42,7 @@ function ConfirmationContent() {
           <div className="bg-brand-black text-brand-white/80 p-6 my-6 text-left space-y-2">
             <p className="text-sm">✓ Votre commande a été confirmée avec succès.</p>
             <p className="text-sm">
-              ✓ Livraison sous <strong className="text-brand-gold">2 jours environ</strong> selon votre wilaya.
+              ✓ Livraison sous <strong className="text-brand-gold">2 jours environ</strong> selon votre ville.
             </p>
             <p className="text-sm">✓ Paiement à la réception (Cash on Delivery).</p>
             <p className="text-sm">✓ Un email de confirmation vous a été envoyé si fourni.</p>

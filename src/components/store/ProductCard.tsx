@@ -106,11 +106,11 @@ export default function ProductCard({ product }: Props) {
         </Link>
         <div className="flex items-center gap-2 mt-1.5">
           <span className="text-brand-black font-semibold text-sm">
-            {product.price.toFixed(2)} DZD
+            {product.price.toFixed(2)} MAD
           </span>
           {product.originalPrice && (
             <span className="text-brand-gray text-xs line-through">
-              {product.originalPrice.toFixed(2)} DZD
+              {product.originalPrice.toFixed(2)} MAD
             </span>
           )}
         </div>
