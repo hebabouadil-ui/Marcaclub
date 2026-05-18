@@ -79,25 +79,32 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                   key={imgIdx}
                   custom={direction}
                   variants={{
-                    enter: (d: number) => ({ x: d * 60, opacity: 0 }),
-                    center: { x: 0, opacity: 1 },
-                    exit: (d: number) => ({ x: d * -60, opacity: 0 }),
+                    enter: (d: number) => ({ x: d > 0 ? '100%' : '-100%', opacity: 0, scale: 1.06 }),
+                    center: { x: 0, opacity: 1, scale: 1 },
+                    exit: (d: number) => ({ x: d > 0 ? '-25%' : '25%', opacity: 0, scale: 0.96 }),
                   }}
                   initial="enter"
                   animate="center"
                   exit="exit"
-                  transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+                  transition={{ type: 'spring', stiffness: 280, damping: 28, mass: 0.8 }}
                   className="absolute inset-0"
                 >
                   {product.images[imgIdx] ? (
-                    <Image
-                      src={product.images[imgIdx]}
-                      alt={product.name}
-                      fill
-                      className="object-cover object-top"
-                      sizes="(max-width: 768px) 100vw, 50vw"
-                      priority
-                    />
+                    <motion.div
+                      className="absolute inset-0"
+                      initial={{ scale: 1.08 }}
+                      animate={{ scale: 1 }}
+                      transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+                    >
+                      <Image
+                        src={product.images[imgIdx]}
+                        alt={product.name}
+                        fill
+                        className="object-cover object-top"
+                        sizes="(max-width: 768px) 100vw, 50vw"
+                        priority
+                      />
+                    </motion.div>
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center">
                       <span className="text-brand-gray text-xs tracking-widest uppercase">Marcaclub</span>
