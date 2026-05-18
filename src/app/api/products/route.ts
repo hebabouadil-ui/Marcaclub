@@ -14,7 +14,10 @@ export async function GET(req: NextRequest) {
     if (!searchParams.get('all') || !session) query.active = true
     if (searchParams.get('category')) query.category = searchParams.get('category')
     if (searchParams.get('featured')) query.featured = true
-    if (searchParams.get('q')) query.name = { $regex: searchParams.get('q'), $options: 'i' }
+    if (searchParams.get('q')) {
+      const escaped = searchParams.get('q')!.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      query.name = { $regex: escaped, $options: 'i' }
+    }
     const products = await Product.find(query).sort({ createdAt: -1 }).lean()
     const normalized = products.map((p) => ({
       ...p,

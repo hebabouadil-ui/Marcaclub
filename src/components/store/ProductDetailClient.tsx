@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ShoppingBag, Check, ChevronLeft, ChevronRight, ArrowRight, ShoppingCart } from 'lucide-react'
+import { ShoppingBag, ChevronLeft, ChevronRight, ArrowRight, ShoppingCart } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cartStore'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
@@ -106,7 +106,8 @@ export default function ProductDetailClient({ product }: { product: Product }) {
         <div className="grid md:grid-cols-[1fr_420px] gap-8 lg:gap-12 items-start">
           {/* Images */}
           <div className="space-y-3">
-            <div className="relative overflow-hidden bg-brand-light-gray w-full md:max-w-[420px] group cursor-zoom-in">
+            {/* Aspect-ratio wrapper keeps the container height stable during slide transitions */}
+            <div className="relative overflow-hidden bg-brand-light-gray w-full md:max-w-[420px] group cursor-zoom-in" style={{ paddingBottom: '125%' }}>
               <AnimatePresence initial={false} custom={dir}>
                 <motion.div
                   key={imgIdx}
@@ -116,21 +117,20 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                   animate="center"
                   exit="exit"
                   transition={swipeTransition}
-                  className="will-change-transform"
+                  className="absolute inset-0 will-change-transform"
                 >
                   {product.images[imgIdx] ? (
                     <Image
                       src={product.images[imgIdx]}
                       alt={product.name}
-                      width={800}
-                      height={1000}
-                      className="w-full h-auto block transition-transform duration-500 ease-out group-hover:scale-110"
+                      fill
+                      className="object-cover object-top transition-transform duration-500 ease-out group-hover:scale-110"
                       sizes="(max-width: 768px) 100vw, 50vw"
                       quality={90}
                       priority
                     />
                   ) : (
-                    <div className="flex items-center justify-center h-96">
+                    <div className="absolute inset-0 flex items-center justify-center">
                       <span className="text-brand-gray text-xs tracking-widest uppercase">Marcaclub</span>
                     </div>
                   )}

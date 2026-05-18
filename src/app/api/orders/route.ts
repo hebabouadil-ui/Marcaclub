@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     if (!Array.isArray(body.items) || body.items.length === 0 || body.items.length > 50) {
       return NextResponse.json({ message: 'Commande invalide' }, { status: 400 })
     }
-    if (!body.customer?.name || !body.customer?.phone || !body.customer?.city) {
+    if (!body.customer?.name || !body.customer?.phone || !body.customer?.city || !body.customer?.address) {
       return NextResponse.json({ message: 'Informations client manquantes' }, { status: 400 })
     }
 

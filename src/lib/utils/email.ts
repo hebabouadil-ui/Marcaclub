@@ -13,6 +13,10 @@ function getFrom() {
 
 export async function sendOrderConfirmationEmail(order: IOrder, emailNote?: string) {
   if (!order.customer.email) return
+  if (!process.env.RESEND_API_KEY) {
+    console.error('sendOrderConfirmationEmail skipped: RESEND_API_KEY is not set')
+    return
+  }
 
   const note = emailNote || 'Notre équipe vous appellera pour confirmer votre commande. Pour toute question, contactez-nous sur WhatsApp au +212695504949.'
 
@@ -112,6 +116,10 @@ Instagram : @marcaclub
 
 export async function sendOrderStatusEmail(order: IOrder, status: string) {
   if (!order.customer.email) return
+  if (!process.env.RESEND_API_KEY) {
+    console.error('sendOrderStatusEmail skipped: RESEND_API_KEY is not set')
+    return
+  }
 
   type StatusCfg = { subject: string; title: string; message: string; textMessage: string; color: string }
   const statusConfig: Record<string, StatusCfg> = {

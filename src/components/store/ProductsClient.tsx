@@ -44,7 +44,7 @@ export default function ProductsClient({ products, filters }: Props) {
   }
 
   return (
-    <div className="pt-20">
+    <div>
       {/* Page Header */}
       <div className="bg-brand-black text-brand-white py-16 md:py-24">
         <div className="max-w-7xl mx-auto px-4 text-center">

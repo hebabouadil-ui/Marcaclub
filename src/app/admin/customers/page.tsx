@@ -67,7 +67,8 @@ export default function CustomersPage() {
     const map = new Map<string, Customer>()
 
     orders.forEach((order) => {
-      const key = order.customer.phone.replace(/\D/g, '').slice(-9)
+      const rawPhone = order.customer.phone || ''
+      const key = rawPhone.replace(/\D/g, '').slice(-9) || `noPhone_${order._id}`
       if (!map.has(key)) {
         map.set(key, {
           phone: order.customer.phone,

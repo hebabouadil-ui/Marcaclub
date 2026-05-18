@@ -144,7 +144,7 @@ export default function DashboardPage() {
     const topCities = Object.entries(cities).sort((a, b) => b[1] - a[1]).slice(0, 5)
 
     // Unique customers
-    const phones = new Set(orders.map((o) => o.customer.phone.replace(/\D/g, '').slice(-9)))
+    const phones = new Set(orders.map((o) => (o.customer.phone || '').replace(/\D/g, '').slice(-9)).filter(Boolean))
 
     return {
       revenue, avgOrder, deliveryRate,
