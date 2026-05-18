@@ -34,9 +34,9 @@ export async function POST(req: NextRequest) {
       for (const item of body.items as { productId: string; size: string; quantity: number }[]) {
         const product = await Product.findById(item.productId)
         if (!product) continue
-        const entry = product.sizes.find((s) => s.size === item.size)
+        const entry = product.sizes.find((s: { size: string; stock: number }) => s.size === item.size)
         if (entry) entry.stock = Math.max(0, entry.stock - item.quantity)
-        product.stock = product.sizes.reduce((sum: number, s) => sum + s.stock, 0)
+        product.stock = product.sizes.reduce((sum: number, s: { size: string; stock: number }) => sum + s.stock, 0)
         await product.save()
       }
     }
