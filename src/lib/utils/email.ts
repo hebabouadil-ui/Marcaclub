@@ -104,7 +104,6 @@ Instagram : @marcaclub
   await getResend().emails.send({
     from: getFrom(),
     to: order.customer.email,
-    replyTo: process.env.EMAIL_USER,
     subject: `Commande reçue N°${order.orderNumber} — Marcaclub`,
     text,
     html,
@@ -201,7 +200,6 @@ Marcaclub — Mode exclusive importée d'Espagne
   await getResend().emails.send({
     from: getFrom(),
     to: order.customer.email,
-    replyTo: process.env.EMAIL_USER,
     subject: cfg.subject,
     text,
     html,
