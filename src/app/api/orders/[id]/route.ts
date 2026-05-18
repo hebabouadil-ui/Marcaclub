@@ -35,54 +35,23 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     await order.save()
 
     // Restore stock when cancelling, re-deduct if un-cancelling (per-size)
-    if (status === 'cancelled' && previousStatus !== 'cancelled') {
-      await Promise.all(
-        order.items.map((item: { productId: string; size: string; quantity: number }) =>
-          Product.updateOne({ _id: item.productId }, [
-            {
-              $set: {
-                sizes: {
-                  $map: {
-                    input: '$sizes', as: 'sz',
-                    in: {
-                      $cond: [
-                        { $eq: ['$$sz.size', item.size] },
-                        { size: '$$sz.size', stock: { $add: ['$$sz.stock', item.quantity] } },
-                        '$$sz'
-                      ]
-                    }
-                  }
-                }
-              }
-            },
-            { $set: { stock: { $sum: '$sizes.stock' } } }
-          ])
-        )
-      )
-    } else if (previousStatus === 'cancelled' && status !== 'cancelled') {
-      await Promise.all(
-        order.items.map((item: { productId: string; size: string; quantity: number }) =>
-          Product.updateOne({ _id: item.productId }, [
-            {
-              $set: {
-                sizes: {
-                  $map: {
-                    input: '$sizes', as: 'sz',
-                    in: {
-                      $cond: [
-                        { $eq: ['$$sz.size', item.size] },
-                        { size: '$$sz.size', stock: { $max: [0, { $subtract: ['$$sz.stock', item.quantity] }] } },
-                        '$$sz'
-                      ]
-                    }
-                  }
-                }
-              }
-            },
-            { $set: { stock: { $sum: '$sizes.stock' } } }
-          ])
-        )
-      )
+    const shouldAdjust =
+      (status === 'cancelled' && previousStatus !== 'cancelled') ||
+      (previousStatus === 'cancelled' && status !== 'cancelled')
+
+    if (shouldAdjust) {
+      for (const item of order.items as unknown as { productId: string; size: string; quantity: number }[]) {
+        const product = await Product.findById(item.productId)
+        if (!product) continue
+        const entry = product.sizes.find((s) => s.size === item.size)
+        if (entry) {
+          entry.stock = status === 'cancelled'
+            ? entry.stock + item.quantity
+            : Math.max(0, entry.stock - item.quantity)
+        }
+        product.stock = product.sizes.reduce((sum: number, s) => sum + s.stock, 0)
+        await product.save()
+      }
     }
 
     sendOrderStatusEmail(order, status).catch(console.error)

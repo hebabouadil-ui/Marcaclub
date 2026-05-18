@@ -31,29 +31,14 @@ export async function POST(req: NextRequest) {
 
     // Decrement per-size stock for each ordered item
     if (Array.isArray(body.items)) {
-      await Promise.all(
-        body.items.map((item: { productId: string; size: string; quantity: number }) =>
-          Product.updateOne({ _id: item.productId }, [
-            {
-              $set: {
-                sizes: {
-                  $map: {
-                    input: '$sizes', as: 'sz',
-                    in: {
-                      $cond: [
-                        { $eq: ['$$sz.size', item.size] },
-                        { size: '$$sz.size', stock: { $max: [0, { $subtract: ['$$sz.stock', item.quantity] }] } },
-                        '$$sz'
-                      ]
-                    }
-                  }
-                }
-              }
-            },
-            { $set: { stock: { $sum: '$sizes.stock' } } }
-          ])
-        )
-      )
+      for (const item of body.items as { productId: string; size: string; quantity: number }[]) {
+        const product = await Product.findById(item.productId)
+        if (!product) continue
+        const entry = product.sizes.find((s) => s.size === item.size)
+        if (entry) entry.stock = Math.max(0, entry.stock - item.quantity)
+        product.stock = product.sizes.reduce((sum: number, s) => sum + s.stock, 0)
+        await product.save()
+      }
     }
 
     const settings = await Settings.findOne().lean() as { emailNote?: string } | null
