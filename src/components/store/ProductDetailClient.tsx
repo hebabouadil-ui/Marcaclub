@@ -24,7 +24,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
   const [selectedSize, setSelectedSize] = useState('')
   const [qty, setQty] = useState(1)
   const [imgIdx, setImgIdx] = useState(0)
-  const [direction, setDirection] = useState(1)
+  const [direction, setDirection] = useState(0)
   const [added, setAdded] = useState(false)
   const addItem = useCartStore((s) => s.addItem)
 
@@ -33,6 +33,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
     : null
 
   const goTo = (idx: number) => {
+    if (idx === imgIdx) return
     setDirection(idx > imgIdx ? 1 : -1)
     setImgIdx(idx)
   }
@@ -56,37 +57,36 @@ export default function ProductDetailClient({ product }: { product: Product }) {
     setTimeout(() => setAdded(false), 2000)
   }
 
-  const slideVariants = {
-    enter: (d: number) => ({ x: d > 0 ? '100%' : '-100%', opacity: 0 }),
-    center: { x: 0, opacity: 1 },
-    exit: (d: number) => ({ x: d > 0 ? '-100%' : '100%', opacity: 0 }),
-  }
-
   return (
     <div className="pt-20 min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-16">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-xs tracking-widest uppercase text-brand-gray mb-8">
           <Link href="/" className="hover:text-brand-black transition-colors">Accueil</Link>
           <span>/</span>
           <Link href="/products" className="hover:text-brand-black transition-colors">Collection</Link>
           <span>/</span>
-          <span className="text-brand-black">{product.name}</span>
+          <span className="text-brand-black truncate max-w-[160px]">{product.name}</span>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 lg:gap-16">
+        <div className="grid md:grid-cols-2 gap-8 lg:gap-12 items-start">
           {/* Images */}
           <div className="space-y-3">
-            <div className="relative aspect-[3/4] overflow-hidden bg-brand-light-gray">
-              <AnimatePresence initial={false} custom={direction} mode="popLayout">
+            {/* Main image — smaller aspect ratio so full product is visible */}
+            <div className="relative overflow-hidden bg-brand-light-gray rounded-sm" style={{ paddingBottom: '115%' }}>
+              <AnimatePresence initial={false} custom={direction}>
                 <motion.div
                   key={imgIdx}
                   custom={direction}
-                  variants={slideVariants}
+                  variants={{
+                    enter: (d: number) => ({ x: d * 60, opacity: 0 }),
+                    center: { x: 0, opacity: 1 },
+                    exit: (d: number) => ({ x: d * -60, opacity: 0 }),
+                  }}
                   initial="enter"
                   animate="center"
                   exit="exit"
-                  transition={{ type: 'spring', stiffness: 300, damping: 35 }}
+                  transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
                   className="absolute inset-0"
                 >
                   {product.images[imgIdx] ? (
@@ -94,12 +94,12 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                       src={product.images[imgIdx]}
                       alt={product.name}
                       fill
-                      className="object-cover"
+                      className="object-cover object-top"
                       sizes="(max-width: 768px) 100vw, 50vw"
                       priority
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center">
+                    <div className="absolute inset-0 flex items-center justify-center">
                       <span className="text-brand-gray text-xs tracking-widest uppercase">Marcaclub</span>
                     </div>
                   )}
@@ -110,25 +110,25 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                 <>
                   <button
                     onClick={prev}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white p-2 backdrop-blur-sm transition-all hover:scale-110"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white p-2 shadow transition-transform hover:scale-105"
                   >
                     <ChevronLeft size={16} />
                   </button>
                   <button
                     onClick={next}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white p-2 backdrop-blur-sm transition-all hover:scale-110"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white p-2 shadow transition-transform hover:scale-105"
                   >
                     <ChevronRight size={16} />
                   </button>
 
                   {/* Dot indicators */}
-                  <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-10">
+                  <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 z-10">
                     {product.images.map((_, i) => (
                       <button
                         key={i}
                         onClick={() => goTo(i)}
                         className={`rounded-full transition-all duration-300 ${
-                          i === imgIdx ? 'w-5 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/50'
+                          i === imgIdx ? 'w-5 h-1.5 bg-brand-black' : 'w-1.5 h-1.5 bg-brand-black/30'
                         }`}
                       />
                     ))}
@@ -141,17 +141,16 @@ export default function ProductDetailClient({ product }: { product: Product }) {
             {product.images.length > 1 && (
               <div className="flex gap-2 overflow-x-auto pb-1">
                 {product.images.map((img, i) => (
-                  <motion.button
+                  <button
                     key={i}
                     onClick={() => goTo(i)}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className={`relative flex-shrink-0 w-16 h-20 overflow-hidden border-2 transition-colors ${
-                      i === imgIdx ? 'border-brand-black' : 'border-transparent opacity-60 hover:opacity-100'
+                    className={`relative flex-shrink-0 w-14 h-18 overflow-hidden border-2 transition-all duration-200 ${
+                      i === imgIdx ? 'border-brand-black opacity-100' : 'border-transparent opacity-50 hover:opacity-80'
                     }`}
+                    style={{ height: '72px' }}
                   >
-                    <Image src={img} alt="" fill className="object-cover" sizes="64px" />
-                  </motion.button>
+                    <Image src={img} alt="" fill className="object-cover object-top" sizes="56px" />
+                  </button>
                 ))}
               </div>
             )}
@@ -161,15 +160,15 @@ export default function ProductDetailClient({ product }: { product: Product }) {
           <div className="flex flex-col">
             <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }}>
               <p className="text-[10px] tracking-[0.3em] text-brand-gold uppercase mb-2">{product.category}</p>
-              <h1 className="font-display text-2xl md:text-4xl text-brand-black leading-tight mb-4">
+              <h1 className="font-display text-2xl md:text-3xl text-brand-black leading-tight mb-4">
                 {product.name}
               </h1>
 
               <div className="flex items-center gap-3 mb-6">
-                <span className="text-2xl font-semibold text-brand-black">{product.price.toFixed(2)} MAD</span>
+                <span className="text-xl font-semibold text-brand-black">{product.price.toFixed(2)} MAD</span>
                 {product.originalPrice && (
                   <>
-                    <span className="text-brand-gray line-through text-lg">{product.originalPrice.toFixed(2)} MAD</span>
+                    <span className="text-brand-gray line-through">{product.originalPrice.toFixed(2)} MAD</span>
                     <span className="bg-brand-gold text-brand-black text-xs font-bold px-2 py-0.5">-{discount}%</span>
                   </>
                 )}
@@ -180,9 +179,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                 {product.stock === 0 ? (
                   <span className="text-sm text-brand-gray tracking-widest uppercase">Épuisé</span>
                 ) : product.stock <= 5 ? (
-                  <span className="text-sm text-amber-600 tracking-widest uppercase">
-                    Plus que {product.stock} en stock
-                  </span>
+                  <span className="text-sm text-amber-600 tracking-widest uppercase">Plus que {product.stock} en stock</span>
                 ) : (
                   <span className="text-sm text-green-600 tracking-widest uppercase">En stock</span>
                 )}
@@ -196,48 +193,36 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                   </p>
                   <div className="flex gap-2 flex-wrap">
                     {product.sizes.map((s) => (
-                      <motion.button
+                      <button
                         key={s}
                         onClick={() => setSelectedSize(s)}
-                        whileTap={{ scale: 0.9 }}
-                        className={`w-12 h-12 text-sm border-2 transition-all duration-200 ${
+                        className={`w-11 h-11 text-sm border-2 transition-all duration-200 ${
                           selectedSize === s
                             ? 'border-brand-black bg-brand-black text-brand-white'
                             : 'border-brand-light-gray text-brand-black hover:border-brand-black'
                         }`}
                       >
                         {s}
-                      </motion.button>
+                      </button>
                     ))}
                   </div>
                 </div>
               )}
 
               {/* Qty */}
-              <div className="mb-8">
+              <div className="mb-7">
                 <p className="text-xs tracking-[0.2em] uppercase text-brand-gray mb-3">Quantité</p>
-                <div className="flex items-center gap-0 border border-brand-light-gray w-fit">
-                  <button
-                    onClick={() => setQty((q) => Math.max(1, q - 1))}
-                    className="w-10 h-10 flex items-center justify-center text-brand-gray hover:text-brand-black hover:bg-brand-light-gray transition-colors"
-                  >
-                    −
-                  </button>
+                <div className="flex items-center border border-brand-light-gray w-fit">
+                  <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-10 h-10 flex items-center justify-center text-brand-gray hover:text-brand-black hover:bg-brand-light-gray transition-colors">−</button>
                   <span className="w-10 h-10 flex items-center justify-center text-sm font-medium">{qty}</span>
-                  <button
-                    onClick={() => setQty((q) => Math.min(product.stock, q + 1))}
-                    className="w-10 h-10 flex items-center justify-center text-brand-gray hover:text-brand-black hover:bg-brand-light-gray transition-colors"
-                  >
-                    +
-                  </button>
+                  <button onClick={() => setQty((q) => Math.min(product.stock, q + 1))} className="w-10 h-10 flex items-center justify-center text-brand-gray hover:text-brand-black hover:bg-brand-light-gray transition-colors">+</button>
                 </div>
               </div>
 
               {/* CTA */}
-              <motion.button
+              <button
                 onClick={handleAddToCart}
                 disabled={product.stock === 0}
-                whileTap={{ scale: product.stock === 0 ? 1 : 0.97 }}
                 className={`w-full flex items-center justify-center gap-3 py-4 text-sm tracking-[0.2em] uppercase font-semibold transition-all duration-300 ${
                   product.stock === 0
                     ? 'bg-brand-light-gray text-brand-gray cursor-not-allowed'
@@ -246,35 +231,23 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                     : 'bg-brand-black text-brand-white hover:bg-brand-gold hover:text-brand-black'
                 }`}
               >
-                <AnimatePresence mode="wait">
-                  <motion.span
-                    key={added ? 'added' : 'add'}
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -6 }}
-                    className="flex items-center gap-3"
-                  >
-                    {added ? <Check size={18} /> : <ShoppingBag size={18} />}
-                    {product.stock === 0 ? 'Épuisé' : added ? 'Ajouté !' : 'Ajouter au panier'}
-                  </motion.span>
-                </AnimatePresence>
-              </motion.button>
+                {added ? <Check size={18} /> : <ShoppingBag size={18} />}
+                {product.stock === 0 ? 'Épuisé' : added ? 'Ajouté !' : 'Ajouter au panier'}
+              </button>
 
-              <Link
-                href="/cart"
-                className="block text-center mt-3 text-xs tracking-widest uppercase text-brand-gray hover:text-brand-black transition-colors underline underline-offset-4"
-              >
+              <Link href="/cart" className="block text-center mt-3 text-xs tracking-widest uppercase text-brand-gray hover:text-brand-black transition-colors underline underline-offset-4">
                 Voir mon panier
               </Link>
 
               {/* Description */}
-              <div className="mt-10 pt-8 border-t border-brand-light-gray">
-                <p className="text-xs tracking-[0.2em] uppercase text-brand-gray mb-3">Description</p>
-                <p className="text-sm text-brand-gray leading-relaxed">{product.description}</p>
-              </div>
+              {product.description && (
+                <div className="mt-8 pt-6 border-t border-brand-light-gray">
+                  <p className="text-xs tracking-[0.2em] uppercase text-brand-gray mb-2">Description</p>
+                  <p className="text-sm text-brand-gray leading-relaxed">{product.description}</p>
+                </div>
+              )}
 
-              {/* Delivery info */}
-              <div className="mt-6 bg-brand-light-gray p-4 space-y-2">
+              <div className="mt-5 bg-brand-light-gray p-4 space-y-1.5">
                 <p className="text-xs text-brand-gray">✓ Paiement à la livraison</p>
                 <p className="text-xs text-brand-gray">✓ Livraison 24-48h selon votre ville</p>
                 <p className="text-xs text-brand-gray">✓ Importé directement d&apos;Espagne</p>
