@@ -21,9 +21,11 @@ const DEFAULT: SettingsForm = {
   announcementActive: true,
   instagramUrl: 'https://instagram.com/marcaclub',
   tiktokUrl: 'https://tiktok.com/@marcaclub',
-  whatsappNumber: '+213000000000',
+  whatsappNumber: '+212695504949',
   emailNote: 'Notre équipe vous appellera pour confirmer votre commande. Pour toute question, contactez-nous sur WhatsApp au +212695504949.',
 }
+
+const inputClass = 'w-full bg-white/5 border border-white/10 text-white px-4 py-2.5 text-sm focus:outline-none focus:border-brand-gold'
 
 export default function AdminSettingsPage() {
   const [form, setForm] = useState<SettingsForm>(DEFAULT)
@@ -39,6 +41,9 @@ export default function AdminSettingsPage() {
       .finally(() => setLoading(false))
   }, [])
 
+  const set = (key: keyof SettingsForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setForm((f) => ({ ...f, [key]: e.target.value }))
+
   const handleSave = async () => {
     setSaving(true)
     const res = await fetch('/api/settings', {
@@ -48,20 +53,8 @@ export default function AdminSettingsPage() {
     })
     setSaving(false)
     if (res.ok) toast.success('Paramètres sauvegardés')
-    else toast.error('Erreur')
+    else toast.error('Erreur lors de la sauvegarde')
   }
-
-  const Field = ({ id, label, type = 'text' }: { id: keyof SettingsForm; label: string; type?: string }) => (
-    <div>
-      <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">{label}</label>
-      <input
-        type={type}
-        value={String(form[id])}
-        onChange={(e) => setForm({ ...form, [id]: e.target.value })}
-        className="w-full bg-white/5 border border-white/10 text-white px-4 py-2.5 text-sm focus:outline-none focus:border-brand-gold"
-      />
-    </div>
-  )
 
   if (loading) return <div className="p-8 text-white/40">Chargement...</div>
 
@@ -73,19 +66,28 @@ export default function AdminSettingsPage() {
         {/* Hero */}
         <div className="bg-white/5 border border-white/5 p-5 space-y-4">
           <h2 className="text-white/60 text-xs uppercase tracking-widest">Page d&apos;accueil</h2>
-          <Field id="heroTitle" label="Titre principal" />
-          <Field id="heroSubtitle" label="Sous-titre" />
+          <div>
+            <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Titre principal</label>
+            <input className={inputClass} value={form.heroTitle} onChange={set('heroTitle')} />
+          </div>
+          <div>
+            <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Sous-titre</label>
+            <input className={inputClass} value={form.heroSubtitle} onChange={set('heroSubtitle')} />
+          </div>
         </div>
 
         {/* Announcement */}
         <div className="bg-white/5 border border-white/5 p-5 space-y-4">
           <h2 className="text-white/60 text-xs uppercase tracking-widest">Barre d&apos;annonce</h2>
-          <Field id="announcementBar" label="Texte de l'annonce" />
+          <div>
+            <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Texte</label>
+            <input className={inputClass} value={form.announcementBar} onChange={set('announcementBar')} />
+          </div>
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
               checked={form.announcementActive}
-              onChange={(e) => setForm({ ...form, announcementActive: e.target.checked })}
+              onChange={(e) => setForm((f) => ({ ...f, announcementActive: e.target.checked }))}
               className="accent-brand-gold"
             />
             <span className="text-white/60 text-sm">Afficher la barre d&apos;annonce</span>
@@ -94,13 +96,22 @@ export default function AdminSettingsPage() {
 
         {/* Social */}
         <div className="bg-white/5 border border-white/5 p-5 space-y-4">
-          <h2 className="text-white/60 text-xs uppercase tracking-widest">Réseaux sociaux</h2>
-          <Field id="instagramUrl" label="URL Instagram" />
-          <Field id="tiktokUrl" label="URL TikTok" />
-          <Field id="whatsappNumber" label="Numéro WhatsApp" />
+          <h2 className="text-white/60 text-xs uppercase tracking-widest">Réseaux sociaux & Contact</h2>
+          <div>
+            <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">URL Instagram</label>
+            <input className={inputClass} value={form.instagramUrl} onChange={set('instagramUrl')} />
+          </div>
+          <div>
+            <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">URL TikTok</label>
+            <input className={inputClass} value={form.tiktokUrl} onChange={set('tiktokUrl')} />
+          </div>
+          <div>
+            <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Numéro WhatsApp</label>
+            <input className={inputClass} value={form.whatsappNumber} onChange={set('whatsappNumber')} placeholder="+212XXXXXXXXX" />
+          </div>
         </div>
 
-        {/* Email template */}
+        {/* Email */}
         <div className="bg-white/5 border border-white/5 p-5 space-y-4">
           <h2 className="text-white/60 text-xs uppercase tracking-widest">Email de confirmation</h2>
           <p className="text-white/30 text-xs">Ce message apparaît dans l&apos;email envoyé au client après sa commande.</p>
@@ -108,12 +119,12 @@ export default function AdminSettingsPage() {
             <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Message client</label>
             <textarea
               rows={3}
+              className={inputClass + ' resize-none'}
               value={form.emailNote}
-              onChange={(e) => setForm({ ...form, emailNote: e.target.value })}
-              className="w-full bg-white/5 border border-white/10 text-white px-4 py-2.5 text-sm focus:outline-none focus:border-brand-gold resize-none"
+              onChange={set('emailNote')}
             />
           </div>
-          <div className="bg-brand-gold/10 border border-brand-gold/20 p-3 rounded">
+          <div className="bg-brand-gold/10 border border-brand-gold/20 p-3">
             <p className="text-brand-gold text-xs">Aperçu : 📞 {form.emailNote}</p>
           </div>
         </div>
