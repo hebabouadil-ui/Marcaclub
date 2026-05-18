@@ -37,7 +37,8 @@ export default function Navbar() {
 
   const links = [
     { href: '/products', label: 'Collection' },
-    { href: '/#featured', label: 'Nouveautés' },
+    { href: '/products?category=pyjamas', label: 'Pyjamas' },
+    { href: '/products?featured=true', label: 'Nouveautés' },
     { href: '/#live', label: 'Live' },
   ]
 

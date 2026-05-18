@@ -31,7 +31,7 @@ export default function Footer({ instagramUrl, tiktokUrl, contactEmail, contactP
               <p className="text-[9px] tracking-[0.3em] uppercase text-brand-white/30 mt-0.5">Mode Exclusive</p>
             </div>
             <p className="text-sm leading-relaxed text-brand-white/50 max-w-xs">
-              Vêtements et accessoires exclusifs importés directement de Primark Espagne. Drops limités, qualité premium.
+              Pyjamas & lingerie femme importés directement de Primark Espagne. Collections exclusives, qualité premium.
             </p>
             <div className="flex gap-3 mt-5">
               <a href={ig} target="_blank" rel="noopener noreferrer" className="p-2 border border-white/10 hover:border-brand-gold hover:text-brand-gold transition-colors">
@@ -47,10 +47,11 @@ export default function Footer({ instagramUrl, tiktokUrl, contactEmail, contactP
             <h4 className="text-[10px] tracking-[0.2em] uppercase text-brand-white/40 mb-4">Boutique</h4>
             <ul className="space-y-3 text-sm">
               {[
-                { href: '/products', label: 'Collection' },
+                { href: '/products', label: 'Toute la collection' },
                 { href: '/products?featured=true', label: 'Nouveautés' },
-                { href: '/products?category=femme', label: 'Femme' },
-                { href: '/products?category=homme', label: 'Homme' },
+                { href: '/products?category=pyjamas', label: 'Pyjamas' },
+                { href: '/products?category=robes-de-nuit', label: 'Robes de nuit' },
+                { href: '/products?category=lingerie', label: 'Lingerie' },
               ].map((l) => (
                 <li key={l.href}>
                   <Link href={l.href} className="hover:text-brand-gold transition-colors">{l.label}</Link>
@@ -105,7 +106,7 @@ export default function Footer({ instagramUrl, tiktokUrl, contactEmail, contactP
 
         <div className="border-t border-white/5 py-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-brand-white/30">
           <p>© {new Date().getFullYear()} Marcaclub. Tous droits réservés.</p>
-          <p>Mode importée d&apos;Espagne — Livraison dans tout le Maroc</p>
+          <p>Pyjamas & lingerie femme importés d&apos;Espagne — Livraison dans tout le Maroc</p>
         </div>
       </div>
     </footer>

@@ -34,7 +34,7 @@ export default function HomeHero({ title, subtitle }: Props) {
           transition={{ duration: 0.6 }}
           className="text-brand-gold text-[10px] md:text-xs tracking-[0.4em] uppercase mb-6 md:mb-8"
         >
-          Collection Exclusive — Primark España
+          Pyjamas & Lingerie Femme — Primark España
         </motion.p>
 
         <motion.h1
