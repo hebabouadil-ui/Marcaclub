@@ -22,7 +22,7 @@ export default function AdminLoginPage() {
     })
     setLoading(false)
     if (res?.ok) {
-      router.push('/admin/dashboard')
+      window.location.href = '/admin/dashboard'
     } else {
       toast.error('Email ou mot de passe incorrect')
     }
