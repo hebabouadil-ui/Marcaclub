@@ -49,7 +49,8 @@ export default function Navbar() {
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 md:h-20">
+          <div className="grid grid-cols-3 items-center h-16 md:h-20">
+            {/* Left — logo */}
             <Link href="/" className="flex flex-col leading-none">
               <span className="text-brand-gold font-display font-bold text-xl md:text-2xl tracking-widest uppercase">
                 MARCACLUB
@@ -59,19 +60,21 @@ export default function Navbar() {
               </span>
             </Link>
 
-            <div className="hidden md:flex items-center gap-8">
+            {/* Center — nav links */}
+            <div className="hidden md:flex items-center justify-center gap-10">
               {links.map((l) => (
                 <Link
                   key={l.href}
                   href={l.href}
-                  className="text-brand-white/80 hover:text-brand-gold text-sm tracking-widest uppercase transition-colors duration-200"
+                  className="text-brand-white/70 hover:text-brand-gold text-xs tracking-[0.2em] uppercase transition-colors duration-200"
                 >
                   {l.label}
                 </Link>
               ))}
             </div>
 
-            <div className="flex items-center gap-4">
+            {/* Right — icons */}
+            <div className="flex items-center justify-end gap-5">
               <a
                 href="https://instagram.com/marcaclub"
                 target="_blank"
