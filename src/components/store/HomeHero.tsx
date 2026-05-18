@@ -10,7 +10,7 @@ interface Props {
 
 export default function HomeHero({ title, subtitle }: Props) {
   return (
-    <section className="relative min-h-screen bg-brand-black flex items-center justify-center overflow-hidden">
+    <section className="relative bg-brand-black flex items-center justify-center overflow-hidden" style={{ minHeight: '100dvh' }}>
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-brand-black via-brand-green/20 to-brand-black" />
 

@@ -3,6 +3,8 @@ import { connectDB } from '@/lib/db'
 import Product from '@/lib/models/Product'
 import ProductDetailClient from '@/components/store/ProductDetailClient'
 
+export const dynamic = 'force-dynamic'
+
 interface Props {
   params: { slug: string }
 }
@@ -22,9 +24,17 @@ export async function generateMetadata({ params }: Props) {
   }
 }
 
+function normalizeSizes(sizes: unknown[]): { size: string; stock: number }[] {
+  return sizes.map((s) =>
+    typeof s === 'string' ? { size: s, stock: 0 } : (s as { size: string; stock: number })
+  )
+}
+
 export default async function ProductPage({ params }: Props) {
   await connectDB()
-  const product = await Product.findOne({ slug: params.slug, active: true }).lean()
-  if (!product) notFound()
-  return <ProductDetailClient product={JSON.parse(JSON.stringify(product))} />
+  const raw = await Product.findOne({ slug: params.slug, active: true }).lean()
+  if (!raw) notFound()
+  const product = JSON.parse(JSON.stringify(raw))
+  if (Array.isArray(product.sizes)) product.sizes = normalizeSizes(product.sizes)
+  return <ProductDetailClient product={product} />
 }
