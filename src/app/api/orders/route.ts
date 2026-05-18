@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/db'
 import Order from '@/lib/models/Order'
 import { generateOrderNumber } from '@/lib/utils/generateOrderNumber'
-import { sendOrderConfirmationEmail } from '@/lib/utils/email'
+import { sendOrderConfirmationEmail, sendAdminOrderNotification } from '@/lib/utils/email'
 
 export async function GET(req: NextRequest) {
   try {
@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
     if (body.customer?.email) {
       sendOrderConfirmationEmail(order).catch(console.error)
     }
+    sendAdminOrderNotification(order).catch(console.error)
     return NextResponse.json({ orderNumber, orderId: order._id }, { status: 201 })
   } catch (err) {
     return NextResponse.json({ message: String(err) }, { status: 500 })
