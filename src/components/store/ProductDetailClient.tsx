@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Image from 'next/image'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { ShoppingBag, Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cartStore'
 import toast from 'react-hot-toast'
@@ -24,12 +24,20 @@ export default function ProductDetailClient({ product }: { product: Product }) {
   const [selectedSize, setSelectedSize] = useState('')
   const [qty, setQty] = useState(1)
   const [imgIdx, setImgIdx] = useState(0)
+  const [direction, setDirection] = useState(1)
   const [added, setAdded] = useState(false)
   const addItem = useCartStore((s) => s.addItem)
 
   const discount = product.originalPrice
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : null
+
+  const goTo = (idx: number) => {
+    setDirection(idx > imgIdx ? 1 : -1)
+    setImgIdx(idx)
+  }
+  const prev = () => goTo((imgIdx - 1 + product.images.length) % product.images.length)
+  const next = () => goTo((imgIdx + 1) % product.images.length)
 
   const handleAddToCart = () => {
     if (!selectedSize) { toast.error('Veuillez choisir une taille'); return }
@@ -48,6 +56,12 @@ export default function ProductDetailClient({ product }: { product: Product }) {
     setTimeout(() => setAdded(false), 2000)
   }
 
+  const slideVariants = {
+    enter: (d: number) => ({ x: d > 0 ? '100%' : '-100%', opacity: 0 }),
+    center: { x: 0, opacity: 1 },
+    exit: (d: number) => ({ x: d > 0 ? '-100%' : '100%', opacity: 0 }),
+  }
+
   return (
     <div className="pt-20 min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-16">
@@ -64,52 +78,80 @@ export default function ProductDetailClient({ product }: { product: Product }) {
           {/* Images */}
           <div className="space-y-3">
             <div className="relative aspect-[3/4] overflow-hidden bg-brand-light-gray">
-              {product.images[imgIdx] ? (
-                <Image
-                  src={product.images[imgIdx]}
-                  alt={product.name}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 100vw, 50vw"
-                  priority
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <span className="text-brand-gray text-xs tracking-widest uppercase">Marcaclub</span>
-                </div>
-              )}
+              <AnimatePresence initial={false} custom={direction} mode="popLayout">
+                <motion.div
+                  key={imgIdx}
+                  custom={direction}
+                  variants={slideVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ type: 'spring', stiffness: 300, damping: 35 }}
+                  className="absolute inset-0"
+                >
+                  {product.images[imgIdx] ? (
+                    <Image
+                      src={product.images[imgIdx]}
+                      alt={product.name}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                      priority
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <span className="text-brand-gray text-xs tracking-widest uppercase">Marcaclub</span>
+                    </div>
+                  )}
+                </motion.div>
+              </AnimatePresence>
 
               {product.images.length > 1 && (
                 <>
                   <button
-                    onClick={() => setImgIdx((prev) => (prev - 1 + product.images.length) % product.images.length)}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 bg-brand-white/90 hover:bg-brand-white p-2 transition-colors"
+                    onClick={prev}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white p-2 backdrop-blur-sm transition-all hover:scale-110"
                   >
                     <ChevronLeft size={16} />
                   </button>
                   <button
-                    onClick={() => setImgIdx((prev) => (prev + 1) % product.images.length)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 bg-brand-white/90 hover:bg-brand-white p-2 transition-colors"
+                    onClick={next}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white p-2 backdrop-blur-sm transition-all hover:scale-110"
                   >
                     <ChevronRight size={16} />
                   </button>
+
+                  {/* Dot indicators */}
+                  <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-10">
+                    {product.images.map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => goTo(i)}
+                        className={`rounded-full transition-all duration-300 ${
+                          i === imgIdx ? 'w-5 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/50'
+                        }`}
+                      />
+                    ))}
+                  </div>
                 </>
               )}
             </div>
 
             {/* Thumbnails */}
             {product.images.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto">
+              <div className="flex gap-2 overflow-x-auto pb-1">
                 {product.images.map((img, i) => (
-                  <button
+                  <motion.button
                     key={i}
-                    onClick={() => setImgIdx(i)}
+                    onClick={() => goTo(i)}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     className={`relative flex-shrink-0 w-16 h-20 overflow-hidden border-2 transition-colors ${
-                      i === imgIdx ? 'border-brand-black' : 'border-transparent'
+                      i === imgIdx ? 'border-brand-black' : 'border-transparent opacity-60 hover:opacity-100'
                     }`}
                   >
                     <Image src={img} alt="" fill className="object-cover" sizes="64px" />
-                  </button>
+                  </motion.button>
                 ))}
               </div>
             )}
@@ -154,9 +196,10 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                   </p>
                   <div className="flex gap-2 flex-wrap">
                     {product.sizes.map((s) => (
-                      <button
+                      <motion.button
                         key={s}
                         onClick={() => setSelectedSize(s)}
+                        whileTap={{ scale: 0.9 }}
                         className={`w-12 h-12 text-sm border-2 transition-all duration-200 ${
                           selectedSize === s
                             ? 'border-brand-black bg-brand-black text-brand-white'
@@ -164,7 +207,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                         }`}
                       >
                         {s}
-                      </button>
+                      </motion.button>
                     ))}
                   </div>
                 </div>
@@ -191,9 +234,10 @@ export default function ProductDetailClient({ product }: { product: Product }) {
               </div>
 
               {/* CTA */}
-              <button
+              <motion.button
                 onClick={handleAddToCart}
                 disabled={product.stock === 0}
+                whileTap={{ scale: product.stock === 0 ? 1 : 0.97 }}
                 className={`w-full flex items-center justify-center gap-3 py-4 text-sm tracking-[0.2em] uppercase font-semibold transition-all duration-300 ${
                   product.stock === 0
                     ? 'bg-brand-light-gray text-brand-gray cursor-not-allowed'
@@ -202,9 +246,19 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                     : 'bg-brand-black text-brand-white hover:bg-brand-gold hover:text-brand-black'
                 }`}
               >
-                {added ? <Check size={18} /> : <ShoppingBag size={18} />}
-                {product.stock === 0 ? 'Épuisé' : added ? 'Ajouté !' : 'Ajouter au panier'}
-              </button>
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={added ? 'added' : 'add'}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    className="flex items-center gap-3"
+                  >
+                    {added ? <Check size={18} /> : <ShoppingBag size={18} />}
+                    {product.stock === 0 ? 'Épuisé' : added ? 'Ajouté !' : 'Ajouter au panier'}
+                  </motion.span>
+                </AnimatePresence>
+              </motion.button>
 
               <Link
                 href="/cart"
@@ -223,7 +277,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
               <div className="mt-6 bg-brand-light-gray p-4 space-y-2">
                 <p className="text-xs text-brand-gray">✓ Paiement à la livraison</p>
                 <p className="text-xs text-brand-gray">✓ Livraison 24-48h selon votre ville</p>
-                <p className="text-xs text-brand-gray">✓ Importé directement d'Espagne</p>
+                <p className="text-xs text-brand-gray">✓ Importé directement d&apos;Espagne</p>
               </div>
             </motion.div>
           </div>

@@ -2,8 +2,8 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { motion } from 'framer-motion'
-import { ShoppingBag, Eye } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Eye } from 'lucide-react'
 
 interface Props {
   product: {
@@ -21,10 +21,11 @@ interface Props {
 
 export default function ProductCard({ product }: Props) {
   const [hovered, setHovered] = useState(false)
-  const [imgIdx, setImgIdx] = useState(0)
   const discount = product.originalPrice
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : null
+
+  const hasSecond = product.images.length > 1
 
   return (
     <motion.div
@@ -33,20 +34,15 @@ export default function ProductCard({ product }: Props) {
       viewport={{ once: true }}
       transition={{ duration: 0.4 }}
       className="group relative"
-      onMouseEnter={() => {
-        setHovered(true)
-        if (product.images.length > 1) setImgIdx(1)
-      }}
-      onMouseLeave={() => {
-        setHovered(false)
-        setImgIdx(0)
-      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
       {/* Image */}
       <div className="relative aspect-[3/4] overflow-hidden bg-brand-light-gray">
-        {product.images[imgIdx] ? (
+        {/* Primary image */}
+        {product.images[0] ? (
           <Image
-            src={product.images[imgIdx]}
+            src={product.images[0]}
             alt={product.name}
             fill
             className="object-cover transition-transform duration-700 group-hover:scale-105"
@@ -58,8 +54,30 @@ export default function ProductCard({ product }: Props) {
           </div>
         )}
 
+        {/* Second image crossfade on hover */}
+        <AnimatePresence>
+          {hovered && hasSecond && (
+            <motion.div
+              key="hover-img"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4 }}
+              className="absolute inset-0"
+            >
+              <Image
+                src={product.images[1]}
+                alt={product.name}
+                fill
+                className="object-cover scale-105"
+                sizes="(max-width: 768px) 50vw, 25vw"
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Badges */}
-        <div className="absolute top-3 left-3 flex flex-col gap-1">
+        <div className="absolute top-3 left-3 flex flex-col gap-1 z-10">
           {product.stock <= 3 && product.stock > 0 && (
             <span className="bg-brand-black text-brand-beige text-[9px] tracking-widest px-2 py-0.5 uppercase">
               Dernières pièces
@@ -79,9 +97,10 @@ export default function ProductCard({ product }: Props) {
 
         {/* Hover actions */}
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: hovered ? 1 : 0 }}
-          className="absolute bottom-0 left-0 right-0 p-3 flex gap-2"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: hovered ? 1 : 0, y: hovered ? 0 : 8 }}
+          transition={{ duration: 0.2 }}
+          className="absolute bottom-0 left-0 right-0 p-3 flex gap-2 z-10"
         >
           <Link
             href={`/products/${product.slug}`}
