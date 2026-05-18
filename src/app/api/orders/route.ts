@@ -12,8 +12,9 @@ export async function GET(req: NextRequest) {
     const query = status ? { status } : {}
     const orders = await Order.find(query).sort({ createdAt: -1 }).lean()
     return NextResponse.json(orders)
-  } catch {
-    return NextResponse.json({ message: 'Server error' }, { status: 500 })
+  } catch (err) {
+    console.error('GET /api/orders error:', err)
+    return NextResponse.json({ message: String(err) }, { status: 500 })
   }
 }
 

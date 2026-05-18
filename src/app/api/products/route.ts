@@ -13,8 +13,9 @@ export async function GET(req: NextRequest) {
     if (searchParams.get('q')) query.name = { $regex: searchParams.get('q'), $options: 'i' }
     const products = await Product.find(query).sort({ createdAt: -1 }).lean()
     return NextResponse.json(products)
-  } catch {
-    return NextResponse.json({ message: 'Server error' }, { status: 500 })
+  } catch (err) {
+    console.error('GET /api/products error:', err)
+    return NextResponse.json({ message: String(err) }, { status: 500 })
   }
 }
 
