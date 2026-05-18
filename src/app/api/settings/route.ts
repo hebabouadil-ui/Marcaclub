@@ -25,7 +25,7 @@ export async function PUT(req: NextRequest) {
     await connectDB()
     const body = await req.json()
     const ALLOWED = ['heroTitle','heroSubtitle','announcementBar','announcementActive',
-      'instagramUrl','tiktokUrl','whatsappNumber','emailNote','contactEmail','contactPhone',
+      'instagramUrl','tiktokUrl','facebookUrl','whatsappNumber','emailNote','contactEmail','contactPhone',
       'liveStatus','liveUrl']
     const sanitized = Object.fromEntries(Object.entries(body).filter(([k]) => ALLOWED.includes(k)))
     const existing = await Settings.findOne()
