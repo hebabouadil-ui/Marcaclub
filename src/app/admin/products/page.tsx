@@ -59,15 +59,21 @@ export default function AdminProductsPage() {
     for (const file of Array.from(files)) {
       const fd = new FormData()
       fd.append('file', file)
-      const res = await fetch('/api/upload', { method: 'POST', body: fd })
-      if (res.ok) {
+      try {
+        const res = await fetch('/api/upload', { method: 'POST', body: fd })
         const data = await res.json()
-        urls.push(data.url)
+        if (res.ok && data.url) {
+          urls.push(data.url)
+        } else {
+          toast.error(`Erreur: ${data.message || 'Upload échoué'}`)
+        }
+      } catch (err) {
+        toast.error(`Erreur réseau: ${String(err)}`)
       }
     }
     setForm((f) => ({ ...f, images: [...f.images, ...urls] }))
     setUploading(false)
-    toast.success(`${urls.length} image(s) uploadée(s)`)
+    if (urls.length > 0) toast.success(`${urls.length} image(s) uploadée(s)`)
   }
 
   const toggleSize = (s: string) =>
