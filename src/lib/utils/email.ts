@@ -208,7 +208,11 @@ Marcaclub — Mode exclusive importée d'Espagne
 
 export async function sendAdminOrderNotification(order: IOrder) {
   const adminEmail = process.env.ADMIN_EMAIL
-  if (!adminEmail) return
+  if (!adminEmail) {
+    console.error('Admin notification skipped: ADMIN_EMAIL env var is not set')
+    return
+  }
+  console.log('Sending admin notification to:', adminEmail)
 
   const itemsHtml = order.items
     .map((item) => `

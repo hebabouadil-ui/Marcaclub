@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
     if (body.customer?.email) {
       emailPromises.push(sendOrderConfirmationEmail(order, emailNote).catch((err) => console.error('Customer email error:', err)))
     }
-    emailPromises.push(sendAdminOrderNotification(order).catch((err) => console.error('Admin email error:', err)))
+    emailPromises.push(sendAdminOrderNotification(order).catch((err) => console.error('Admin email error:', JSON.stringify(err))))
     await Promise.all(emailPromises)
 
     return NextResponse.json({ orderNumber, orderId: order._id }, { status: 201 })
