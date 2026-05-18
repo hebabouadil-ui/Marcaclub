@@ -20,11 +20,16 @@ interface Product {
   category: string
 }
 
+const swipeVariants = {
+  enter: (dir: number) => ({ x: dir > 0 ? 400 : -400, opacity: 0, scale: 1.05 }),
+  center: { x: 0, opacity: 1, scale: 1, transition: { duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] } },
+  exit: (dir: number) => ({ x: dir > 0 ? -200 : 200, opacity: 0, scale: 0.92, transition: { duration: 0.3, ease: [0.55, 0, 1, 0.45] } }),
+}
+
 export default function ProductDetailClient({ product }: { product: Product }) {
+  const [[imgIdx, dir], setPage] = useState([0, 0])
   const [selectedSize, setSelectedSize] = useState('')
   const [qty, setQty] = useState(1)
-  const [imgIdx, setImgIdx] = useState(0)
-  const [direction, setDirection] = useState(0)
   const [added, setAdded] = useState(false)
   const addItem = useCartStore((s) => s.addItem)
 
@@ -34,11 +39,10 @@ export default function ProductDetailClient({ product }: { product: Product }) {
 
   const goTo = (idx: number) => {
     if (idx === imgIdx) return
-    setDirection(idx > imgIdx ? 1 : -1)
-    setImgIdx(idx)
+    setPage([idx, idx > imgIdx ? 1 : -1])
   }
-  const prev = () => goTo((imgIdx - 1 + product.images.length) % product.images.length)
-  const next = () => goTo((imgIdx + 1) % product.images.length)
+  const prev = () => setPage(([i]) => [(i - 1 + product.images.length) % product.images.length, -1])
+  const next = () => setPage(([i]) => [(i + 1) % product.images.length, 1])
 
   const handleAddToCart = () => {
     if (!selectedSize) { toast.error('Veuillez choisir une taille'); return }
@@ -72,39 +76,26 @@ export default function ProductDetailClient({ product }: { product: Product }) {
         <div className="grid md:grid-cols-2 gap-8 lg:gap-12 items-start">
           {/* Images */}
           <div className="space-y-3">
-            {/* Main image — smaller aspect ratio so full product is visible */}
-            <div className="relative overflow-hidden bg-brand-light-gray rounded-sm" style={{ paddingBottom: '115%' }}>
-              <AnimatePresence initial={false} custom={direction}>
+            <div className="relative overflow-hidden bg-brand-light-gray" style={{ paddingBottom: '115%' }}>
+              <AnimatePresence initial={false} custom={dir} mode="popLayout">
                 <motion.div
                   key={imgIdx}
-                  custom={direction}
-                  variants={{
-                    enter: (d: number) => ({ x: d > 0 ? '100%' : '-100%', opacity: 0, scale: 1.06 }),
-                    center: { x: 0, opacity: 1, scale: 1 },
-                    exit: (d: number) => ({ x: d > 0 ? '-25%' : '25%', opacity: 0, scale: 0.96 }),
-                  }}
+                  custom={dir}
+                  variants={swipeVariants}
                   initial="enter"
                   animate="center"
                   exit="exit"
-                  transition={{ type: 'spring', stiffness: 280, damping: 28, mass: 0.8 }}
                   className="absolute inset-0"
                 >
                   {product.images[imgIdx] ? (
-                    <motion.div
-                      className="absolute inset-0"
-                      initial={{ scale: 1.08 }}
-                      animate={{ scale: 1 }}
-                      transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
-                    >
-                      <Image
-                        src={product.images[imgIdx]}
-                        alt={product.name}
-                        fill
-                        className="object-cover object-top"
-                        sizes="(max-width: 768px) 100vw, 50vw"
-                        priority
-                      />
-                    </motion.div>
+                    <Image
+                      src={product.images[imgIdx]}
+                      alt={product.name}
+                      fill
+                      className="object-cover object-top"
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                      priority
+                    />
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center">
                       <span className="text-brand-gray text-xs tracking-widest uppercase">Marcaclub</span>
@@ -117,25 +108,24 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                 <>
                   <button
                     onClick={prev}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white p-2 shadow transition-transform hover:scale-105"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white p-2.5 shadow-md transition-all hover:scale-110 active:scale-95"
                   >
-                    <ChevronLeft size={16} />
+                    <ChevronLeft size={18} />
                   </button>
                   <button
                     onClick={next}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white p-2 shadow transition-transform hover:scale-105"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white p-2.5 shadow-md transition-all hover:scale-110 active:scale-95"
                   >
-                    <ChevronRight size={16} />
+                    <ChevronRight size={18} />
                   </button>
 
-                  {/* Dot indicators */}
                   <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 z-10">
                     {product.images.map((_, i) => (
                       <button
                         key={i}
                         onClick={() => goTo(i)}
                         className={`rounded-full transition-all duration-300 ${
-                          i === imgIdx ? 'w-5 h-1.5 bg-brand-black' : 'w-1.5 h-1.5 bg-brand-black/30'
+                          i === imgIdx ? 'w-6 h-2 bg-white shadow' : 'w-2 h-2 bg-white/50 hover:bg-white/80'
                         }`}
                       />
                     ))}
@@ -151,7 +141,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                   <button
                     key={i}
                     onClick={() => goTo(i)}
-                    className={`relative flex-shrink-0 w-14 h-18 overflow-hidden border-2 transition-all duration-200 ${
+                    className={`relative flex-shrink-0 w-14 overflow-hidden border-2 transition-all duration-200 ${
                       i === imgIdx ? 'border-brand-black opacity-100' : 'border-transparent opacity-50 hover:opacity-80'
                     }`}
                     style={{ height: '72px' }}
@@ -181,7 +171,6 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                 )}
               </div>
 
-              {/* Stock */}
               <div className="mb-6">
                 {product.stock === 0 ? (
                   <span className="text-sm text-brand-gray tracking-widest uppercase">Épuisé</span>
@@ -192,7 +181,6 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                 )}
               </div>
 
-              {/* Sizes */}
               {product.sizes.length > 0 && (
                 <div className="mb-6">
                   <p className="text-xs tracking-[0.2em] uppercase text-brand-gray mb-3">
@@ -216,7 +204,6 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                 </div>
               )}
 
-              {/* Qty */}
               <div className="mb-7">
                 <p className="text-xs tracking-[0.2em] uppercase text-brand-gray mb-3">Quantité</p>
                 <div className="flex items-center border border-brand-light-gray w-fit">
@@ -226,7 +213,6 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                 </div>
               </div>
 
-              {/* CTA */}
               <button
                 onClick={handleAddToCart}
                 disabled={product.stock === 0}
@@ -246,7 +232,6 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                 Voir mon panier
               </Link>
 
-              {/* Description */}
               {product.description && (
                 <div className="mt-8 pt-6 border-t border-brand-light-gray">
                   <p className="text-xs tracking-[0.2em] uppercase text-brand-gray mb-2">Description</p>
