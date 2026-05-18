@@ -11,6 +11,7 @@ interface SettingsForm {
   instagramUrl: string
   tiktokUrl: string
   whatsappNumber: string
+  emailNote: string
 }
 
 const DEFAULT: SettingsForm = {
@@ -21,6 +22,7 @@ const DEFAULT: SettingsForm = {
   instagramUrl: 'https://instagram.com/marcaclub',
   tiktokUrl: 'https://tiktok.com/@marcaclub',
   whatsappNumber: '+213000000000',
+  emailNote: 'Notre équipe vous appellera pour confirmer votre commande. Pour toute question, contactez-nous sur WhatsApp au +212695504949.',
 }
 
 export default function AdminSettingsPage() {
@@ -96,6 +98,24 @@ export default function AdminSettingsPage() {
           <Field id="instagramUrl" label="URL Instagram" />
           <Field id="tiktokUrl" label="URL TikTok" />
           <Field id="whatsappNumber" label="Numéro WhatsApp" />
+        </div>
+
+        {/* Email template */}
+        <div className="bg-white/5 border border-white/5 p-5 space-y-4">
+          <h2 className="text-white/60 text-xs uppercase tracking-widest">Email de confirmation</h2>
+          <p className="text-white/30 text-xs">Ce message apparaît dans l&apos;email envoyé au client après sa commande.</p>
+          <div>
+            <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Message client</label>
+            <textarea
+              rows={3}
+              value={form.emailNote}
+              onChange={(e) => setForm({ ...form, emailNote: e.target.value })}
+              className="w-full bg-white/5 border border-white/10 text-white px-4 py-2.5 text-sm focus:outline-none focus:border-brand-gold resize-none"
+            />
+          </div>
+          <div className="bg-brand-gold/10 border border-brand-gold/20 p-3 rounded">
+            <p className="text-brand-gold text-xs">Aperçu : 📞 {form.emailNote}</p>
+          </div>
         </div>
 
         <button

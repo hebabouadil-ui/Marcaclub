@@ -11,8 +11,10 @@ const transporter = nodemailer.createTransport({
   },
 })
 
-export async function sendOrderConfirmationEmail(order: IOrder) {
+export async function sendOrderConfirmationEmail(order: IOrder, emailNote?: string) {
   if (!order.customer.email) return
+
+  const note = emailNote || 'Notre équipe vous appellera pour confirmer votre commande. Pour toute question, contactez-nous sur WhatsApp au +212695504949.'
 
   const itemsHtml = order.items
     .map(
@@ -76,6 +78,12 @@ export async function sendOrderConfirmationEmail(order: IOrder) {
 
       <div style="background: #0a0a0a; color: #c9a84c; padding: 16px; border-radius: 4px; margin-top: 24px; text-align: center; font-size: 14px;">
         Paiement à la livraison (Cash on Delivery)
+      </div>
+
+      <div style="background: #fff8e7; border-left: 4px solid #c9a84c; padding: 16px; margin-top: 20px; border-radius: 2px;">
+        <p style="margin: 0; color: #333; font-size: 14px; line-height: 1.6;">
+          📞 ${note}
+        </p>
       </div>
     </div>
 

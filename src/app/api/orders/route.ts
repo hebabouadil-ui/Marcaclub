@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/db'
 import Order from '@/lib/models/Order'
+import Settings from '@/lib/models/Settings'
 import { generateOrderNumber } from '@/lib/utils/generateOrderNumber'
 import { sendOrderConfirmationEmail, sendAdminOrderNotification } from '@/lib/utils/email'
 
@@ -24,9 +25,13 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const orderNumber = generateOrderNumber()
     const order = await Order.create({ ...body, orderNumber })
+
+    const settings = await Settings.findOne().lean() as { emailNote?: string } | null
+    const emailNote = settings?.emailNote
+
     const emailPromises = []
     if (body.customer?.email) {
-      emailPromises.push(sendOrderConfirmationEmail(order).catch((err) => console.error('Customer email error:', err)))
+      emailPromises.push(sendOrderConfirmationEmail(order, emailNote).catch((err) => console.error('Customer email error:', err)))
     }
     emailPromises.push(sendAdminOrderNotification(order).catch((err) => console.error('Admin email error:', err)))
     await Promise.all(emailPromises)
