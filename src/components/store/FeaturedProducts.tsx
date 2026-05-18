@@ -13,7 +13,7 @@ interface Props {
     originalPrice?: number
     images: string[]
     stock: number
-    sizes: string[]
+    sizes: Array<{ size: string; stock: number }>
     category: string
   }>
 }
