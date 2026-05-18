@@ -25,9 +25,9 @@ export async function POST(req: NextRequest) {
     const orderNumber = generateOrderNumber()
     const order = await Order.create({ ...body, orderNumber })
     if (body.customer?.email) {
-      sendOrderConfirmationEmail(order).catch(console.error)
+      sendOrderConfirmationEmail(order).catch((err) => console.error('Customer email error:', err))
     }
-    sendAdminOrderNotification(order).catch(console.error)
+    sendAdminOrderNotification(order).catch((err) => console.error('Admin email error:', err))
     return NextResponse.json({ orderNumber, orderId: order._id }, { status: 201 })
   } catch (err) {
     return NextResponse.json({ message: String(err) }, { status: 500 })
