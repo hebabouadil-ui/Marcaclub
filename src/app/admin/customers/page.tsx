@@ -231,6 +231,9 @@ export default function CustomersPage() {
                       <p className="text-white/40 text-xs mt-0.5 truncate">
                         {customer.phone} — {customer.city}
                       </p>
+                      <p className="text-white/25 text-[10px] mt-0.5">
+                        Dernière commande : {new Date(customer.lastOrder).toLocaleDateString('fr-MA', { day: 'numeric', month: 'short', year: 'numeric' })} à {new Date(customer.lastOrder).toLocaleTimeString('fr-MA', { hour: '2-digit', minute: '2-digit' })}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-6 flex-shrink-0 ml-4">
@@ -275,7 +278,9 @@ export default function CustomersPage() {
                                 {order.flagged && <AlertTriangle size={10} className="text-orange-400" />}
                               </div>
                               <p className="text-white/40 text-[10px] mt-0.5">
-                                {new Date(order.createdAt).toLocaleDateString('fr-MA', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                {new Date(order.createdAt).toLocaleDateString('fr-MA', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                {' · '}
+                                {new Date(order.createdAt).toLocaleTimeString('fr-MA', { hour: '2-digit', minute: '2-digit' })}
                               </p>
                             </div>
                             <div className="text-right">
