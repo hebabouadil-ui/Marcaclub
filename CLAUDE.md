@@ -25,11 +25,9 @@ ADMIN_PASSWORD=          # plain text or bcrypt hash
 CLOUDINARY_CLOUD_NAME=djctexvnr
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USER=
-EMAIL_PASS=              # Gmail app password
-EMAIL_FROM=
+RESEND_API_KEY=           # from resend.com dashboard
+EMAIL_FROM=              # e.g. Marcaclub <orders@yourdomain.com>
+EMAIL_USER=              # used as replyTo on customer emails (optional)
 ```
 
 ## Architecture
@@ -63,6 +61,8 @@ Images upload via `POST /api/upload` to Cloudinary (cloud: `djctexvnr`). The upl
 Zustand store with `persist` middleware, stored in localStorage under key `marcaclub-cart`. Always select `items` from the store and compute count reactively — never select `count` (a function reference) directly, as it won't trigger re-renders.
 
 ### Email (`src/lib/utils/email.ts`)
+
+Uses the **Resend** SDK (`resend` npm package). Set `RESEND_API_KEY` in env. `EMAIL_FROM` must be a sender address on a domain verified in the Resend dashboard (e.g. `Marcaclub <orders@yourdomain.com>`). `EMAIL_USER` is used as `replyTo` on customer emails.
 
 Three exported functions:
 - `sendOrderConfirmationEmail(order, emailNote?)` — sent when order is placed; tells customer an agent will call to confirm

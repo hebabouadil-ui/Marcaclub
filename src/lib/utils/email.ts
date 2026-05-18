@@ -1,19 +1,14 @@
-import nodemailer from 'nodemailer'
+import { Resend } from 'resend'
 import { IOrder } from '../models/Order'
 
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-  port: Number(process.env.EMAIL_PORT) || 587,
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-})
+let _resend: Resend | null = null
+function getResend() {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY)
+  return _resend
+}
 
-// FROM must match EMAIL_USER when using Gmail SMTP to avoid spam
 function getFrom() {
-  return `Marcaclub <${process.env.EMAIL_USER}>`
+  return process.env.EMAIL_FROM || 'Marcaclub <orders@marcaclub.ma>'
 }
 
 export async function sendOrderConfirmationEmail(order: IOrder, emailNote?: string) {
@@ -106,7 +101,7 @@ Instagram : @marcaclub
 </body>
 </html>`
 
-  await transporter.sendMail({
+  await getResend().emails.send({
     from: getFrom(),
     to: order.customer.email,
     replyTo: process.env.EMAIL_USER,
@@ -203,7 +198,7 @@ Marcaclub — Mode exclusive importée d'Espagne
 </body>
 </html>`
 
-  await transporter.sendMail({
+  await getResend().emails.send({
     from: getFrom(),
     to: order.customer.email,
     replyTo: process.env.EMAIL_USER,
@@ -273,7 +268,7 @@ Admin : ${process.env.NEXTAUTH_URL || 'https://marcaclub.vercel.app'}/admin/orde
 </body>
 </html>`
 
-  await transporter.sendMail({
+  await getResend().emails.send({
     from: getFrom(),
     to: adminEmail,
     subject: `Nouvelle commande ${order.orderNumber} — ${order.total.toFixed(0)} MAD`,
