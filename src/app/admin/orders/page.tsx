@@ -24,6 +24,7 @@ interface Order {
   total: number
   status: string
   flagged: boolean
+  flagSeverity?: 'low' | 'medium' | 'high'
   flagReason?: string
   flaggedOrderNumbers?: string[]
   createdAt: string
@@ -147,27 +148,37 @@ export default function AdminOrdersPage() {
               key={order._id}
               className={`border transition-colors ${
                 order.flagged
-                  ? 'bg-red-500/5 border-red-500/30'
+                  ? order.flagSeverity === 'high'   ? 'bg-red-500/5 border-red-500/30'
+                  : order.flagSeverity === 'medium' ? 'bg-orange-500/5 border-orange-500/30'
+                  :                                   'bg-yellow-500/5 border-yellow-500/30'
                   : 'bg-white/5 border-white/5'
               }`}
             >
               {/* Flag warning banner */}
-              {order.flagged && (
-                <div className="flex items-start gap-3 px-5 py-3 bg-red-500/10 border-b border-red-500/20">
-                  <AlertTriangle size={14} className="text-red-400 mt-0.5 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-red-400 text-xs font-semibold uppercase tracking-widest mb-0.5">Doublon détecté — confirmation requise</p>
-                    <p className="text-red-300/70 text-xs">{order.flagReason}</p>
+              {order.flagged && (() => {
+                const sev = order.flagSeverity || 'medium'
+                const colors = {
+                  high:   { bg: 'bg-red-500/10',    border: 'border-red-500/20',    text: 'text-red-400',    sub: 'text-red-300/70',    label: 'RISQUE ÉLEVÉ' },
+                  medium: { bg: 'bg-orange-500/10', border: 'border-orange-500/20', text: 'text-orange-400', sub: 'text-orange-300/70', label: 'RISQUE MOYEN' },
+                  low:    { bg: 'bg-yellow-500/10', border: 'border-yellow-500/20', text: 'text-yellow-400', sub: 'text-yellow-300/70', label: 'RISQUE FAIBLE' },
+                }[sev]
+                return (
+                  <div className={`flex items-start gap-3 px-5 py-3 ${colors.bg} border-b ${colors.border}`}>
+                    <AlertTriangle size={14} className={`${colors.text} mt-0.5 flex-shrink-0`} />
+                    <div className="flex-1 min-w-0">
+                      <p className={`${colors.text} text-xs font-semibold uppercase tracking-widest mb-0.5`}>{colors.label} — confirmation requise</p>
+                      <p className={`${colors.sub} text-xs`}>{order.flagReason}</p>
+                    </div>
+                    <button
+                      onClick={() => unflag(order._id)}
+                      className="flex items-center gap-1.5 bg-green-500/20 hover:bg-green-500/30 text-green-400 px-3 py-1.5 text-xs font-semibold tracking-widest uppercase transition-colors flex-shrink-0"
+                    >
+                      <ShieldCheck size={12} />
+                      Valider
+                    </button>
                   </div>
-                  <button
-                    onClick={() => unflag(order._id)}
-                    className="flex items-center gap-1.5 bg-green-500/20 hover:bg-green-500/30 text-green-400 px-3 py-1.5 text-xs font-semibold tracking-widest uppercase transition-colors flex-shrink-0"
-                  >
-                    <ShieldCheck size={12} />
-                    Valider
-                  </button>
-                </div>
-              )}
+                )
+              })()}
 
               <button
                 onClick={() => setExpanded(expanded === order._id ? null : order._id)}

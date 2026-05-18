@@ -80,37 +80,122 @@ export async function POST(req: NextRequest) {
 
     const orderNumber = generateOrderNumber()
 
-    // Duplicate detection — check last 30 days for same phone, name, email, or address
-    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    // --- Advanced duplicate & risk detection ---
     const phone = body.customer.phone.replace(/\D/g, '')
-    const duplicateQuery: Record<string, unknown>[] = [
+    const nameTrimmed = body.customer.name.trim()
+    const cityTrimmed = body.customer.city.trim().toLowerCase()
+    const emailNorm = body.customer.email ? body.customer.email.toLowerCase().trim() : null
+
+    const now = Date.now()
+    const since30d = new Date(now - 30 * 24 * 60 * 60 * 1000)
+    const since24h = new Date(now - 24 * 60 * 60 * 1000)
+    const since2h  = new Date(now - 2 * 60 * 60 * 1000)
+
+    type DupOrder = { orderNumber: string; customer: { phone: string; name: string; email?: string; city: string }; items: Array<{ productId: string }>; total: number; createdAt: Date }
+
+    const baseQuery: Record<string, unknown>[] = [
       { 'customer.phone': { $regex: phone.slice(-9) } },
-      { 'customer.name': { $regex: new RegExp(`^${body.customer.name.trim()}$`, 'i') } },
+      { 'customer.name': { $regex: new RegExp(`^${nameTrimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } },
     ]
-    if (body.customer.email) {
-      duplicateQuery.push({ 'customer.email': body.customer.email.toLowerCase().trim() })
-    }
-    const duplicates = await Order.find({
-      createdAt: { $gte: since },
+    if (emailNorm) baseQuery.push({ 'customer.email': emailNorm })
+
+    const recentOrders = await Order.find({
+      createdAt: { $gte: since30d },
       status: { $nin: ['cancelled'] },
-      $or: duplicateQuery,
-    }).select('orderNumber customer createdAt').lean()
+      $or: baseQuery,
+    }).select('orderNumber customer items total createdAt').lean() as DupOrder[]
 
     let flagged = false
+    let flagSeverity: 'low' | 'medium' | 'high' | undefined
     let flagReason = ''
     const flaggedOrderNumbers: string[] = []
+    const riskSignals: string[] = []
+    let maxSeverity = 0 // 0=none,1=low,2=medium,3=high
 
-    if (duplicates.length > 0) {
-      const reasons: string[] = []
-      for (const dup of duplicates as Array<{ orderNumber: string; customer: { phone: string; name: string; email?: string } }>) {
-        const dupPhone = dup.customer.phone.replace(/\D/g, '')
-        if (dupPhone.slice(-9) === phone.slice(-9)) reasons.push(`même téléphone`)
-        else if (dup.customer.name.toLowerCase().trim() === body.customer.name.toLowerCase().trim()) reasons.push(`même nom`)
-        else if (body.customer.email && dup.customer.email?.toLowerCase() === body.customer.email.toLowerCase()) reasons.push(`même email`)
-        flaggedOrderNumbers.push(dup.orderNumber)
+    const addSignal = (msg: string, level: 1 | 2 | 3) => {
+      riskSignals.push(msg)
+      if (level > maxSeverity) maxSeverity = level
+    }
+
+    // Velocity: same phone, 3+ orders in 24h → HIGH
+    const samePhone24h = recentOrders.filter(
+      (o) => o.customer.phone.replace(/\D/g, '').slice(-9) === phone.slice(-9) &&
+              new Date(o.createdAt).getTime() >= since24h.getTime()
+    )
+    if (samePhone24h.length >= 2) {
+      addSignal(`${samePhone24h.length + 1} commandes en 24h (même téléphone)`, 3)
+      samePhone24h.forEach((o) => { if (!flaggedOrderNumbers.includes(o.orderNumber)) flaggedOrderNumbers.push(o.orderNumber) })
+    }
+
+    // Identical basket from same city in 2h → HIGH
+    const orderProductIds = items.map((i: { productId: string }) => i.productId).sort().join(',')
+    const basketMatch2h = recentOrders.filter((o) => {
+      if (o.customer.city.trim().toLowerCase() !== cityTrimmed) return false
+      if (new Date(o.createdAt).getTime() < since2h.getTime()) return false
+      const dupIds = o.items.map((i) => i.productId).sort().join(',')
+      return dupIds === orderProductIds
+    })
+    if (basketMatch2h.length > 0) {
+      addSignal(`Panier identique depuis la même ville en moins de 2h`, 3)
+      basketMatch2h.forEach((o) => { if (!flaggedOrderNumbers.includes(o.orderNumber)) flaggedOrderNumbers.push(o.orderNumber) })
+    }
+
+    // Basic duplicate: same phone (last 9 digits) in 30d → MEDIUM
+    for (const dup of recentOrders) {
+      const dupPhone = dup.customer.phone.replace(/\D/g, '')
+      if (dupPhone.slice(-9) === phone.slice(-9)) {
+        addSignal(`même téléphone`, 2)
+        if (!flaggedOrderNumbers.includes(dup.orderNumber)) flaggedOrderNumbers.push(dup.orderNumber)
+      } else if (dup.customer.name.toLowerCase().trim() === nameTrimmed.toLowerCase()) {
+        addSignal(`même nom`, 2)
+        if (!flaggedOrderNumbers.includes(dup.orderNumber)) flaggedOrderNumbers.push(dup.orderNumber)
+      } else if (emailNorm && dup.customer.email?.toLowerCase() === emailNorm) {
+        addSignal(`même email`, 2)
+        if (!flaggedOrderNumbers.includes(dup.orderNumber)) flaggedOrderNumbers.push(dup.orderNumber)
       }
+    }
+
+    // Same name + same city (no phone match) in 30d → MEDIUM
+    const nameCity30d = recentOrders.filter(
+      (o) => o.customer.name.toLowerCase().trim() === nameTrimmed.toLowerCase() &&
+              o.customer.city.trim().toLowerCase() === cityTrimmed &&
+              o.customer.phone.replace(/\D/g, '').slice(-9) !== phone.slice(-9)
+    )
+    if (nameCity30d.length > 0) {
+      addSignal(`même nom + même ville`, 2)
+      nameCity30d.forEach((o) => { if (!flaggedOrderNumbers.includes(o.orderNumber)) flaggedOrderNumbers.push(o.orderNumber) })
+    }
+
+    // High order value → LOW
+    if (serverTotal > 800) {
+      addSignal(`montant élevé (${serverTotal.toFixed(0)} MAD)`, 1)
+    }
+
+    // Same city + same items on same calendar day → LOW
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
+    const cityItemsToday = recentOrders.filter((o) => {
+      if (o.customer.city.trim().toLowerCase() !== cityTrimmed) return false
+      if (new Date(o.createdAt).getTime() < todayStart.getTime()) return false
+      const dupIds = o.items.map((i) => i.productId).sort().join(',')
+      return dupIds === orderProductIds
+    })
+    if (cityItemsToday.length > 0 && basketMatch2h.length === 0) {
+      addSignal(`articles identiques depuis la même ville aujourd'hui`, 1)
+      cityItemsToday.forEach((o) => { if (!flaggedOrderNumbers.includes(o.orderNumber)) flaggedOrderNumbers.push(o.orderNumber) })
+    }
+
+    // Order at unusual hours (midnight–5am Morocco time, UTC+1) → LOW
+    const moroccohour = (new Date().getUTCHours() + 1) % 24
+    if (moroccohour >= 0 && moroccohour < 5) {
+      addSignal(`commande passée la nuit (${moroccohour}h)`, 1)
+    }
+
+    if (maxSeverity > 0) {
       flagged = true
-      flagReason = `Doublon détecté (${reasons.filter((v, i, a) => a.indexOf(v) === i).join(', ')}) avec commande(s) : ${flaggedOrderNumbers.join(', ')}`
+      flagSeverity = maxSeverity === 3 ? 'high' : maxSeverity === 2 ? 'medium' : 'low'
+      const uniqueSignals = riskSignals.filter((v, i, a) => a.indexOf(v) === i)
+      const refList = flaggedOrderNumbers.length ? ` — réf: ${flaggedOrderNumbers.join(', ')}` : ''
+      flagReason = `[${flagSeverity.toUpperCase()}] ${uniqueSignals.join(' · ')}${refList}`
     }
 
     const order = await Order.create({
@@ -120,6 +205,7 @@ export async function POST(req: NextRequest) {
       orderNumber,
       total: serverTotal,
       flagged,
+      flagSeverity: flagSeverity || undefined,
       flagReason: flagReason || undefined,
       flaggedOrderNumbers: flaggedOrderNumbers.length ? flaggedOrderNumbers : undefined,
     })

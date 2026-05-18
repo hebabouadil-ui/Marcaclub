@@ -22,6 +22,7 @@ export interface IOrder extends Document {
   total: number
   status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled'
   flagged: boolean
+  flagSeverity?: 'low' | 'medium' | 'high'
   flagReason?: string
   flaggedOrderNumbers?: string[]
   notes?: string
