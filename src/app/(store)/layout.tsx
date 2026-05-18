@@ -38,6 +38,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
     announcementBar: string
     instagramUrl: string
     tiktokUrl: string
+    facebookUrl: string
     whatsappNumber: string
     contactEmail: string
     contactPhone: string
@@ -87,6 +88,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
       <Footer
         instagramUrl={s.instagramUrl ?? 'https://instagram.com/marcaclub'}
         tiktokUrl={s.tiktokUrl ?? 'https://tiktok.com/@marcaclub'}
+        facebookUrl={s.facebookUrl ?? ''}
         whatsappNumber={s.whatsappNumber ?? ''}
         contactEmail={s.contactEmail ?? ''}
         contactPhone={s.contactPhone ?? ''}

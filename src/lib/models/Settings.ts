@@ -9,6 +9,7 @@ export interface ISettings extends Document {
   announcementActive: boolean
   instagramUrl: string
   tiktokUrl: string
+  facebookUrl: string
   whatsappNumber: string
   emailNote: string
   contactEmail: string
@@ -30,6 +31,7 @@ const SettingsSchema = new Schema<ISettings>({
   announcementActive: { type: Boolean, default: true },
   instagramUrl: { type: String, default: 'https://instagram.com/marcaclub' },
   tiktokUrl: { type: String, default: 'https://tiktok.com/@marcaclub' },
+  facebookUrl: { type: String, default: '' },
   whatsappNumber: { type: String, default: '+213000000000' },
   emailNote: { type: String, default: 'Notre équipe vous appellera pour confirmer votre commande. Pour toute question, contactez-nous sur WhatsApp au +212695504949.' },
   contactEmail: { type: String, default: '' },

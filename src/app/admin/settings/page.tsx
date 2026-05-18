@@ -10,6 +10,7 @@ interface SettingsForm {
   announcementActive: boolean
   instagramUrl: string
   tiktokUrl: string
+  facebookUrl: string
   whatsappNumber: string
   emailNote: string
   contactEmail: string
@@ -23,6 +24,7 @@ const DEFAULT: SettingsForm = {
   announcementActive: true,
   instagramUrl: 'https://instagram.com/marcaclub',
   tiktokUrl: 'https://tiktok.com/@marcaclub',
+  facebookUrl: '',
   whatsappNumber: '+212695504949',
   emailNote: 'Notre équipe vous appellera pour confirmer votre commande. Pour toute question, contactez-nous sur WhatsApp au +212695504949.',
   contactEmail: '',
@@ -109,6 +111,10 @@ export default function AdminSettingsPage() {
           <div>
             <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">URL TikTok</label>
             <input className={inputClass} value={form.tiktokUrl} onChange={set('tiktokUrl')} />
+          </div>
+          <div>
+            <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">URL Facebook</label>
+            <input className={inputClass} value={form.facebookUrl} onChange={set('facebookUrl')} placeholder="https://facebook.com/marcaclub" />
           </div>
           <div>
             <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Numéro WhatsApp</label>

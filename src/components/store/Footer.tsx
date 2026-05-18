@@ -9,17 +9,27 @@ function TikTokIcon() {
   )
 }
 
+function FacebookIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="w-[18px] h-[18px]">
+      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+    </svg>
+  )
+}
+
 interface FooterProps {
   instagramUrl?: string
   tiktokUrl?: string
+  facebookUrl?: string
   contactEmail?: string
   contactPhone?: string
   whatsappNumber?: string
 }
 
-export default function Footer({ instagramUrl, tiktokUrl, contactEmail, contactPhone, whatsappNumber }: FooterProps) {
+export default function Footer({ instagramUrl, tiktokUrl, facebookUrl, contactEmail, contactPhone, whatsappNumber }: FooterProps) {
   const ig = instagramUrl || 'https://instagram.com/marcaclub'
   const tt = tiktokUrl || 'https://tiktok.com/@marcaclub'
+  const fb = facebookUrl || ''
 
   return (
     <footer className="bg-brand-black text-brand-white/70">
@@ -34,12 +44,17 @@ export default function Footer({ instagramUrl, tiktokUrl, contactEmail, contactP
               Vêtements et accessoires exclusifs importés directement de Primark Espagne. Drops limités, qualité premium.
             </p>
             <div className="flex gap-3 mt-5">
-              <a href={ig} target="_blank" rel="noopener noreferrer" className="p-2 border border-white/10 hover:border-brand-gold hover:text-brand-gold transition-colors">
+              <a href={ig} target="_blank" rel="noopener noreferrer" className="p-2 border border-white/10 hover:border-brand-gold hover:text-brand-gold transition-colors" title="Instagram">
                 <InstagramIcon size={16} />
               </a>
-              <a href={tt} target="_blank" rel="noopener noreferrer" className="p-2 border border-white/10 hover:border-brand-gold hover:text-brand-gold transition-colors">
+              <a href={tt} target="_blank" rel="noopener noreferrer" className="p-2 border border-white/10 hover:border-brand-gold hover:text-brand-gold transition-colors" title="TikTok">
                 <TikTokIcon />
               </a>
+              {fb && (
+                <a href={fb} target="_blank" rel="noopener noreferrer" className="p-2 border border-white/10 hover:border-brand-gold hover:text-brand-gold transition-colors" title="Facebook">
+                  <FacebookIcon />
+                </a>
+              )}
             </div>
           </div>
 
