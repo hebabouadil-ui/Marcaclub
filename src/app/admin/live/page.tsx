@@ -11,7 +11,7 @@ export default function AdminLivePage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/api/live')
+    fetch('/api/live', { credentials: 'include' })
       .then((r) => r.json())
       .then((d) => {
         setLiveStatus(d.liveStatus)

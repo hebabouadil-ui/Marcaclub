@@ -35,7 +35,7 @@ export default function AdminOrdersPage() {
   const [expanded, setExpanded] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/orders')
+    fetch('/api/orders', { credentials: 'include' })
       .then((r) => r.json())
       .then((data) => {
         setOrders(data)

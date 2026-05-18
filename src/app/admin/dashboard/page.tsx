@@ -29,9 +29,9 @@ export default function DashboardPage() {
     const fetchData = async () => {
       try {
         const [ordersRes, productsRes, liveRes] = await Promise.all([
-          fetch('/api/orders'),
-          fetch('/api/products?all=true'),
-          fetch('/api/live'),
+          fetch('/api/orders', { credentials: 'include' }),
+          fetch('/api/products?all=true', { credentials: 'include' }),
+          fetch('/api/live', { credentials: 'include' }),
         ])
         const orders = ordersRes.ok ? await ordersRes.json() : []
         const products = productsRes.ok ? await productsRes.json() : []

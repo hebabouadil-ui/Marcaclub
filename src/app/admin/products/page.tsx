@@ -37,7 +37,7 @@ export default function AdminProductsPage() {
 
   const load = () => {
     setLoading(true)
-    fetch('/api/products')
+    fetch('/api/products', { credentials: 'include' })
       .then((r) => r.json())
       .then(setProducts)
       .finally(() => setLoading(false))

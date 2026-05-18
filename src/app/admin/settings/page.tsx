@@ -29,7 +29,7 @@ export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/api/settings')
+    fetch('/api/settings', { credentials: 'include' })
       .then((r) => r.json())
       .then((data) => {
         if (data && Object.keys(data).length > 0) setForm({ ...DEFAULT, ...data })
