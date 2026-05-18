@@ -30,8 +30,8 @@ export default function CheckoutPage() {
       <div className="min-h-screen flex items-center justify-center text-center px-4">
         <div>
           <h1 className="font-display text-3xl mb-4">Panier vide</h1>
-          <Link href="/products" className="text-brand-gold underline underline-offset-4">
-            Voir la collection
+          <Link href="/products" className="inline-flex items-center gap-2 text-brand-gold hover:gap-3 transition-all text-sm tracking-widest uppercase">
+            Voir la collection <span>→</span>
           </Link>
         </div>
       </div>

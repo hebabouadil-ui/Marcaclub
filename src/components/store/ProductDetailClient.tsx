@@ -232,8 +232,8 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                 {product.stock === 0 ? 'Épuisé' : added ? 'Ajouté !' : 'Ajouter au panier'}
               </button>
 
-              <Link href="/cart" className="block text-center mt-3 text-xs tracking-widest uppercase text-brand-gray hover:text-brand-black transition-colors underline underline-offset-4">
-                Voir mon panier
+              <Link href="/cart" className="flex items-center justify-center gap-1.5 mt-3 text-xs tracking-widest uppercase text-brand-gray hover:text-brand-black hover:gap-2.5 transition-all">
+                Voir mon panier →
               </Link>
 
               {product.description && (
