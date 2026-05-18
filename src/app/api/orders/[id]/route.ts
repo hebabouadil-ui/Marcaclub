@@ -26,7 +26,20 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
   try {
     await connectDB()
-    const { status } = await req.json()
+    const body = await req.json()
+
+    // Handle unflag action separately
+    if (body.action === 'unflag') {
+      const order = await Order.findById(params.id)
+      if (!order) return NextResponse.json({ message: 'Not found' }, { status: 404 })
+      order.flagged = false
+      order.flagReason = undefined
+      order.flaggedOrderNumbers = []
+      await order.save()
+      return NextResponse.json(order.toObject())
+    }
+
+    const { status } = body
     const VALID_STATUSES = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled']
     if (!VALID_STATUSES.includes(status)) {
       return NextResponse.json({ message: 'Statut invalide' }, { status: 400 })

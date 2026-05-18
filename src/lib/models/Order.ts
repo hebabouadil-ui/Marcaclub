@@ -21,6 +21,9 @@ export interface IOrder extends Document {
   items: IOrderItem[]
   total: number
   status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled'
+  flagged: boolean
+  flagReason?: string
+  flaggedOrderNumbers?: string[]
   notes?: string
   createdAt: Date
   updatedAt: Date
@@ -52,6 +55,9 @@ const OrderSchema = new Schema<IOrder>(
       enum: ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'],
       default: 'pending',
     },
+    flagged: { type: Boolean, default: false },
+    flagReason: { type: String },
+    flaggedOrderNumbers: [{ type: String }],
     notes: { type: String },
   },
   { timestamps: true }

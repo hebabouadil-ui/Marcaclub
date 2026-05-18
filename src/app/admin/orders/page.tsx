@@ -1,9 +1,9 @@
 'use client'
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
-import { ChevronDown, Search } from 'lucide-react'
+import { ChevronDown, Search, AlertTriangle, ShieldCheck, Flag } from 'lucide-react'
 
-const STATUSES = ['all', 'pending', 'confirmed', 'shipped', 'delivered', 'cancelled']
+const STATUSES = ['all', 'flagged', 'pending', 'confirmed', 'shipped', 'delivered', 'cancelled']
 const STATUS_LABELS: Record<string, string> = {
   pending: 'En attente', confirmed: 'Confirmé', shipped: 'Expédié',
   delivered: 'Livré', cancelled: 'Annulé',
@@ -19,10 +19,13 @@ const statusColors: Record<string, string> = {
 interface Order {
   _id: string
   orderNumber: string
-  customer: { name: string; phone: string; city: string }
-  items: Array<{ name: string; quantity: number; size: string }>
+  customer: { name: string; phone: string; city: string; address: string; email?: string }
+  items: Array<{ name: string; quantity: number; size: string; price: number }>
   total: number
   status: string
+  flagged: boolean
+  flagReason?: string
+  flaggedOrderNumbers?: string[]
   createdAt: string
 }
 
@@ -37,7 +40,8 @@ export default function AdminOrdersPage() {
   useEffect(() => {
     fetch('/api/orders', { credentials: 'include' })
       .then((r) => r.json())
-      .then((data) => { if (!Array.isArray(data)) return;
+      .then((data) => {
+        if (!Array.isArray(data)) return
         setOrders(data)
         setFiltered(data)
       })
@@ -46,9 +50,12 @@ export default function AdminOrdersPage() {
 
   useEffect(() => {
     let data = orders
-    if (filter !== 'all') data = data.filter((o) => o.status === filter)
+    if (filter === 'flagged') data = data.filter((o) => o.flagged)
+    else if (filter !== 'all') data = data.filter((o) => o.status === filter)
     if (search) data = data.filter(
-      (o) => o.orderNumber.includes(search) || o.customer.name.toLowerCase().includes(search.toLowerCase())
+      (o) => o.orderNumber.includes(search) ||
+        o.customer.name.toLowerCase().includes(search.toLowerCase()) ||
+        o.customer.phone.includes(search)
     )
     setFiltered(data)
   }, [filter, search, orders])
@@ -68,9 +75,34 @@ export default function AdminOrdersPage() {
     }
   }
 
+  const unflag = async (id: string) => {
+    const res = await fetch(`/api/orders/${id}`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'unflag' }),
+    })
+    if (res.ok) {
+      setOrders((prev) => prev.map((o) => o._id === id ? { ...o, flagged: false, flagReason: undefined } : o))
+      toast.success('Commande validée')
+    } else {
+      toast.error('Erreur')
+    }
+  }
+
+  const flaggedCount = orders.filter((o) => o.flagged).length
+
   return (
     <div className="p-6 md:p-8 max-w-6xl">
-      <h1 className="text-white text-2xl font-semibold mb-6">Commandes</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-white text-2xl font-semibold">Commandes</h1>
+        {flaggedCount > 0 && (
+          <div className="flex items-center gap-2 bg-red-500/20 border border-red-500/30 px-4 py-2 rounded">
+            <AlertTriangle size={14} className="text-red-400" />
+            <span className="text-red-400 text-sm font-semibold">{flaggedCount} doublon{flaggedCount > 1 ? 's' : ''} à vérifier</span>
+          </div>
+        )}
+      </div>
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
@@ -78,7 +110,7 @@ export default function AdminOrdersPage() {
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
           <input
             type="text"
-            placeholder="Rechercher..."
+            placeholder="Nom, téléphone, N° commande..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full bg-white/5 border border-white/10 text-white placeholder-white/30 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:border-brand-gold"
@@ -89,13 +121,14 @@ export default function AdminOrdersPage() {
             <button
               key={s}
               onClick={() => setFilter(s)}
-              className={`flex-shrink-0 px-4 py-2 text-xs tracking-widest uppercase transition-colors ${
+              className={`flex-shrink-0 px-4 py-2 text-xs tracking-widest uppercase transition-colors flex items-center gap-1.5 ${
                 filter === s
-                  ? 'bg-brand-gold text-brand-black'
-                  : 'bg-white/5 text-white/50 hover:bg-white/10'
+                  ? s === 'flagged' ? 'bg-red-500 text-white' : 'bg-brand-gold text-brand-black'
+                  : s === 'flagged' ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20' : 'bg-white/5 text-white/50 hover:bg-white/10'
               }`}
             >
-              {s === 'all' ? 'Tous' : STATUS_LABELS[s]}
+              {s === 'flagged' && <Flag size={10} />}
+              {s === 'all' ? 'Tous' : s === 'flagged' ? `Doublons${flaggedCount > 0 ? ` (${flaggedCount})` : ''}` : STATUS_LABELS[s]}
             </button>
           ))}
         </div>
@@ -110,16 +143,44 @@ export default function AdminOrdersPage() {
       ) : (
         <div className="space-y-3">
           {filtered.map((order) => (
-            <div key={order._id} className="bg-white/5 border border-white/5">
+            <div
+              key={order._id}
+              className={`border transition-colors ${
+                order.flagged
+                  ? 'bg-red-500/5 border-red-500/30'
+                  : 'bg-white/5 border-white/5'
+              }`}
+            >
+              {/* Flag warning banner */}
+              {order.flagged && (
+                <div className="flex items-start gap-3 px-5 py-3 bg-red-500/10 border-b border-red-500/20">
+                  <AlertTriangle size={14} className="text-red-400 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-red-400 text-xs font-semibold uppercase tracking-widest mb-0.5">Doublon détecté — confirmation requise</p>
+                    <p className="text-red-300/70 text-xs">{order.flagReason}</p>
+                  </div>
+                  <button
+                    onClick={() => unflag(order._id)}
+                    className="flex items-center gap-1.5 bg-green-500/20 hover:bg-green-500/30 text-green-400 px-3 py-1.5 text-xs font-semibold tracking-widest uppercase transition-colors flex-shrink-0"
+                  >
+                    <ShieldCheck size={12} />
+                    Valider
+                  </button>
+                </div>
+              )}
+
               <button
                 onClick={() => setExpanded(expanded === order._id ? null : order._id)}
                 className="w-full flex items-center justify-between px-5 py-4 text-left"
               >
                 <div className="flex items-center gap-4 min-w-0">
                   <div className="min-w-0">
-                    <p className="text-white font-medium text-sm">{order.orderNumber}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-white font-medium text-sm">{order.orderNumber}</p>
+                      {order.flagged && <Flag size={10} className="text-red-400 flex-shrink-0" />}
+                    </div>
                     <p className="text-white/40 text-xs mt-0.5 truncate">
-                      {order.customer.name} — {order.customer.city}
+                      {order.customer.name} — {order.customer.city} — {order.customer.phone}
                     </p>
                   </div>
                 </div>
@@ -145,6 +206,8 @@ export default function AdminOrdersPage() {
                       <p className="text-white text-sm">{order.customer.name}</p>
                       <p className="text-white/50 text-sm">{order.customer.phone}</p>
                       <p className="text-white/50 text-sm">{order.customer.city}</p>
+                      {order.customer.address && <p className="text-white/40 text-xs mt-1">{order.customer.address}</p>}
+                      {order.customer.email && <p className="text-white/40 text-xs">{order.customer.email}</p>}
                     </div>
                     <div>
                       <p className="text-white/40 text-xs uppercase tracking-widest mb-2">Articles</p>
@@ -156,6 +219,13 @@ export default function AdminOrdersPage() {
                       <p className="text-brand-gold font-semibold mt-2">Total: {order.total.toFixed(0)} MAD</p>
                     </div>
                   </div>
+
+                  {order.flagged && order.flaggedOrderNumbers && order.flaggedOrderNumbers.length > 0 && (
+                    <div className="mb-4 bg-red-500/10 border border-red-500/20 p-3">
+                      <p className="text-red-400 text-xs font-semibold uppercase tracking-widest mb-1">Commandes similaires</p>
+                      <p className="text-red-300/60 text-xs">{order.flaggedOrderNumbers.join(', ')}</p>
+                    </div>
+                  )}
 
                   <div>
                     <p className="text-white/40 text-xs uppercase tracking-widest mb-2">Changer statut</p>

@@ -79,12 +79,49 @@ export async function POST(req: NextRequest) {
     }
 
     const orderNumber = generateOrderNumber()
+
+    // Duplicate detection — check last 30 days for same phone, name, email, or address
+    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    const phone = body.customer.phone.replace(/\D/g, '')
+    const duplicateQuery: Record<string, unknown>[] = [
+      { 'customer.phone': { $regex: phone.slice(-9) } },
+      { 'customer.name': { $regex: new RegExp(`^${body.customer.name.trim()}$`, 'i') } },
+    ]
+    if (body.customer.email) {
+      duplicateQuery.push({ 'customer.email': body.customer.email.toLowerCase().trim() })
+    }
+    const duplicates = await Order.find({
+      createdAt: { $gte: since },
+      status: { $nin: ['cancelled'] },
+      $or: duplicateQuery,
+    }).select('orderNumber customer createdAt').lean()
+
+    let flagged = false
+    let flagReason = ''
+    const flaggedOrderNumbers: string[] = []
+
+    if (duplicates.length > 0) {
+      const reasons: string[] = []
+      for (const dup of duplicates as Array<{ orderNumber: string; customer: { phone: string; name: string; email?: string } }>) {
+        const dupPhone = dup.customer.phone.replace(/\D/g, '')
+        if (dupPhone.slice(-9) === phone.slice(-9)) reasons.push(`même téléphone`)
+        else if (dup.customer.name.toLowerCase().trim() === body.customer.name.toLowerCase().trim()) reasons.push(`même nom`)
+        else if (body.customer.email && dup.customer.email?.toLowerCase() === body.customer.email.toLowerCase()) reasons.push(`même email`)
+        flaggedOrderNumbers.push(dup.orderNumber)
+      }
+      flagged = true
+      flagReason = `Doublon détecté (${reasons.filter((v, i, a) => a.indexOf(v) === i).join(', ')}) avec commande(s) : ${flaggedOrderNumbers.join(', ')}`
+    }
+
     const order = await Order.create({
       customer: body.customer,
       items: body.items,
       notes: body.notes,
       orderNumber,
       total: serverTotal,
+      flagged,
+      flagReason: flagReason || undefined,
+      flaggedOrderNumbers: flaggedOrderNumbers.length ? flaggedOrderNumbers : undefined,
     })
 
     const settings = await Settings.findOne().lean() as { emailNote?: string } | null
