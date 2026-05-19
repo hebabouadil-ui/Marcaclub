@@ -5,17 +5,31 @@ import '@/styles/globals.css'
 export const metadata: Metadata = {
   title: 'Marcaclub — Mode Exclusive d\'Espagne',
   description:
-    'Marcaclub — Vêtements et accessoires exclusifs importés de Primark Espagne. Drops limités, qualité premium.',
-  keywords: 'marcaclub, mode, vêtements, Primark, Espagne, maroc, livraison',
+    'Marcaclub — Vêtements et accessoires exclusifs importés de Primark Espagne. Drops limités, qualité premium. Livraison 24-48h, paiement à la livraison.',
+  keywords: 'marcaclub, mode femme, vêtements, Primark, Espagne, Algérie, livraison, marca club',
+  metadataBase: new URL('https://marca-club.com'),
+  alternates: { canonical: 'https://marca-club.com' },
   icons: {
     icon: '/icon.svg',
     shortcut: '/icon.svg',
     apple: '/icon.svg',
   },
   openGraph: {
-    title: 'Marcaclub',
-    description: 'Mode exclusive importée d\'Espagne',
+    title: 'Marcaclub — Mode Exclusive d\'Espagne',
+    description: 'Vêtements et accessoires exclusifs importés de Primark Espagne. Livraison 24-48h.',
     type: 'website',
+    url: 'https://marca-club.com',
+    siteName: 'Marcaclub',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Marcaclub — Mode Exclusive d\'Espagne',
+    description: 'Vêtements et accessoires exclusifs importés de Primark Espagne.',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
   },
 }
 
