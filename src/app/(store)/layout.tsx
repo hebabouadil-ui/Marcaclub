@@ -3,6 +3,7 @@ import Footer from '@/components/store/Footer'
 import WhatsAppButton from '@/components/ui/WhatsAppButton'
 import AnnouncementBar from '@/components/store/AnnouncementBar'
 import LiveBanner from '@/components/store/LiveBanner'
+import VisitorTracker from '@/components/store/VisitorTracker'
 import { connectDB } from '@/lib/db'
 import Settings from '@/lib/models/Settings'
 
@@ -84,6 +85,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
         className="hidden md:block bg-brand-black"
       />
 
+      <VisitorTracker />
       <main className="flex-1">{children}</main>
       <Footer
         instagramUrl={s.instagramUrl ?? 'https://instagram.com/marcaclub'}

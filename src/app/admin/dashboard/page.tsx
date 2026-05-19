@@ -3,7 +3,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import {
   ShoppingBag, Package, TrendingUp, Clock, Radio,
-  AlertTriangle, Ban, Star, BarChart2, Users, CheckCircle,
+  AlertTriangle, Ban, Star, BarChart2, Users, CheckCircle, Eye,
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -53,6 +53,7 @@ export default function DashboardPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [liveStatus, setLiveStatus] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [visitors, setVisitors] = useState<number | null>(null)
 
   useEffect(() => {
     Promise.all([
@@ -64,6 +65,17 @@ export default function DashboardPage() {
       if (Array.isArray(prod)) setProducts(prod)
       setLiveStatus(live?.liveStatus ?? false)
     }).finally(() => setLoading(false))
+
+    // Poll visitor count every 30s
+    const fetchVisitors = () => {
+      fetch('/api/visitors', { credentials: 'include' })
+        .then((r) => r.json())
+        .then((d) => setVisitors(d.count ?? 0))
+        .catch(() => {})
+    }
+    fetchVisitors()
+    const visitorInterval = setInterval(fetchVisitors, 30_000)
+    return () => clearInterval(visitorInterval)
   }, [])
 
   const toggleLive = async () => {
@@ -202,6 +214,7 @@ export default function DashboardPage() {
           { label: 'Annulées', value: loading ? '—' : fmt(stats.cancelled), icon: Ban, color: 'text-red-400', sub: `${loading ? '—' : stats.total > 0 ? ((stats.cancelled / stats.total) * 100).toFixed(0) : 0}% du total` },
           { label: 'Produits', value: loading ? '—' : fmt(products.length), icon: Package, color: 'text-amber-400', sub: `${loading ? '—' : products.filter((p) => p.stock === 0).length} rupture` },
           { label: 'Suspectes', value: loading ? '—' : fmt(stats.flagged), icon: AlertTriangle, color: 'text-orange-400', sub: 'à vérifier' },
+          { label: 'Sur le site maintenant', value: visitors === null ? '—' : fmt(visitors), icon: Eye, color: 'text-green-300', sub: 'visiteurs actifs (2 min)', live: true },
         ].map((card, i) => {
           const Icon = card.icon
           return (
@@ -213,7 +226,15 @@ export default function DashboardPage() {
               className="bg-white/5 border border-white/5 p-5"
             >
               <div className="flex items-center justify-between mb-2">
-                <p className="text-white/40 text-[10px] tracking-widest uppercase">{card.label}</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-white/40 text-[10px] tracking-widest uppercase">{card.label}</p>
+                  {'live' in card && card.live && (
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-400" />
+                    </span>
+                  )}
+                </div>
                 <Icon size={14} className={card.color} />
               </div>
               <p className={`text-2xl font-bold ${card.color}`}>{card.value}</p>
