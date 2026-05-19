@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { ChevronDown, Search, AlertTriangle, ShieldCheck, Flag, Ban, Trash2, Shield, Bot, Loader2, CheckCircle2, XCircle, AlertCircle } from 'lucide-react'
 
@@ -54,6 +55,7 @@ interface BlocklistEntry {
 }
 
 export default function AdminOrdersPage() {
+  const router = useRouter()
   const [orders, setOrders] = useState<Order[]>([])
   const [filtered, setFiltered] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
@@ -135,9 +137,8 @@ export default function AdminOrdersPage() {
       }),
     })
     if (res.ok) {
-      const entry = await res.json()
-      setBlocklist((prev) => [entry, ...prev])
-      toast.success('Client blacklisté')
+      toast.success('Client blacklisté — redirection vers Risques élevés')
+      setTimeout(() => router.push('/admin/high-risk'), 800)
     } else {
       toast.error('Erreur')
     }
@@ -200,8 +201,10 @@ export default function AdminOrdersPage() {
         orderNumbers: [order.orderNumber],
       }),
     })
-    if (res.ok) toast.success(`IP ${order.ip} bloquée`)
-    else toast.error('Erreur')
+    if (res.ok) {
+      toast.success(`IP ${order.ip} bloquée — redirection vers Risques élevés`)
+      setTimeout(() => router.push('/admin/high-risk'), 800)
+    } else toast.error('Erreur')
   }
 
   const flaggedCount = orders.filter((o) => o.flagged).length

@@ -16,7 +16,16 @@ const WILAYAS = [
   'Laâyoune', 'Dakhla', 'Al Hoceima', 'Azrou', 'Chefchaouen', 'Midelt', 'Taroudant',
   'Sidi Kacem', 'Sidi Slimane', 'Berkane', 'Youssoufia', 'Benslimane', 'Fnideq',
   'Martil', 'M\'diq', 'Aïn Harrouda', 'Bouskoura', 'Temara', 'Salé',
-]
+  'Kelaa des Sraghna', 'Souk El Arbaa', 'Sidi Bennour', 'El Kelaâ des Srarhna',
+  'Ouled Teima', 'Ait Melloul', 'Dcheira El Jihadia', 'Inezgane', 'Biougra',
+  'Tiznit', 'Oulad Teima', 'Smara', 'Boujdour', 'Tan-Tan', 'Sidi Ifni',
+  'Zagora', 'Tinghir', 'Azilal', 'Fquih Ben Salah', 'Souk Sebt',
+  'Sefrou', 'El Hajeb', 'Itzer', 'Mrirt', 'Khenifra', 'Boulmane',
+  'Jerada', 'Figuig', 'Bouarfa', 'Ain Beni Mathar', 'Guercif',
+  'Imzouren', 'Beni Ansar', 'Driouch', 'Midar', 'Kassita',
+  'Larache', 'Ksar El Kébir', 'Souk Larbaa', 'Moulay Bousselham',
+  'Asilah', 'Zouerate', 'Aousserd',
+].sort()
 
 export default function CheckoutPage() {
   const router = useRouter()
