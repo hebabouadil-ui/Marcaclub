@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { signOut, useSession } from 'next-auth/react'
 import { SessionProvider } from 'next-auth/react'
 import {
-  LayoutDashboard, Package, ShoppingBag, Settings, LogOut, Radio, Menu, X, BarChart2, Users,
+  LayoutDashboard, Package, ShoppingBag, Settings, LogOut, Radio, Menu, X, BarChart2, Users, Shield,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -13,6 +13,7 @@ const navItems = [
   { href: '/admin/products', label: 'Produits', icon: Package },
   { href: '/admin/orders', label: 'Commandes', icon: ShoppingBag },
   { href: '/admin/customers', label: 'Clients', icon: Users },
+  { href: '/admin/blocked-ips', label: 'IPs bloquées', icon: Shield },
   { href: '/admin/reports', label: 'Rapports', icon: BarChart2 },
   { href: '/admin/settings', label: 'Paramètres', icon: Settings },
   { href: '/admin/live', label: 'Live', icon: Radio },

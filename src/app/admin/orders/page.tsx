@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
-import { ChevronDown, Search, AlertTriangle, ShieldCheck, Flag, Ban, Trash2 } from 'lucide-react'
+import { ChevronDown, Search, AlertTriangle, ShieldCheck, Flag, Ban, Trash2, Shield } from 'lucide-react'
 
 const STATUSES = ['all', 'flagged', 'pending', 'confirmed', 'shipped', 'delivered', 'cancelled']
 const STATUS_LABELS: Record<string, string> = {
@@ -27,6 +27,7 @@ interface Order {
   flagSeverity?: 'low' | 'medium' | 'high'
   flagReason?: string
   flaggedOrderNumbers?: string[]
+  ip?: string
   createdAt: string
 }
 
@@ -141,6 +142,22 @@ export default function AdminOrdersPage() {
     }
   }
 
+  const blockIP = async (order: Order) => {
+    if (!order.ip) return
+    const res = await fetch('/api/blocked-ips', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ip: order.ip,
+        reason: `Bloqué depuis commande ${order.orderNumber}`,
+        orderNumbers: [order.orderNumber],
+      }),
+    })
+    if (res.ok) toast.success(`IP ${order.ip} bloquée`)
+    else toast.error('Erreur')
+  }
+
   const flaggedCount = orders.filter((o) => o.flagged).length
 
   return (
@@ -245,6 +262,15 @@ export default function AdminOrdersPage() {
                         <Ban size={12} />
                         Blacklister
                       </button>
+                      {order.ip && (
+                        <button
+                          onClick={() => blockIP(order)}
+                          className="flex items-center gap-1.5 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 px-3 py-1.5 text-xs font-semibold tracking-widest uppercase transition-colors"
+                        >
+                          <Shield size={12} />
+                          Bloquer IP
+                        </button>
+                      )}
                     </div>
                   </div>
                 )
@@ -289,6 +315,12 @@ export default function AdminOrdersPage() {
                       <p className="text-white/50 text-sm">{order.customer.city}</p>
                       {order.customer.address && <p className="text-white/40 text-xs mt-1">{order.customer.address}</p>}
                       {order.customer.email && <p className="text-white/40 text-xs">{order.customer.email}</p>}
+                      {order.ip && (
+                        <p className="text-purple-400/60 font-mono text-xs mt-1 flex items-center gap-1">
+                          <Shield size={10} />
+                          {order.ip}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <p className="text-white/40 text-xs uppercase tracking-widest mb-2">Articles</p>

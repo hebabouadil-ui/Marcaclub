@@ -4,6 +4,7 @@ import Order from '@/lib/models/Order'
 import Product from '@/lib/models/Product'
 import Settings from '@/lib/models/Settings'
 import Blocklist from '@/lib/models/Blocklist'
+import BlockedIP from '@/lib/models/BlockedIP'
 import { generateOrderNumber } from '@/lib/utils/generateOrderNumber'
 import { sendOrderConfirmationEmail, sendAdminOrderNotification } from '@/lib/utils/email'
 import { getServerSession } from 'next-auth'
@@ -101,21 +102,27 @@ export async function POST(req: NextRequest) {
     const since24h = new Date(now - 24 * 60 * 60 * 1000)
     const since2h  = new Date(now - 2 * 60 * 60 * 1000)
 
-    type DupOrder = { orderNumber: string; customer: { phone: string; name: string; email?: string; city: string }; items: Array<{ productId: string }>; total: number; createdAt: Date }
+    type DupOrder = { orderNumber: string; customer: { phone: string; name: string; email?: string; city: string }; items: Array<{ productId: string }>; total: number; createdAt: Date; ip?: string }
 
     const baseQuery: Record<string, unknown>[] = [
       { 'customer.phone': { $regex: phone.slice(-9) } },
       { 'customer.name': { $regex: new RegExp(`^${nameTrimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } },
     ]
     if (emailNorm) baseQuery.push({ 'customer.email': emailNorm })
+    if (ip && ip !== 'unknown') baseQuery.push({ ip })
 
     const recentOrders = await Order.find({
       createdAt: { $gte: since30d },
       status: { $nin: ['cancelled'] },
       $or: baseQuery,
-    }).select('orderNumber customer items total createdAt').lean() as DupOrder[]
+    }).select('orderNumber customer items total createdAt ip').lean() as DupOrder[]
 
-    // --- Blocklist check (always HIGH) ---
+    // --- IP blocklist check (always HIGH) ---
+    const blockedIPEntry = ip && ip !== 'unknown'
+      ? await BlockedIP.findOne({ ip }).lean() as { ip: string; reason?: string } | null
+      : null
+
+    // --- Customer blocklist check (always HIGH) ---
     type BlockEntry = { phone?: string; name?: string; address?: string; city?: string; reason?: string }
     const blocklistEntries = await Blocklist.find({}).lean() as BlockEntry[]
     const addressTrimmed = body.customer.address?.trim().toLowerCase() || ''
@@ -134,9 +141,14 @@ export async function POST(req: NextRequest) {
     const riskSignals: string[] = []
     let maxSeverity = 0 // 0=none,1=low,2=medium,3=high
 
+    if (blockedIPEntry) {
+      riskSignals.push(`IP bloquée (${ip})${blockedIPEntry.reason ? ` — ${blockedIPEntry.reason}` : ''}`)
+      maxSeverity = 3
+    }
+
     if (blockedBy.length > 0) {
       blockedBy.filter((v, i, a) => a.indexOf(v) === i).forEach((s) => riskSignals.push(s))
-      maxSeverity = 3
+      if (3 > maxSeverity) maxSeverity = 3
     }
 
     const addSignal = (msg: string, level: 1 | 2 | 3) => {
@@ -211,14 +223,14 @@ export async function POST(req: NextRequest) {
       cityItemsToday.forEach((o) => { if (!flaggedOrderNumbers.includes(o.orderNumber)) flaggedOrderNumbers.push(o.orderNumber) })
     }
 
-    // Same IP address ordered before → MEDIUM
-    if (ip && ip !== 'unknown') {
-      const sameIpOrders = await Order.find({ ip, status: { $nin: ['cancelled'] }, createdAt: { $gte: since30d } })
-        .select('orderNumber').lean() as { orderNumber: string }[]
-      if (sameIpOrders.length > 0) {
-        addSignal(`même adresse IP (${ip})`, 2)
-        sameIpOrders.forEach((o) => { if (!flaggedOrderNumbers.includes(o.orderNumber)) flaggedOrderNumbers.push(o.orderNumber) })
-      }
+    // Same IP from different customer → MEDIUM (caught via $or above)
+    const sameIpDiffCustomer = recentOrders.filter(
+      (o) => o.ip === ip &&
+        o.customer.phone.replace(/\D/g, '').slice(-9) !== phone.slice(-9)
+    )
+    if (sameIpDiffCustomer.length > 0) {
+      addSignal(`même IP, client différent (${ip})`, 2)
+      sameIpDiffCustomer.forEach((o) => { if (!flaggedOrderNumbers.includes(o.orderNumber)) flaggedOrderNumbers.push(o.orderNumber) })
     }
 
     // Order at unusual hours (midnight–5am Morocco time, UTC+1) → LOW
