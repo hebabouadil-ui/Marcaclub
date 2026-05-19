@@ -29,13 +29,11 @@ function useBadges(): Badges {
   useEffect(() => {
     if (!session) return
     const fetch_ = () => {
-      fetch('/api/orders', { credentials: 'include' })
+      fetch('/api/admin/counts', { credentials: 'include' })
         .then((r) => r.json())
-        .then((data: Array<{ status: string; flagged: boolean; trusted?: boolean; flagSeverity?: string; aiVerdict?: string }>) => {
-          if (!Array.isArray(data)) return
-          const orders = data.filter((o) => o.status === 'pending' && !o.flagged && !o.trusted).length
-          const highRisk = data.filter((o) => !o.trusted && (o.flagSeverity === 'high' || o.aiVerdict === 'HIGH_RISK')).length
-          setBadges({ orders, highRisk })
+        .then((data: { pendingUntouched: number; highRisk: number }) => {
+          if (typeof data?.pendingUntouched !== 'number') return
+          setBadges({ orders: data.pendingUntouched, highRisk: data.highRisk })
         })
         .catch(() => {})
     }
