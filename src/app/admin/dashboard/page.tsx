@@ -15,6 +15,9 @@ interface Order {
   total: number
   status: string
   flagged: boolean
+  trusted?: boolean
+  flagSeverity?: 'low' | 'medium' | 'high'
+  aiVerdict?: 'SAFE' | 'SUSPICIOUS' | 'HIGH_RISK'
   flagReason?: string
   ip?: string
   createdAt: string
@@ -111,6 +114,12 @@ export default function DashboardPage() {
     const cancelled = orders.filter((o) => o.status === 'cancelled')
     const pending = orders.filter((o) => o.status === 'pending')
     const flagged = orders.filter((o) => o.flagged)
+    // Untouched = pending AND not flagged AND not trusted (never acted on)
+    const untouched = orders.filter((o) => o.status === 'pending' && !o.flagged && !o.trusted)
+    // High risk waiting = flagged or AI HIGH_RISK and not yet trusted
+    const highRiskWaiting = orders.filter((o) =>
+      !o.trusted && (o.flagSeverity === 'high' || o.aiVerdict === 'HIGH_RISK')
+    )
     const avgOrder = active.length > 0 ? revenue / active.length : 0
     const nonCancelled = orders.filter((o) => o.status !== 'cancelled')
     const deliveryRate = nonCancelled.length > 0 ? (delivered.length / nonCancelled.length) * 100 : 0
@@ -179,6 +188,8 @@ export default function DashboardPage() {
       total: orders.length, pending: pending.length, cancelled: cancelled.length,
       flagged: flagged.length, delivered: delivered.length,
       uniqueCustomers: phones.size,
+      untouched: untouched.length,
+      highRiskWaiting: highRiskWaiting.length,
       recentOrders: orders.slice(0, 6),
       revenueByDay: days,
       ordersByDay,
@@ -215,13 +226,40 @@ export default function DashboardPage() {
         </button>
       </div>
 
-      {/* Flagged alert */}
-      {!loading && stats.flagged > 0 && (
-        <Link href="/admin/orders?filter=flagged" className="flex items-center gap-3 bg-red-500/10 border border-red-500/30 px-5 py-3 hover:bg-red-500/15 transition-colors">
-          <AlertTriangle size={16} className="text-red-400 flex-shrink-0" />
-          <span className="text-red-400 text-sm font-semibold">{stats.flagged} commande{stats.flagged > 1 ? 's' : ''} suspecte{stats.flagged > 1 ? 's' : ''} à vérifier</span>
-          <span className="text-red-400/50 text-xs ml-auto">Voir →</span>
-        </Link>
+      {/* Notification bar */}
+      {!loading && (stats.untouched > 0 || stats.highRiskWaiting > 0) && (
+        <div className="flex flex-col sm:flex-row gap-2">
+          {stats.untouched > 0 && (
+            <Link
+              href="/admin/orders"
+              className="flex-1 flex items-center gap-3 bg-amber-500/10 border border-amber-500/30 px-5 py-3 hover:bg-amber-500/15 transition-colors"
+            >
+              <Clock size={15} className="text-amber-400 flex-shrink-0" />
+              <div className="flex-1">
+                <span className="text-amber-400 text-sm font-semibold">
+                  {stats.untouched} commande{stats.untouched > 1 ? 's' : ''} en attente non traitée{stats.untouched > 1 ? 's' : ''}
+                </span>
+                <p className="text-amber-400/50 text-[11px]">Nouvelles commandes à confirmer</p>
+              </div>
+              <span className="text-amber-400/50 text-xs shrink-0">Voir →</span>
+            </Link>
+          )}
+          {stats.highRiskWaiting > 0 && (
+            <Link
+              href="/admin/high-risk"
+              className="flex-1 flex items-center gap-3 bg-red-500/10 border border-red-500/30 px-5 py-3 hover:bg-red-500/15 transition-colors"
+            >
+              <AlertTriangle size={15} className="text-red-400 flex-shrink-0" />
+              <div className="flex-1">
+                <span className="text-red-400 text-sm font-semibold">
+                  {stats.highRiskWaiting} commande{stats.highRiskWaiting > 1 ? 's' : ''} à risque élevé en attente
+                </span>
+                <p className="text-red-400/50 text-[11px]">Décision requise avant livraison</p>
+              </div>
+              <span className="text-red-400/50 text-xs shrink-0">Voir →</span>
+            </Link>
+          )}
+        </div>
       )}
 
       {/* KPI cards */}

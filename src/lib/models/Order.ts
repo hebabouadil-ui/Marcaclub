@@ -22,6 +22,7 @@ export interface IOrder extends Document {
   total: number
   status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled'
   flagged: boolean
+  trusted?: boolean
   flagSeverity?: 'low' | 'medium' | 'high'
   flagReason?: string
   flaggedOrderNumbers?: string[]
@@ -62,6 +63,7 @@ const OrderSchema = new Schema<IOrder>(
       default: 'pending',
     },
     flagged: { type: Boolean, default: false },
+    trusted: { type: Boolean, default: false },
     flagSeverity: { type: String, enum: ['low', 'medium', 'high'] },
     flagReason: { type: String },
     flaggedOrderNumbers: [{ type: String }],

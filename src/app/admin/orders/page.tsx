@@ -1,8 +1,9 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { ChevronDown, Search, AlertTriangle, ShieldCheck, Flag, Ban, Trash2, Shield, Bot, Loader2, CheckCircle2, XCircle, AlertCircle } from 'lucide-react'
+import { ChevronDown, Search, AlertTriangle, ShieldCheck, Flag, Ban, Trash2, Shield, Bot, Loader2, CheckCircle2, XCircle, AlertCircle, Clock } from 'lucide-react'
 
 const STATUSES = ['all', 'flagged', 'pending', 'confirmed', 'shipped', 'delivered', 'cancelled']
 const STATUS_LABELS: Record<string, string> = {
@@ -33,6 +34,7 @@ interface Order {
   total: number
   status: string
   flagged: boolean
+  trusted?: boolean
   flagSeverity?: 'low' | 'medium' | 'high'
   flagReason?: string
   flaggedOrderNumbers?: string[]
@@ -117,10 +119,10 @@ export default function AdminOrdersPage() {
     })
     if (res.ok) {
       setOrders((prev) => prev.map((o) => o._id === id
-        ? { ...o, flagged: false, flagReason: undefined, flagSeverity: undefined, flaggedOrderNumbers: [], aiVerdict: undefined, aiConfidence: undefined, aiReasoning: undefined }
+        ? { ...o, flagged: false, trusted: true, flagReason: undefined, flagSeverity: undefined, flaggedOrderNumbers: [], aiVerdict: undefined, aiConfidence: undefined, aiReasoning: undefined }
         : o
       ))
-      toast.success('Commande validée')
+      toast.success('Commande marquée comme fiable ✓')
     } else {
       toast.error('Erreur')
     }
@@ -211,9 +213,30 @@ export default function AdminOrdersPage() {
   }
 
   const flaggedCount = orders.filter((o) => o.flagged).length
+  const untouchedCount = orders.filter((o) => o.status === 'pending' && !o.flagged && !o.trusted).length
+  const highRiskCount = orders.filter((o) => !o.trusted && (o.flagSeverity === 'high' || o.aiVerdict === 'HIGH_RISK')).length
 
   return (
     <div className="p-6 md:p-8 max-w-6xl">
+      {/* Notification bar */}
+      {(untouchedCount > 0 || highRiskCount > 0) && (
+        <div className="flex flex-col sm:flex-row gap-2 mb-6">
+          {untouchedCount > 0 && (
+            <div className="flex-1 flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 px-4 py-2.5">
+              <Clock size={13} className="text-amber-400 shrink-0" />
+              <span className="text-amber-400 text-sm font-semibold">{untouchedCount} en attente non traitée{untouchedCount > 1 ? 's' : ''}</span>
+            </div>
+          )}
+          {highRiskCount > 0 && (
+            <Link href="/admin/high-risk" className="flex-1 flex items-center gap-2 bg-red-500/10 border border-red-500/30 px-4 py-2.5 hover:bg-red-500/15 transition-colors">
+              <AlertTriangle size={13} className="text-red-400 shrink-0" />
+              <span className="text-red-400 text-sm font-semibold">{highRiskCount} risque{highRiskCount > 1 ? 's' : ''} élevé{highRiskCount > 1 ? 's' : ''} en attente</span>
+              <span className="text-red-400/50 text-xs ml-auto">→</span>
+            </Link>
+          )}
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-white text-2xl font-semibold">Commandes</h1>
         <div className="flex items-center gap-3">
@@ -305,7 +328,7 @@ export default function AdminOrdersPage() {
                         className="flex items-center gap-1.5 bg-green-500/20 hover:bg-green-500/30 text-green-400 px-3 py-1.5 text-xs font-semibold tracking-widest uppercase transition-colors"
                       >
                         <ShieldCheck size={12} />
-                        Valider
+                        Fiable
                       </button>
                       <button
                         onClick={() => blacklistOrder(order)}
@@ -355,6 +378,11 @@ export default function AdminOrdersPage() {
                     <div className="flex items-center gap-2">
                       <p className="text-white font-medium text-sm">{order.orderNumber}</p>
                       {order.flagged && <Flag size={10} className="text-red-400 flex-shrink-0" />}
+                      {order.trusted && !order.flagged && (
+                        <span className="flex items-center gap-0.5 text-green-400/70 text-[10px]">
+                          <ShieldCheck size={10} />fiable
+                        </span>
+                      )}
                     </div>
                     <p className="text-white/40 text-xs mt-0.5 truncate">
                       {order.customer.name} — {order.customer.city} — {order.customer.phone}

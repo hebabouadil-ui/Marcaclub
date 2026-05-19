@@ -36,12 +36,12 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     await connectDB()
     const body = await req.json()
 
-    // Unflag: clear all flag + AI verdict fields
+    // Unflag: clear all flag + AI verdict fields, mark as trusted
     if (body.action === 'unflag') {
       const order = await Order.findByIdAndUpdate(
         params.id,
         {
-          $set: { flagged: false },
+          $set: { flagged: false, trusted: true },
           $unset: { flagReason: '', flagSeverity: '', flaggedOrderNumbers: '', aiVerdict: '', aiConfidence: '', aiReasoning: '', aiAnalyzedAt: '' },
         },
         { new: true }
