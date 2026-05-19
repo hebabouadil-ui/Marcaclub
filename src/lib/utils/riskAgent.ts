@@ -1,10 +1,7 @@
-import Anthropic from '@anthropic-ai/sdk'
 import { connectDB } from '@/lib/db'
 import Order from '@/lib/models/Order'
 import Blocklist from '@/lib/models/Blocklist'
 import BlockedIP from '@/lib/models/BlockedIP'
-
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export interface RiskVerdict {
   verdict: 'SAFE' | 'SUSPICIOUS' | 'HIGH_RISK'
@@ -24,313 +21,236 @@ interface OrderContext {
   createdAt: string
 }
 
-// Tools the agent can call to gather intelligence
-const tools: Anthropic.Tool[] = [
-  {
-    name: 'get_customer_order_history',
-    description: 'Retrieve all past orders from the same phone number or customer name to detect patterns',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        phone: { type: 'string', description: 'Customer phone number (digits only)' },
-        name: { type: 'string', description: 'Customer full name' },
-      },
-      required: ['phone'],
-    },
-  },
-  {
-    name: 'check_customer_blocklist',
-    description: 'Check if the customer phone, name, or address matches any entry in the blocklist',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        phone: { type: 'string' },
-        name: { type: 'string' },
-        address: { type: 'string' },
-      },
-      required: ['phone'],
-    },
-  },
-  {
-    name: 'get_ip_order_history',
-    description: 'Get all orders placed from the same IP address to detect multi-account fraud',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        ip: { type: 'string', description: 'IP address to look up' },
-      },
-      required: ['ip'],
-    },
-  },
-  {
-    name: 'check_ip_blocklist',
-    description: 'Check if this IP address is in the blocked IPs list',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        ip: { type: 'string' },
-      },
-      required: ['ip'],
-    },
-  },
-  {
-    name: 'get_city_order_stats',
-    description: 'Get recent order statistics for a city to detect unusual activity spikes',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        city: { type: 'string' },
-        days: { type: 'number', description: 'Number of days to look back (default 7)' },
-      },
-      required: ['city'],
-    },
-  },
-  {
-    name: 'get_delivery_success_rate',
-    description: 'Get the historical delivery success rate for a phone number or city',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        phone: { type: 'string' },
-        city: { type: 'string' },
-      },
-      required: [],
-    },
-  },
-]
-
-// Tool execution — each tool hits MongoDB directly
-async function executeTool(name: string, input: Record<string, string | number>): Promise<string> {
-  await connectDB()
-
-  if (name === 'get_customer_order_history') {
-    const phone = String(input.phone || '').replace(/\D/g, '').slice(-9)
-    const nameVal = input.name ? String(input.name) : ''
-    const query = nameVal
-      ? { $or: [{ 'customer.phone': { $regex: phone } }, { 'customer.name': { $regex: new RegExp(nameVal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') } }] }
-      : { 'customer.phone': { $regex: phone } }
-
-    const orders = await Order.find(query)
-      .select('orderNumber status total createdAt customer.city ip')
-      .sort({ createdAt: -1 })
-      .limit(20)
-      .lean()
-
-    if (orders.length === 0) return JSON.stringify({ found: 0, message: 'No previous orders found for this customer' })
-
-    const delivered = orders.filter((o) => o.status === 'delivered').length
-    const cancelled = orders.filter((o) => o.status === 'cancelled').length
-    return JSON.stringify({
-      found: orders.length,
-      delivered,
-      cancelled,
-      deliveryRate: orders.length > 0 ? Math.round((delivered / orders.length) * 100) : 0,
-      cancellationRate: orders.length > 0 ? Math.round((cancelled / orders.length) * 100) : 0,
-      orders: orders.map((o) => ({
-        orderNumber: o.orderNumber,
-        status: o.status,
-        total: o.total,
-        city: (o.customer as { city: string }).city,
-        date: o.createdAt,
-      })),
-    })
-  }
-
-  if (name === 'check_customer_blocklist') {
-    const phone = String(input.phone || '').replace(/\D/g, '').slice(-9)
-    const nameVal = input.name ? String(input.name).toLowerCase() : ''
-    const addressVal = input.address ? String(input.address).toLowerCase() : ''
-
-    type Entry = { phone?: string; name?: string; address?: string; reason?: string }
-    const entries = await Blocklist.find({}).lean() as Entry[]
-    const matches: string[] = []
-
-    for (const e of entries) {
-      if (e.phone && e.phone.replace(/\D/g, '').slice(-9) === phone) matches.push(`phone matches blocklist entry${e.reason ? ` (${e.reason})` : ''}`)
-      else if (nameVal && e.name && e.name.toLowerCase() === nameVal) matches.push(`name matches blocklist entry${e.reason ? ` (${e.reason})` : ''}`)
-      else if (addressVal && e.address && addressVal.includes(e.address.toLowerCase())) matches.push(`address matches blocklist entry${e.reason ? ` (${e.reason})` : ''}`)
-    }
-
-    return JSON.stringify({ blocked: matches.length > 0, matches })
-  }
-
-  if (name === 'get_ip_order_history') {
-    const ip = String(input.ip || '')
-    if (!ip || ip === 'unknown') return JSON.stringify({ message: 'No IP available' })
-
-    const orders = await Order.find({ ip })
-      .select('orderNumber status total createdAt customer.name customer.phone customer.city')
-      .sort({ createdAt: -1 })
-      .limit(20)
-      .lean()
-
-    if (orders.length === 0) return JSON.stringify({ found: 0, message: 'No previous orders from this IP' })
-
-    type Cust = { name: string; phone: string; city: string }
-    const uniquePhones = new Set(orders.map((o) => (o.customer as Cust).phone.replace(/\D/g, '').slice(-9)))
-    const uniqueNames = new Set(orders.map((o) => (o.customer as Cust).name.toLowerCase()))
-    const delivered = orders.filter((o) => o.status === 'delivered').length
-    const cancelled = orders.filter((o) => o.status === 'cancelled').length
-
-    return JSON.stringify({
-      found: orders.length,
-      uniqueCustomers: uniquePhones.size,
-      multipleIdentities: uniquePhones.size > 1 || uniqueNames.size > 1,
-      delivered,
-      cancelled,
-      orders: orders.map((o) => ({
-        orderNumber: o.orderNumber,
-        status: o.status,
-        name: (o.customer as Cust).name,
-        phone: (o.customer as Cust).phone,
-        city: (o.customer as Cust).city,
-        date: o.createdAt,
-      })),
-    })
-  }
-
-  if (name === 'check_ip_blocklist') {
-    const ip = String(input.ip || '')
-    if (!ip || ip === 'unknown') return JSON.stringify({ blocked: false })
-    type BEntry = { ip: string; reason?: string }
-    const entry = await BlockedIP.findOne({ ip }).lean() as BEntry | null
-    return JSON.stringify({ blocked: !!entry, reason: entry?.reason || null })
-  }
-
-  if (name === 'get_city_order_stats') {
-    const city = String(input.city || '')
-    const days = Number(input.days) || 7
-    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
-
-    const orders = await Order.find({
-      'customer.city': { $regex: new RegExp(city.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') },
-      createdAt: { $gte: since },
-    }).select('status total').lean()
-
-    const cancelled = orders.filter((o) => o.status === 'cancelled').length
-    return JSON.stringify({
-      totalOrders: orders.length,
-      delivered: orders.filter((o) => o.status === 'delivered').length,
-      cancelled,
-      cancellationRate: orders.length > 0 ? Math.round((cancelled / orders.length) * 100) : 0,
-      totalRevenue: orders.filter((o) => ['confirmed', 'shipped', 'delivered'].includes(o.status)).reduce((s, o) => s + o.total, 0),
-    })
-  }
-
-  if (name === 'get_delivery_success_rate') {
-    const phone = input.phone ? String(input.phone).replace(/\D/g, '').slice(-9) : ''
-    const city = input.city ? String(input.city) : ''
-
-    const query: Record<string, unknown> = {}
-    if (phone) query['customer.phone'] = { $regex: phone }
-    else if (city) query['customer.city'] = { $regex: new RegExp(city.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }
-
-    const orders = await Order.find(query).select('status').lean()
-    const delivered = orders.filter((o) => o.status === 'delivered').length
-    const cancelled = orders.filter((o) => o.status === 'cancelled').length
-
-    return JSON.stringify({
-      totalOrders: orders.length,
-      delivered,
-      cancelled,
-      successRate: orders.length > 0 ? Math.round((delivered / orders.length) * 100) : null,
-      cancellationRate: orders.length > 0 ? Math.round((cancelled / orders.length) * 100) : null,
-    })
-  }
-
-  return JSON.stringify({ error: 'Unknown tool' })
+interface ScoredSignal {
+  message: string
+  points: number   // positive = risky, negative = trust-building
+  severity: 'critical' | 'high' | 'medium' | 'low' | 'positive'
 }
 
 export async function analyzeOrderRisk(order: OrderContext): Promise<RiskVerdict> {
-  const systemPrompt = `You are an advanced fraud detection agent for Marcaclub, a Moroccan e-commerce store selling clothing. Your job is to analyze orders and determine if they are safe to deliver or pose a fraud/non-delivery risk.
+  await connectDB()
 
-Context about the business:
-- Orders are paid on delivery (cash on delivery), so failed deliveries = lost shipping costs
-- Main risks: fake orders, serial non-delivery customers, identity fraud, coordinated fraud rings
-- Morocco-specific: some customers place multiple orders from different numbers/names but same address/IP
-- Typical order values: 200–1500 MAD
+  const signals: ScoredSignal[] = []
+  const phone = order.customer.phone.replace(/\D/g, '').slice(-9)
+  const nameTrimmed = order.customer.name.trim().toLowerCase()
+  const cityTrimmed = order.customer.city.trim().toLowerCase()
+  const now = Date.now()
+  const since30d = new Date(now - 30 * 24 * 60 * 60 * 1000)
+  const since7d  = new Date(now - 7  * 24 * 60 * 60 * 1000)
+  const since24h = new Date(now - 24 * 60 * 60 * 1000)
+  const since2h  = new Date(now - 2  * 60 * 60 * 1000)
 
-Use the available tools to gather intelligence, then produce a final verdict.
+  type PastOrder = {
+    orderNumber: string
+    status: string
+    total: number
+    createdAt: Date
+    ip?: string
+    customer: { name: string; phone: string; city: string }
+    items: Array<{ productId: string }>
+  }
 
-Your verdict must be one of:
-- SAFE: Low risk, proceed with delivery
-- SUSPICIOUS: Medium risk, call customer to verify before shipping
-- HIGH_RISK: Do not deliver without strong verification, likely fraudulent
-
-Always explain your reasoning in French (the business language). Be precise and data-driven.`
-
-  const userMessage = `Analyze this new order for delivery risk:
-
-Order #${order.orderNumber}
-Customer: ${order.customer.name}
-Phone: ${order.customer.phone}
-City: ${order.customer.city}
-Address: ${order.customer.address}
-${order.customer.email ? `Email: ${order.customer.email}` : ''}
-IP: ${order.ip || 'unknown'}
-Total: ${order.total} MAD
-Items: ${order.items.map((i) => `${i.name} (${i.size} ×${i.quantity})`).join(', ')}
-Placed at: ${new Date(order.createdAt).toLocaleString('fr-MA')}
-
-Use all available tools to investigate this customer thoroughly, then give your final verdict.`
-
-  const messages: Anthropic.MessageParam[] = [{ role: 'user', content: userMessage }]
-
-  // Agentic loop — keep calling tools until the agent decides to stop
-  for (let round = 0; round < 10; round++) {
-    const response = await client.messages.create({
-      model: 'claude-haiku-4-5',
-      max_tokens: 2048,
-      system: systemPrompt,
-      tools,
-      messages,
-    })
-
-    messages.push({ role: 'assistant', content: response.content })
-
-    if (response.stop_reason === 'end_turn') {
-      // Extract the final text response
-      const text = response.content
-        .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-        .map((b) => b.text)
-        .join('\n')
-
-      return parseVerdict(text)
-    }
-
-    if (response.stop_reason === 'tool_use') {
-      const toolUses = response.content.filter((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use')
-      const toolResults: Anthropic.ToolResultBlockParam[] = []
-
-      for (const toolUse of toolUses) {
-        const result = await executeTool(toolUse.name, toolUse.input as Record<string, string | number>)
-        toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: result })
-      }
-
-      messages.push({ role: 'user', content: toolResults })
+  // ── 1. IP blocklist ────────────────────────────────────────────────────────
+  if (order.ip && order.ip !== 'unknown') {
+    type BIP = { ip: string; reason?: string }
+    const blockedIp = await BlockedIP.findOne({ ip: order.ip }).lean() as BIP | null
+    if (blockedIp) {
+      signals.push({ message: `IP ${order.ip} est bloquée${blockedIp.reason ? ` (${blockedIp.reason})` : ''}`, points: 80, severity: 'critical' })
     }
   }
 
-  return { verdict: 'SUSPICIOUS', confidence: 50, reasoning: 'Analyse incomplète — vérification manuelle requise.', signals: [], recommendation: 'Appeler le client avant livraison' }
-}
+  // ── 2. Customer blocklist ──────────────────────────────────────────────────
+  type BEntry = { phone?: string; name?: string; address?: string; reason?: string }
+  const blocklistEntries = await Blocklist.find({}).lean() as BEntry[]
+  const addressLow = order.customer.address.toLowerCase()
+  for (const e of blocklistEntries) {
+    if (e.phone && e.phone.replace(/\D/g, '').slice(-9) === phone) {
+      signals.push({ message: `Téléphone blacklisté${e.reason ? ` — ${e.reason}` : ''}`, points: 80, severity: 'critical' })
+      break
+    }
+    if (e.name && e.name.toLowerCase() === nameTrimmed) {
+      signals.push({ message: `Nom blacklisté${e.reason ? ` — ${e.reason}` : ''}`, points: 70, severity: 'critical' })
+      break
+    }
+    if (e.address && addressLow.includes(e.address.toLowerCase())) {
+      signals.push({ message: `Adresse blacklistée${e.reason ? ` — ${e.reason}` : ''}`, points: 60, severity: 'critical' })
+      break
+    }
+  }
 
-function parseVerdict(text: string): RiskVerdict {
-  // Try to extract structured verdict from the agent's response
-  const verdictMatch = text.match(/\b(SAFE|SUSPICIOUS|HIGH_RISK)\b/)
-  const confidenceMatch = text.match(/confidence[:\s]+(\d+)/i) || text.match(/(\d+)%\s*(?:de confiance|confidence)/i)
-  const verdict = (verdictMatch?.[1] as RiskVerdict['verdict']) || 'SUSPICIOUS'
-  const confidence = confidenceMatch ? Math.min(100, Math.max(0, parseInt(confidenceMatch[1]))) : 60
+  // ── 3. Load past orders (same phone OR same IP) ────────────────────────────
+  const orQuery: Record<string, unknown>[] = [{ 'customer.phone': { $regex: phone } }]
+  if (order.ip && order.ip !== 'unknown') orQuery.push({ ip: order.ip })
 
-  // Extract signals (lines starting with - or •)
-  const signalLines = text.match(/^[-•*]\s+(.+)$/gm) || []
-  const signals = signalLines.map((l) => l.replace(/^[-•*]\s+/, '').trim()).filter(Boolean).slice(0, 8)
+  const pastOrders = await Order.find({
+    createdAt: { $gte: since30d },
+    status: { $nin: ['cancelled'] },
+    $or: orQuery,
+  }).select('orderNumber status total createdAt ip customer items').lean() as PastOrder[]
 
-  // Extract recommendation
-  const recMatch = text.match(/recommandation[:\s]+([^\n.]+)/i) ||
-                   text.match(/(?:livrer|ne pas livrer|appeler|vérifier)[^\n.]+/i)
-  const recommendation = recMatch
-    ? recMatch[0].replace(/^recommandation[:\s]+/i, '').trim()
-    : verdict === 'SAFE' ? 'Procéder à la livraison' : verdict === 'HIGH_RISK' ? 'Ne pas livrer sans vérification' : 'Appeler le client avant livraison'
+  const allPastOrders = await Order.find({
+    'customer.phone': { $regex: phone },
+  }).select('status').lean() as { status: string }[]
 
-  return { verdict, confidence, reasoning: text.slice(0, 1500), signals, recommendation }
+  // ── 4. Customer history trust score ───────────────────────────────────────
+  const totalEver = allPastOrders.length
+  const deliveredEver = allPastOrders.filter((o) => o.status === 'delivered').length
+  const cancelledEver = allPastOrders.filter((o) => o.status === 'cancelled').length
+
+  if (totalEver >= 3 && deliveredEver / totalEver >= 0.75) {
+    signals.push({ message: `Client fidèle — ${deliveredEver}/${totalEver} commandes livrées (${Math.round(deliveredEver/totalEver*100)}%)`, points: -30, severity: 'positive' })
+  }
+  if (totalEver >= 2 && cancelledEver / totalEver >= 0.5) {
+    signals.push({ message: `Taux d'annulation élevé — ${cancelledEver}/${totalEver} annulations`, points: 35, severity: 'high' })
+  }
+  if (totalEver === 0) {
+    signals.push({ message: 'Nouveau client — aucun historique', points: 10, severity: 'low' })
+  }
+
+  // ── 5. Velocity — orders in last 24h ──────────────────────────────────────
+  const last24h = pastOrders.filter((o) => new Date(o.createdAt).getTime() >= since24h.getTime())
+  if (last24h.length >= 3) {
+    signals.push({ message: `${last24h.length + 1} commandes en moins de 24h (même téléphone)`, points: 60, severity: 'critical' })
+  } else if (last24h.length === 2) {
+    signals.push({ message: `3 commandes en 24h — activité inhabituelle`, points: 35, severity: 'high' })
+  } else if (last24h.length === 1) {
+    signals.push({ message: `2 commandes aujourd'hui`, points: 15, severity: 'medium' })
+  }
+
+  // ── 6. IP multi-identity fraud ────────────────────────────────────────────
+  if (order.ip && order.ip !== 'unknown') {
+    const ipOrders = pastOrders.filter((o) => o.ip === order.ip)
+    if (ipOrders.length > 0) {
+      const uniquePhones = new Set(ipOrders.map((o) => o.customer.phone.replace(/\D/g, '').slice(-9)))
+      uniquePhones.delete(phone)
+      if (uniquePhones.size >= 2) {
+        signals.push({ message: `IP ${order.ip} utilisée par ${uniquePhones.size + 1} numéros différents — fraude probable`, points: 70, severity: 'critical' })
+      } else if (uniquePhones.size === 1) {
+        signals.push({ message: `IP déjà utilisée avec un autre numéro de téléphone`, points: 40, severity: 'high' })
+      } else {
+        signals.push({ message: `IP déjà utilisée par ce client — ${ipOrders.length} commande(s) précédente(s)`, points: 15, severity: 'medium' })
+      }
+    }
+  }
+
+  // ── 7. Identical basket duplicate ─────────────────────────────────────────
+  const orderProductIds = order.items.map((i) => i as unknown as { productId: string }).map((i) => i.productId).sort().join(',')
+  const basketMatch2h = pastOrders.filter((o) => {
+    if (new Date(o.createdAt).getTime() < since2h.getTime()) return false
+    const ids = o.items.map((i) => i.productId).sort().join(',')
+    return ids === orderProductIds && o.customer.city.toLowerCase() === cityTrimmed
+  })
+  if (basketMatch2h.length > 0) {
+    signals.push({ message: `Panier identique passé depuis la même ville en moins de 2h`, points: 55, severity: 'critical' })
+  }
+
+  // ── 8. Same name + different phone in same city ───────────────────────────
+  const nameCityDiffPhone = await Order.find({
+    createdAt: { $gte: since7d },
+    'customer.city': { $regex: new RegExp(order.customer.city.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') },
+    'customer.name': { $regex: new RegExp(`^${order.customer.name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+    'customer.phone': { $not: { $regex: phone } },
+    status: { $nin: ['cancelled'] },
+  }).countDocuments()
+  if (nameCityDiffPhone > 0) {
+    signals.push({ message: `Même nom + même ville avec un numéro différent (${nameCityDiffPhone} fois en 7j)`, points: 35, severity: 'high' })
+  }
+
+  // ── 9. City-level anomaly ─────────────────────────────────────────────────
+  const cityRecent = await Order.find({
+    'customer.city': { $regex: new RegExp(order.customer.city.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') },
+    createdAt: { $gte: since24h },
+    status: { $nin: ['cancelled'] },
+  }).countDocuments()
+  if (cityRecent >= 10) {
+    signals.push({ message: `Pic de commandes depuis ${order.customer.city} — ${cityRecent} en 24h`, points: 20, severity: 'medium' })
+  }
+
+  // ── 10. Order value risk ──────────────────────────────────────────────────
+  if (order.total > 1500) {
+    signals.push({ message: `Montant très élevé — ${order.total} MAD`, points: 25, severity: 'high' })
+  } else if (order.total > 800) {
+    signals.push({ message: `Montant élevé — ${order.total} MAD`, points: 10, severity: 'low' })
+  } else if (order.total < 150) {
+    signals.push({ message: `Petite commande — ${order.total} MAD`, points: -5, severity: 'positive' })
+  }
+
+  // ── 11. Night order ───────────────────────────────────────────────────────
+  const hour = (new Date().getUTCHours() + 1) % 24
+  if (hour >= 1 && hour < 5) {
+    signals.push({ message: `Commande passée à ${hour}h du matin`, points: 15, severity: 'medium' })
+  }
+
+  // ── 12. Quantity abuse ────────────────────────────────────────────────────
+  const totalQty = order.items.reduce((s, i) => s + i.quantity, 0)
+  if (totalQty >= 15) {
+    signals.push({ message: `Quantité très élevée — ${totalQty} articles`, points: 30, severity: 'high' })
+  } else if (totalQty >= 8) {
+    signals.push({ message: `Commande en gros — ${totalQty} articles`, points: 15, severity: 'medium' })
+  }
+
+  // ── 13. Verified delivery history (trust) ─────────────────────────────────
+  if (deliveredEver >= 5) {
+    signals.push({ message: `Client vérifié — ${deliveredEver} livraisons réussies`, points: -25, severity: 'positive' })
+  }
+
+  // ── Compute final score ───────────────────────────────────────────────────
+  const rawScore = signals.reduce((s, sig) => s + sig.points, 0)
+  const score = Math.max(0, Math.min(100, rawScore))
+
+  let verdict: RiskVerdict['verdict']
+  let confidence: number
+  let recommendation: string
+
+  if (score >= 60) {
+    verdict = 'HIGH_RISK'
+    confidence = Math.min(95, 60 + score / 5)
+    recommendation = 'Ne pas livrer sans vérification téléphonique approfondie'
+  } else if (score >= 25) {
+    verdict = 'SUSPICIOUS'
+    confidence = Math.min(90, 50 + score)
+    recommendation = 'Appeler le client pour confirmer avant expédition'
+  } else {
+    verdict = 'SAFE'
+    confidence = Math.max(60, 95 - score * 2)
+    recommendation = 'Procéder à la livraison normalement'
+  }
+
+  // ── Build reasoning text ──────────────────────────────────────────────────
+  const critical = signals.filter((s) => s.severity === 'critical')
+  const highs    = signals.filter((s) => s.severity === 'high')
+  const mediums  = signals.filter((s) => s.severity === 'medium')
+  const lows     = signals.filter((s) => s.severity === 'low')
+  const positives= signals.filter((s) => s.severity === 'positive')
+
+  const lines: string[] = [
+    `Analyse de risque — Commande ${order.orderNumber}`,
+    `Score de risque: ${score}/100 → Verdict: ${verdict} (${Math.round(confidence)}% de confiance)`,
+    '',
+  ]
+
+  if (critical.length)  { lines.push('🔴 Signaux critiques:'); critical.forEach((s) => lines.push(`  • ${s.message} (+${s.points} pts)`)) }
+  if (highs.length)     { lines.push('🟠 Signaux élevés:');    highs.forEach((s) => lines.push(`  • ${s.message} (+${s.points} pts)`)) }
+  if (mediums.length)   { lines.push('🟡 Signaux modérés:');   mediums.forEach((s) => lines.push(`  • ${s.message} (+${s.points} pts)`)) }
+  if (lows.length)      { lines.push('⚪ Signaux faibles:');   lows.forEach((s) => lines.push(`  • ${s.message} (+${s.points} pts)`)) }
+  if (positives.length) { lines.push('🟢 Facteurs positifs:'); positives.forEach((s) => lines.push(`  • ${s.message} (${s.points} pts)`)) }
+
+  lines.push('')
+  lines.push(`Historique: ${totalEver} commande(s) au total — ${deliveredEver} livrée(s), ${cancelledEver} annulée(s)`)
+  lines.push(`Recommandation: ${recommendation}`)
+
+  const signalLabels = [
+    ...critical.map((s) => s.message),
+    ...highs.map((s) => s.message),
+    ...mediums.map((s) => s.message),
+    ...positives.map((s) => s.message),
+  ].slice(0, 8)
+
+  return {
+    verdict,
+    confidence: Math.round(confidence),
+    reasoning: lines.join('\n'),
+    signals: signalLabels,
+    recommendation,
+  }
 }

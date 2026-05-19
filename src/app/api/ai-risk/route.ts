@@ -9,10 +9,6 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return NextResponse.json({ message: 'ANTHROPIC_API_KEY not configured' }, { status: 503 })
-  }
-
   try {
     await connectDB()
     const { orderId } = await req.json()
