@@ -25,6 +25,7 @@ ADMIN_PASSWORD=          # plain text or bcrypt hash
 CLOUDINARY_CLOUD_NAME=djctexvnr
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
+ANTHROPIC_API_KEY=        # from console.anthropic.com — used by the AI risk agent
 RESEND_API_KEY=           # from resend.com dashboard
 EMAIL_FROM=              # e.g. Marcaclub <orders@yourdomain.com>
 EMAIL_USER=              # used as replyTo on customer emails (optional)

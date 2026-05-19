@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
-import { ChevronDown, Search, AlertTriangle, ShieldCheck, Flag, Ban, Trash2, Shield } from 'lucide-react'
+import { ChevronDown, Search, AlertTriangle, ShieldCheck, Flag, Ban, Trash2, Shield, Bot, Loader2, CheckCircle2, XCircle, AlertCircle } from 'lucide-react'
 
 const STATUSES = ['all', 'flagged', 'pending', 'confirmed', 'shipped', 'delivered', 'cancelled']
 const STATUS_LABELS: Record<string, string> = {
@@ -16,6 +16,14 @@ const statusColors: Record<string, string> = {
   cancelled: 'text-red-400 bg-red-400/10',
 }
 
+interface AiResult {
+  verdict: 'SAFE' | 'SUSPICIOUS' | 'HIGH_RISK'
+  confidence: number
+  reasoning: string
+  signals: string[]
+  recommendation: string
+}
+
 interface Order {
   _id: string
   orderNumber: string
@@ -28,6 +36,10 @@ interface Order {
   flagReason?: string
   flaggedOrderNumbers?: string[]
   ip?: string
+  aiVerdict?: 'SAFE' | 'SUSPICIOUS' | 'HIGH_RISK'
+  aiConfidence?: number
+  aiReasoning?: string
+  aiAnalyzedAt?: string
   createdAt: string
 }
 
@@ -50,6 +62,8 @@ export default function AdminOrdersPage() {
   const [expanded, setExpanded] = useState<string | null>(null)
   const [blocklist, setBlocklist] = useState<BlocklistEntry[]>([])
   const [showBlocklist, setShowBlocklist] = useState(false)
+  const [aiLoading, setAiLoading] = useState<string | null>(null)
+  const [aiResults, setAiResults] = useState<Record<string, AiResult>>({})
 
   useEffect(() => {
     fetch('/api/orders', { credentials: 'include' })
@@ -139,6 +153,33 @@ export default function AdminOrdersPage() {
     if (res.ok) {
       setBlocklist((prev) => prev.filter((e) => e._id !== id))
       toast.success('Entrée supprimée')
+    }
+  }
+
+  const analyzeWithAI = async (order: Order) => {
+    setAiLoading(order._id)
+    // Auto-expand the order to show results
+    setExpanded(order._id)
+    try {
+      const res = await fetch('/api/ai-risk', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: order._id }),
+      })
+      if (!res.ok) throw new Error('Analysis failed')
+      const result: AiResult = await res.json()
+      setAiResults((prev) => ({ ...prev, [order._id]: result }))
+      // Update order in list with new AI verdict
+      setOrders((prev) => prev.map((o) => o._id === order._id
+        ? { ...o, aiVerdict: result.verdict, aiConfidence: result.confidence, aiReasoning: result.reasoning }
+        : o
+      ))
+      toast.success(`Analyse IA: ${result.verdict}`)
+    } catch {
+      toast.error('Erreur lors de l\'analyse IA')
+    } finally {
+      setAiLoading(null)
     }
   }
 
@@ -276,6 +317,24 @@ export default function AdminOrdersPage() {
                 )
               })()}
 
+              {/* AI verdict badge on collapsed row */}
+              {order.aiVerdict && !expanded && (
+                <div className={`px-5 py-2 border-t flex items-center gap-2 ${
+                  order.aiVerdict === 'SAFE' ? 'border-green-500/10 bg-green-500/5' :
+                  order.aiVerdict === 'HIGH_RISK' ? 'border-red-500/10 bg-red-500/5' :
+                  'border-orange-500/10 bg-orange-500/5'
+                }`}>
+                  <Bot size={11} className={
+                    order.aiVerdict === 'SAFE' ? 'text-green-400' :
+                    order.aiVerdict === 'HIGH_RISK' ? 'text-red-400' : 'text-orange-400'
+                  } />
+                  <span className={`text-[10px] font-semibold uppercase tracking-widest ${
+                    order.aiVerdict === 'SAFE' ? 'text-green-400' :
+                    order.aiVerdict === 'HIGH_RISK' ? 'text-red-400' : 'text-orange-400'
+                  }`}>IA: {order.aiVerdict.replace('_', ' ')} — {order.aiConfidence}%</span>
+                </div>
+              )}
+
               <button
                 onClick={() => setExpanded(expanded === order._id ? null : order._id)}
                 className="w-full flex items-center justify-between px-5 py-4 text-left"
@@ -291,17 +350,29 @@ export default function AdminOrdersPage() {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-4 flex-shrink-0 ml-4">
-                  <span className="text-white text-sm hidden sm:block">
-                    {order.total.toFixed(0)} MAD
-                  </span>
+                <div className="flex items-center gap-3 flex-shrink-0 ml-4">
+                  <span className="text-white text-sm hidden sm:block">{order.total.toFixed(0)} MAD</span>
                   <span className={`text-[10px] px-2 py-1 rounded-full uppercase tracking-wider ${statusColors[order.status] || 'text-white/40'}`}>
                     {STATUS_LABELS[order.status] || order.status}
                   </span>
-                  <ChevronDown
-                    size={14}
-                    className={`text-white/40 transition-transform ${expanded === order._id ? 'rotate-180' : ''}`}
-                  />
+                  <button
+                    onClick={(e) => { e.stopPropagation(); analyzeWithAI(order) }}
+                    disabled={aiLoading === order._id}
+                    title="Analyser avec l'IA"
+                    className={`flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold tracking-widest uppercase transition-colors border ${
+                      order.aiVerdict === 'SAFE' ? 'border-green-500/30 text-green-400 bg-green-500/10' :
+                      order.aiVerdict === 'HIGH_RISK' ? 'border-red-500/30 text-red-400 bg-red-500/10' :
+                      order.aiVerdict === 'SUSPICIOUS' ? 'border-orange-500/30 text-orange-400 bg-orange-500/10' :
+                      'border-white/10 text-white/40 hover:border-brand-gold/50 hover:text-brand-gold'
+                    }`}
+                  >
+                    {aiLoading === order._id
+                      ? <Loader2 size={11} className="animate-spin" />
+                      : <Bot size={11} />
+                    }
+                    <span className="hidden sm:inline">IA</span>
+                  </button>
+                  <ChevronDown size={14} className={`text-white/40 transition-transform ${expanded === order._id ? 'rotate-180' : ''}`} />
                 </div>
               </button>
 
@@ -339,6 +410,76 @@ export default function AdminOrdersPage() {
                       <p className="text-red-300/60 text-xs">{order.flaggedOrderNumbers.join(', ')}</p>
                     </div>
                   )}
+
+                  {/* AI Analysis panel */}
+                  {(() => {
+                    const ai = aiResults[order._id] || (order.aiVerdict ? { verdict: order.aiVerdict, confidence: order.aiConfidence || 0, reasoning: order.aiReasoning || '', signals: [], recommendation: '' } : null)
+                    if (aiLoading === order._id) return (
+                      <div className="mb-4 bg-brand-gold/5 border border-brand-gold/20 p-4 flex items-center gap-3">
+                        <Loader2 size={16} className="text-brand-gold animate-spin" />
+                        <div>
+                          <p className="text-brand-gold text-xs font-semibold uppercase tracking-widest">Analyse IA en cours...</p>
+                          <p className="text-white/30 text-xs mt-0.5">L'agent interroge l'historique client, l'IP, et les listes noires</p>
+                        </div>
+                      </div>
+                    )
+                    if (!ai) return (
+                      <div className="mb-4">
+                        <button
+                          onClick={() => analyzeWithAI(order)}
+                          className="flex items-center gap-2 bg-brand-gold/10 hover:bg-brand-gold/20 border border-brand-gold/20 text-brand-gold px-4 py-2.5 text-xs font-semibold tracking-widest uppercase transition-colors w-full justify-center"
+                        >
+                          <Bot size={14} />
+                          Analyser avec l'agent IA
+                        </button>
+                      </div>
+                    )
+                    const cfg = {
+                      SAFE:      { bg: 'bg-green-500/10',  border: 'border-green-500/20',  text: 'text-green-400',  Icon: CheckCircle2,  label: 'SAFE — Livraison recommandée' },
+                      SUSPICIOUS:{ bg: 'bg-orange-500/10', border: 'border-orange-500/20', text: 'text-orange-400', Icon: AlertCircle,   label: 'SUSPICIEUX — Vérification requise' },
+                      HIGH_RISK: { bg: 'bg-red-500/10',    border: 'border-red-500/20',    text: 'text-red-400',    Icon: XCircle,       label: 'RISQUE ÉLEVÉ — Ne pas livrer' },
+                    }[ai.verdict]
+                    return (
+                      <div className={`mb-4 ${cfg.bg} border ${cfg.border} p-4`}>
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div className="flex items-center gap-2">
+                            <cfg.Icon size={16} className={cfg.text} />
+                            <p className={`${cfg.text} text-xs font-semibold uppercase tracking-widest`}>{cfg.label}</p>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <div className="text-right">
+                              <span className={`text-lg font-bold ${cfg.text}`}>{ai.confidence}%</span>
+                              <p className="text-white/30 text-[10px]">confiance</p>
+                            </div>
+                            <button onClick={() => analyzeWithAI(order)} className={`${cfg.text} hover:opacity-70 transition-opacity`} title="Relancer l'analyse">
+                              <Bot size={14} />
+                            </button>
+                          </div>
+                        </div>
+                        {ai.signals && ai.signals.length > 0 && (
+                          <div className="mb-3 flex flex-wrap gap-1.5">
+                            {ai.signals.map((s, i) => (
+                              <span key={i} className={`text-[10px] px-2 py-0.5 border ${cfg.border} ${cfg.text} opacity-80`}>{s}</span>
+                            ))}
+                          </div>
+                        )}
+                        {ai.recommendation && (
+                          <p className={`${cfg.text} text-xs font-semibold mb-2`}>→ {ai.recommendation}</p>
+                        )}
+                        <details className="group">
+                          <summary className="text-white/30 text-[10px] uppercase tracking-widest cursor-pointer hover:text-white/50 transition-colors select-none">
+                            Voir le raisonnement complet ▾
+                          </summary>
+                          <p className="text-white/40 text-xs mt-2 whitespace-pre-wrap leading-relaxed">{ai.reasoning}</p>
+                        </details>
+                        {order.aiAnalyzedAt && (
+                          <p className="text-white/20 text-[10px] mt-2">
+                            Analysé le {new Date(order.aiAnalyzedAt).toLocaleString('fr-MA')}
+                          </p>
+                        )}
+                      </div>
+                    )
+                  })()}
 
                   <div>
                     <p className="text-white/40 text-xs uppercase tracking-widest mb-2">Changer statut</p>

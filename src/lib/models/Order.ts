@@ -27,6 +27,10 @@ export interface IOrder extends Document {
   flaggedOrderNumbers?: string[]
   notes?: string
   ip?: string
+  aiVerdict?: 'SAFE' | 'SUSPICIOUS' | 'HIGH_RISK'
+  aiConfidence?: number
+  aiReasoning?: string
+  aiAnalyzedAt?: Date
   createdAt: Date
   updatedAt: Date
 }
@@ -63,6 +67,10 @@ const OrderSchema = new Schema<IOrder>(
     flaggedOrderNumbers: [{ type: String }],
     notes: { type: String },
     ip: { type: String },
+    aiVerdict: { type: String, enum: ['SAFE', 'SUSPICIOUS', 'HIGH_RISK'] },
+    aiConfidence: { type: Number },
+    aiReasoning: { type: String },
+    aiAnalyzedAt: { type: Date },
   },
   { timestamps: true }
 )
