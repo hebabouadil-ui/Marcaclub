@@ -54,28 +54,37 @@ export default function DashboardPage() {
   const [liveStatus, setLiveStatus] = useState(false)
   const [loading, setLoading] = useState(true)
   const [visitors, setVisitors] = useState<number | null>(null)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
   useEffect(() => {
-    Promise.all([
-      fetch('/api/orders', { credentials: 'include' }).then((r) => r.json()),
-      fetch('/api/products?all=true', { credentials: 'include' }).then((r) => r.json()),
-      fetch('/api/live', { credentials: 'include' }).then((r) => r.json()),
-    ]).then(([ord, prod, live]) => {
-      if (Array.isArray(ord)) setOrders(ord)
-      if (Array.isArray(prod)) setProducts(prod)
-      setLiveStatus(live?.liveStatus ?? false)
-    }).finally(() => setLoading(false))
+    const fetchData = () => {
+      Promise.all([
+        fetch('/api/orders', { credentials: 'include' }).then((r) => r.json()),
+        fetch('/api/products?all=true', { credentials: 'include' }).then((r) => r.json()),
+        fetch('/api/live', { credentials: 'include' }).then((r) => r.json()),
+      ]).then(([ord, prod, live]) => {
+        if (Array.isArray(ord)) setOrders(ord)
+        if (Array.isArray(prod)) setProducts(prod)
+        setLiveStatus(live?.liveStatus ?? false)
+        setLastUpdated(new Date())
+      }).finally(() => setLoading(false))
+    }
 
-    // Poll visitor count every 30s
     const fetchVisitors = () => {
       fetch('/api/visitors', { credentials: 'include' })
         .then((r) => r.json())
         .then((d) => setVisitors(d.count ?? 0))
         .catch(() => {})
     }
+
+    fetchData()
     fetchVisitors()
+    const dataInterval = setInterval(fetchData, 30_000)
     const visitorInterval = setInterval(fetchVisitors, 30_000)
-    return () => clearInterval(visitorInterval)
+    return () => {
+      clearInterval(dataInterval)
+      clearInterval(visitorInterval)
+    }
   }, [])
 
   const toggleLive = async () => {
@@ -181,7 +190,12 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-white text-2xl font-semibold">Dashboard</h1>
-          <p className="text-white/40 text-sm mt-0.5">Vue d&apos;ensemble de votre boutique</p>
+          <p className="text-white/40 text-sm mt-0.5">
+            {lastUpdated
+              ? <>Mis à jour à {lastUpdated.toLocaleTimeString('fr-MA', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse align-middle ml-1" /></>
+              : 'Vue d\'ensemble de votre boutique'
+            }
+          </p>
         </div>
         <button
           onClick={toggleLive}
