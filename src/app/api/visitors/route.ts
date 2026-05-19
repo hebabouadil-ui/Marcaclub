@@ -4,6 +4,14 @@ import Visitor from '@/lib/models/Visitor'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/authOptions'
 
+function getIP(req: NextRequest): string {
+  return (
+    req.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+    req.headers.get('x-real-ip') ||
+    'unknown'
+  )
+}
+
 // Public: heartbeat from a visitor
 export async function POST(req: NextRequest) {
   try {
@@ -12,9 +20,10 @@ export async function POST(req: NextRequest) {
     if (!sessionId || typeof sessionId !== 'string' || sessionId.length > 64) {
       return NextResponse.json({ ok: false }, { status: 400 })
     }
+    const ip = getIP(req)
     await Visitor.findOneAndUpdate(
       { sessionId },
-      { lastSeen: new Date(), page: page || '/' },
+      { lastSeen: new Date(), page: page || '/', ip },
       { upsert: true }
     )
     return NextResponse.json({ ok: true })
@@ -23,17 +32,19 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Admin only: get active visitor count
-export async function GET() {
+// Admin only: get active visitors with IP
+export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
 
   try {
     await connectDB()
-    const since = new Date(Date.now() - 2 * 60 * 1000) // active in last 2 minutes
-    const count = await Visitor.countDocuments({ lastSeen: { $gte: since } })
-    return NextResponse.json({ count })
+    const since = new Date(Date.now() - 2 * 60 * 1000)
+    const visitors = await Visitor.find({ lastSeen: { $gte: since } })
+      .select('ip page lastSeen')
+      .lean()
+    return NextResponse.json({ count: visitors.length, visitors })
   } catch {
-    return NextResponse.json({ count: 0 })
+    return NextResponse.json({ count: 0, visitors: [] })
   }
 }

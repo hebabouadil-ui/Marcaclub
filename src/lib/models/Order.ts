@@ -26,6 +26,7 @@ export interface IOrder extends Document {
   flagReason?: string
   flaggedOrderNumbers?: string[]
   notes?: string
+  ip?: string
   createdAt: Date
   updatedAt: Date
 }
@@ -61,6 +62,7 @@ const OrderSchema = new Schema<IOrder>(
     flagReason: { type: String },
     flaggedOrderNumbers: [{ type: String }],
     notes: { type: String },
+    ip: { type: String },
   },
   { timestamps: true }
 )

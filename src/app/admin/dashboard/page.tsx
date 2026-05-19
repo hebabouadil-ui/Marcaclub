@@ -15,6 +15,8 @@ interface Order {
   total: number
   status: string
   flagged: boolean
+  flagReason?: string
+  ip?: string
   createdAt: string
 }
 
@@ -54,6 +56,7 @@ export default function DashboardPage() {
   const [liveStatus, setLiveStatus] = useState(false)
   const [loading, setLoading] = useState(true)
   const [visitors, setVisitors] = useState<number | null>(null)
+  const [visitorList, setVisitorList] = useState<{ ip: string; page: string; lastSeen: string }[]>([])
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
   useEffect(() => {
@@ -73,7 +76,10 @@ export default function DashboardPage() {
     const fetchVisitors = () => {
       fetch('/api/visitors', { credentials: 'include' })
         .then((r) => r.json())
-        .then((d) => setVisitors(d.count ?? 0))
+        .then((d) => {
+          setVisitors(d.count ?? 0)
+          if (Array.isArray(d.visitors)) setVisitorList(d.visitors)
+        })
         .catch(() => {})
     }
 
@@ -258,6 +264,34 @@ export default function DashboardPage() {
         })}
       </div>
 
+      {/* Active visitors IP list */}
+      {visitorList.length > 0 && (
+        <div className="bg-white/5 border border-white/5 p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-400" />
+            </span>
+            <h3 className="text-white/60 text-xs uppercase tracking-widest">Visiteurs actifs — adresses IP</h3>
+            <span className="ml-auto text-green-400 text-xs font-bold">{visitorList.length} en ligne</span>
+          </div>
+          <div className="divide-y divide-white/5">
+            {visitorList.map((v, i) => (
+              <div key={i} className="flex items-center justify-between py-2 gap-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <Eye size={12} className="text-green-400 shrink-0" />
+                  <span className="text-white font-mono text-xs">{v.ip || 'unknown'}</span>
+                </div>
+                <span className="text-white/40 text-xs truncate max-w-[200px]">{v.page}</span>
+                <span className="text-white/25 text-[10px] shrink-0">
+                  {new Date(v.lastSeen).toLocaleTimeString('fr-MA', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Charts row */}
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Revenue last 7 days */}
@@ -403,6 +437,7 @@ export default function DashboardPage() {
                   <div className="min-w-0">
                     <p className="text-white text-sm font-medium">{order.orderNumber}</p>
                     <p className="text-white/40 text-xs truncate">{order.customer.name} — {order.customer.city}</p>
+                    {order.ip && <p className="text-white/25 font-mono text-[10px]">{order.ip}</p>}
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0 ml-4">

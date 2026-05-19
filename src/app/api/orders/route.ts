@@ -23,9 +23,18 @@ export async function GET() {
   }
 }
 
+function getIP(req: NextRequest): string {
+  return (
+    req.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+    req.headers.get('x-real-ip') ||
+    'unknown'
+  )
+}
+
 export async function POST(req: NextRequest) {
   try {
     await connectDB()
+    const ip = getIP(req)
     const body = await req.json()
 
     // Basic input validation
@@ -202,6 +211,16 @@ export async function POST(req: NextRequest) {
       cityItemsToday.forEach((o) => { if (!flaggedOrderNumbers.includes(o.orderNumber)) flaggedOrderNumbers.push(o.orderNumber) })
     }
 
+    // Same IP address ordered before → MEDIUM
+    if (ip && ip !== 'unknown') {
+      const sameIpOrders = await Order.find({ ip, status: { $nin: ['cancelled'] }, createdAt: { $gte: since30d } })
+        .select('orderNumber').lean() as { orderNumber: string }[]
+      if (sameIpOrders.length > 0) {
+        addSignal(`même adresse IP (${ip})`, 2)
+        sameIpOrders.forEach((o) => { if (!flaggedOrderNumbers.includes(o.orderNumber)) flaggedOrderNumbers.push(o.orderNumber) })
+      }
+    }
+
     // Order at unusual hours (midnight–5am Morocco time, UTC+1) → LOW
     const moroccohour = (new Date().getUTCHours() + 1) % 24
     if (moroccohour >= 0 && moroccohour < 5) {
@@ -226,6 +245,7 @@ export async function POST(req: NextRequest) {
       flagSeverity: flagSeverity || undefined,
       flagReason: flagReason || undefined,
       flaggedOrderNumbers: flaggedOrderNumbers.length ? flaggedOrderNumbers : undefined,
+      ip: ip !== 'unknown' ? ip : undefined,
     })
 
     const settings = await Settings.findOne().lean() as { emailNote?: string } | null
