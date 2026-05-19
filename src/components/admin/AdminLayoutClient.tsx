@@ -6,13 +6,13 @@ import { SessionProvider } from 'next-auth/react'
 import {
   LayoutDashboard, Package, ShoppingBag, Settings, LogOut, Radio, Menu, X, BarChart2, Users, Shield, XCircle,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const navItems = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/products', label: 'Produits', icon: Package },
-  { href: '/admin/orders', label: 'Commandes', icon: ShoppingBag },
-  { href: '/admin/high-risk', label: 'Risques élevés', icon: XCircle },
+  { href: '/admin/orders', label: 'Commandes', icon: ShoppingBag, badgeKey: 'orders' },
+  { href: '/admin/high-risk', label: 'Risques élevés', icon: XCircle, badgeKey: 'highRisk' },
   { href: '/admin/customers', label: 'Clients', icon: Users },
   { href: '/admin/blocked-ips', label: 'IPs bloquées', icon: Shield },
   { href: '/admin/reports', label: 'Rapports', icon: BarChart2 },
@@ -20,10 +20,72 @@ const navItems = [
   { href: '/admin/live', label: 'Live', icon: Radio },
 ]
 
+interface Badges { orders: number; highRisk: number }
+
+function useBadges(): Badges {
+  const [badges, setBadges] = useState<Badges>({ orders: 0, highRisk: 0 })
+  const { data: session } = useSession()
+
+  useEffect(() => {
+    if (!session) return
+    const fetch_ = () => {
+      fetch('/api/orders', { credentials: 'include' })
+        .then((r) => r.json())
+        .then((data: Array<{ status: string; flagged: boolean; trusted?: boolean; flagSeverity?: string; aiVerdict?: string }>) => {
+          if (!Array.isArray(data)) return
+          const orders = data.filter((o) => o.status === 'pending' && !o.flagged && !o.trusted).length
+          const highRisk = data.filter((o) => !o.trusted && (o.flagSeverity === 'high' || o.aiVerdict === 'HIGH_RISK')).length
+          setBadges({ orders, highRisk })
+        })
+        .catch(() => {})
+    }
+    fetch_()
+    const interval = setInterval(() => { if (!document.hidden) fetch_() }, 30_000)
+    return () => clearInterval(interval)
+  }, [session])
+
+  return badges
+}
+
+function NavLink({ item, active, badges, onClick }: {
+  item: typeof navItems[0]
+  active: boolean
+  badges: Badges
+  onClick?: () => void
+}) {
+  const Icon = item.icon
+  const count = item.badgeKey ? badges[item.badgeKey as keyof Badges] : 0
+
+  return (
+    <Link
+      href={item.href}
+      onClick={onClick}
+      className={`flex items-center gap-3 px-6 py-3 text-sm transition-colors ${
+        active
+          ? 'text-brand-gold bg-white/5 border-r-2 border-brand-gold'
+          : 'text-white/50 hover:text-white hover:bg-white/5'
+      }`}
+    >
+      <Icon size={16} />
+      <span className="flex-1">{item.label}</span>
+      {count > 0 && (
+        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center ${
+          item.badgeKey === 'highRisk'
+            ? 'bg-red-500 text-white'
+            : 'bg-amber-500 text-black'
+        }`}>
+          {count}
+        </span>
+      )}
+    </Link>
+  )
+}
+
 function AdminNav() {
   const pathname = usePathname()
   const { data: session } = useSession()
   const [open, setOpen] = useState(false)
+  const badges = useBadges()
 
   if (pathname === '/admin/login') return null
 
@@ -38,24 +100,14 @@ function AdminNav() {
           <p className="text-white/30 text-[9px] tracking-[0.2em] mt-0.5">Admin Panel</p>
         </div>
         <nav className="flex-1 py-4">
-          {navItems.map((item) => {
-            const Icon = item.icon
-            const active = pathname.startsWith(item.href)
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-3 px-6 py-3 text-sm transition-colors ${
-                  active
-                    ? 'text-brand-gold bg-white/5 border-r-2 border-brand-gold'
-                    : 'text-white/50 hover:text-white hover:bg-white/5'
-                }`}
-              >
-                <Icon size={16} />
-                {item.label}
-              </Link>
-            )
-          })}
+          {navItems.map((item) => (
+            <NavLink
+              key={item.href}
+              item={item}
+              active={pathname.startsWith(item.href)}
+              badges={badges}
+            />
+          ))}
         </nav>
         <div className="p-6 border-t border-white/5">
           <p className="text-white/30 text-xs mb-3">{session?.user?.email}</p>
@@ -74,9 +126,21 @@ function AdminNav() {
         <h1 className="text-brand-gold font-display font-bold text-base tracking-widest uppercase">
           MARCACLUB
         </h1>
-        <button onClick={() => setOpen(!open)} className="text-white">
-          {open ? <X size={20} /> : <Menu size={20} />}
-        </button>
+        <div className="flex items-center gap-3">
+          {(badges.orders > 0 || badges.highRisk > 0) && (
+            <div className="flex items-center gap-1.5">
+              {badges.orders > 0 && (
+                <span className="text-[10px] font-bold bg-amber-500 text-black px-1.5 py-0.5 rounded-full">{badges.orders}</span>
+              )}
+              {badges.highRisk > 0 && (
+                <span className="text-[10px] font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-full">{badges.highRisk}</span>
+              )}
+            </div>
+          )}
+          <button onClick={() => setOpen(!open)} className="text-white">
+            {open ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        </div>
       </header>
 
       {/* Mobile nav */}
@@ -86,6 +150,7 @@ function AdminNav() {
             {navItems.map((item) => {
               const Icon = item.icon
               const active = pathname.startsWith(item.href)
+              const count = item.badgeKey ? badges[item.badgeKey as keyof Badges] : 0
               return (
                 <Link
                   key={item.href}
@@ -96,7 +161,12 @@ function AdminNav() {
                   }`}
                 >
                   <Icon size={18} />
-                  {item.label}
+                  <span className="flex-1">{item.label}</span>
+                  {count > 0 && (
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                      item.badgeKey === 'highRisk' ? 'bg-red-500 text-white' : 'bg-amber-500 text-black'
+                    }`}>{count}</span>
+                  )}
                 </Link>
               )
             })}
