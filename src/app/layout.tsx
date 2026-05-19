@@ -5,8 +5,8 @@ import '@/styles/globals.css'
 export const metadata: Metadata = {
   title: 'Marcaclub — Mode Exclusive d\'Espagne',
   description:
-    'Marcaclub — Vêtements et accessoires exclusifs importés de Primark Espagne. Drops limités, qualité premium. Livraison 24-48h, paiement à la livraison.',
-  keywords: 'marcaclub, mode femme, vêtements, Primark, Espagne, Algérie, livraison, marca club',
+    'Marcaclub — Vêtements et accessoires exclusifs importés de Primark Espagne. Drops limités, qualité premium. Livraison 24-48h au Maroc, paiement à la livraison.',
+  keywords: 'marcaclub, mode femme, vêtements, Primark, Espagne, Maroc, livraison Maroc, marca club, mode maroc',
   metadataBase: new URL('https://marca-club.com'),
   verification: { google: 'i1_TysAAZ-m67oKRQv6n-O7XES5p5Nla6xJaIXbnius' },
   alternates: { canonical: 'https://marca-club.com' },
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: 'Marcaclub — Mode Exclusive d\'Espagne',
-    description: 'Vêtements et accessoires exclusifs importés de Primark Espagne. Livraison 24-48h.',
+    description: 'Vêtements et accessoires exclusifs importés de Primark Espagne. Livraison 24-48h au Maroc.',
     type: 'website',
     url: 'https://marca-club.com',
     siteName: 'Marcaclub',
