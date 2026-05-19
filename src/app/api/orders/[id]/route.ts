@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import mongoose from 'mongoose'
 import { connectDB } from '@/lib/db'
 import Order from '@/lib/models/Order'
 import Product from '@/lib/models/Product'
@@ -10,12 +11,16 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
 
+  if (!mongoose.isValidObjectId(params.id))
+    return NextResponse.json({ message: 'Invalid id' }, { status: 400 })
+
   try {
     await connectDB()
     const order = await Order.findById(params.id).lean()
     if (!order) return NextResponse.json({ message: 'Not found' }, { status: 404 })
     return NextResponse.json(order)
-  } catch {
+  } catch (err) {
+    console.error('GET /api/orders/[id] error:', err)
     return NextResponse.json({ message: 'Server error' }, { status: 500 })
   }
 }
@@ -24,26 +29,32 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
 
+  if (!mongoose.isValidObjectId(params.id))
+    return NextResponse.json({ message: 'Invalid id' }, { status: 400 })
+
   try {
     await connectDB()
     const body = await req.json()
 
-    // Handle unflag action separately
+    // Unflag: clear all flag + AI verdict fields
     if (body.action === 'unflag') {
-      const order = await Order.findById(params.id)
+      const order = await Order.findByIdAndUpdate(
+        params.id,
+        {
+          $set: { flagged: false },
+          $unset: { flagReason: '', flagSeverity: '', flaggedOrderNumbers: '', aiVerdict: '', aiConfidence: '', aiReasoning: '', aiAnalyzedAt: '' },
+        },
+        { new: true }
+      )
       if (!order) return NextResponse.json({ message: 'Not found' }, { status: 404 })
-      order.flagged = false
-      order.flagReason = undefined
-      order.flaggedOrderNumbers = []
-      await order.save()
       return NextResponse.json(order.toObject())
     }
 
     const { status } = body
     const VALID_STATUSES = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled']
-    if (!VALID_STATUSES.includes(status)) {
+    if (!VALID_STATUSES.includes(status))
       return NextResponse.json({ message: 'Statut invalide' }, { status: 400 })
-    }
+
     const order = await Order.findById(params.id)
     if (!order) return NextResponse.json({ message: 'Not found' }, { status: 404 })
 
@@ -51,30 +62,32 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     order.status = status
     await order.save()
 
-    // Restore stock when cancelling, re-deduct if un-cancelling (per-size)
+    // Adjust stock atomically when toggling cancelled ↔ active
     const shouldAdjust =
       (status === 'cancelled' && previousStatus !== 'cancelled') ||
       (previousStatus === 'cancelled' && status !== 'cancelled')
 
     if (shouldAdjust) {
       for (const item of order.items as unknown as { productId: string; size: string; quantity: number }[]) {
-        const product = await Product.findById(item.productId)
-        if (!product) continue
-        const entry = product.sizes.find((s: { size: string; stock: number }) => s.size === item.size)
-        if (entry) {
-          entry.stock = status === 'cancelled'
-            ? entry.stock + item.quantity
-            : Math.max(0, entry.stock - item.quantity)
-        }
-        product.stock = product.sizes.reduce((sum: number, s: { size: string; stock: number }) => sum + s.stock, 0)
-        await product.save()
+        const delta = status === 'cancelled' ? item.quantity : -item.quantity
+        await Product.findOneAndUpdate(
+          { _id: item.productId, 'sizes.size': item.size },
+          {
+            $inc: {
+              'sizes.$[el].stock': delta,
+              stock: delta,
+            },
+          },
+          { arrayFilters: [{ 'el.size': item.size }] }
+        )
       }
     }
 
     const plainOrder = order.toObject()
-    await sendOrderStatusEmail(plainOrder, status).catch((err) => console.error('Status email error:', err))
+    sendOrderStatusEmail(plainOrder, status).catch((err) => console.error('Status email error:', err))
     return NextResponse.json(plainOrder)
-  } catch {
+  } catch (err) {
+    console.error('PUT /api/orders/[id] error:', err)
     return NextResponse.json({ message: 'Server error' }, { status: 500 })
   }
 }

@@ -15,7 +15,7 @@ interface OrderContext {
   orderId: string
   orderNumber: string
   customer: { name: string; phone: string; city: string; address: string; email?: string }
-  items: Array<{ name: string; quantity: number; size: string; price: number }>
+  items: Array<{ productId: string; name: string; quantity: number; size: string; price: number }>
   total: number
   ip?: string
   createdAt: string
@@ -134,11 +134,11 @@ export async function analyzeOrderRisk(order: OrderContext): Promise<RiskVerdict
   }
 
   // ── 7. Identical basket duplicate ─────────────────────────────────────────
-  const orderProductIds = order.items.map((i) => i as unknown as { productId: string }).map((i) => i.productId).sort().join(',')
+  const orderProductIds = order.items.map((i) => i.productId).sort().join(',')
   const basketMatch2h = pastOrders.filter((o) => {
     if (new Date(o.createdAt).getTime() < since2h.getTime()) return false
     const ids = o.items.map((i) => i.productId).sort().join(',')
-    return ids === orderProductIds && o.customer.city.toLowerCase() === cityTrimmed
+    return ids === orderProductIds && o.customer.city.trim().toLowerCase() === cityTrimmed
   })
   if (basketMatch2h.length > 0) {
     signals.push({ message: `Panier identique passé depuis la même ville en moins de 2h`, points: 55, severity: 'critical' })
@@ -175,8 +175,11 @@ export async function analyzeOrderRisk(order: OrderContext): Promise<RiskVerdict
     signals.push({ message: `Petite commande — ${order.total} MAD`, points: -5, severity: 'positive' })
   }
 
-  // ── 11. Night order ───────────────────────────────────────────────────────
-  const hour = (new Date().getUTCHours() + 1) % 24
+  // ── 11. Night order (DST-aware Morocco time) ─────────────────────────────
+  const hour = parseInt(
+    new Intl.DateTimeFormat('fr-MA', { timeZone: 'Africa/Casablanca', hour: 'numeric', hour12: false }).format(new Date()),
+    10
+  )
   if (hour >= 1 && hour < 5) {
     signals.push({ message: `Commande passée à ${hour}h du matin`, points: 15, severity: 'medium' })
   }
@@ -195,8 +198,13 @@ export async function analyzeOrderRisk(order: OrderContext): Promise<RiskVerdict
   }
 
   // ── Compute final score ───────────────────────────────────────────────────
+  const criticalSignals = signals.filter((s) => s.severity === 'critical')
+  // Short-circuit: any critical signal always means HIGH_RISK regardless of positive trust scores
+  const hasCritical = criticalSignals.length > 0
   const rawScore = signals.reduce((s, sig) => s + sig.points, 0)
-  const score = Math.max(0, Math.min(100, rawScore))
+  const score = hasCritical
+    ? Math.max(60, Math.min(100, rawScore))  // floor at 60 (HIGH_RISK threshold) if any critical
+    : Math.max(0, Math.min(100, rawScore))
 
   let verdict: RiskVerdict['verdict']
   let confidence: number
@@ -217,7 +225,7 @@ export async function analyzeOrderRisk(order: OrderContext): Promise<RiskVerdict
   }
 
   // ── Build reasoning text ──────────────────────────────────────────────────
-  const critical = signals.filter((s) => s.severity === 'critical')
+  const critical = criticalSignals
   const highs    = signals.filter((s) => s.severity === 'high')
   const mediums  = signals.filter((s) => s.severity === 'medium')
   const lows     = signals.filter((s) => s.severity === 'low')

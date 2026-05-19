@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
 
     const order = await Order.findById(orderId).lean() as {
       _id: string; orderNumber: string; customer: { name: string; phone: string; city: string; address: string; email?: string }
-      items: Array<{ name: string; quantity: number; size: string; price: number }>
+      items: Array<{ productId: string; name: string; quantity: number; size: string; price: number }>
       total: number; ip?: string; createdAt: Date
     } | null
 

@@ -85,8 +85,8 @@ export default function DashboardPage() {
 
     fetchData()
     fetchVisitors()
-    const dataInterval = setInterval(fetchData, 30_000)
-    const visitorInterval = setInterval(fetchVisitors, 30_000)
+    const dataInterval = setInterval(() => { if (!document.hidden) fetchData() }, 30_000)
+    const visitorInterval = setInterval(() => { if (!document.hidden) fetchVisitors() }, 30_000)
     return () => {
       clearInterval(dataInterval)
       clearInterval(visitorInterval)
@@ -112,7 +112,8 @@ export default function DashboardPage() {
     const pending = orders.filter((o) => o.status === 'pending')
     const flagged = orders.filter((o) => o.flagged)
     const avgOrder = active.length > 0 ? revenue / active.length : 0
-    const deliveryRate = orders.length > 0 ? (delivered.length / orders.length) * 100 : 0
+    const nonCancelled = orders.filter((o) => o.status !== 'cancelled')
+    const deliveryRate = nonCancelled.length > 0 ? (delivered.length / nonCancelled.length) * 100 : 0
 
     // Revenue last 7 days
     const days: { label: string; value: number; date: string }[] = []

@@ -20,12 +20,19 @@ export async function POST(req: NextRequest) {
     if (!sessionId || typeof sessionId !== 'string' || sessionId.length > 64) {
       return NextResponse.json({ ok: false }, { status: 400 })
     }
+    // Sanitize page: must be a path string, cap at 200 chars
+    const safePage = typeof page === 'string' ? page.slice(0, 200) : '/'
     const ip = getIP(req)
-    await Visitor.findOneAndUpdate(
-      { sessionId },
-      { lastSeen: new Date(), page: page || '/', ip },
-      { upsert: true }
-    )
+    try {
+      await Visitor.findOneAndUpdate(
+        { sessionId },
+        { lastSeen: new Date(), page: safePage, ip },
+        { upsert: true }
+      )
+    } catch (e: unknown) {
+      // E11000 duplicate key on concurrent upsert — harmless, just ignore
+      if ((e as { code?: number }).code !== 11000) throw e
+    }
     return NextResponse.json({ ok: true })
   } catch {
     return NextResponse.json({ ok: false }, { status: 500 })

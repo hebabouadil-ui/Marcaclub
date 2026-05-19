@@ -75,5 +75,13 @@ const OrderSchema = new Schema<IOrder>(
   { timestamps: true }
 )
 
+// Indexes for hot-path queries (duplicate detection, risk analysis, list views)
+OrderSchema.index({ 'customer.phone': 1 })
+OrderSchema.index({ 'customer.name': 1, 'customer.city': 1 })
+OrderSchema.index({ ip: 1 })
+OrderSchema.index({ createdAt: -1, status: 1 })
+OrderSchema.index({ flagged: 1, flagSeverity: 1 })
+OrderSchema.index({ aiVerdict: 1 })
+
 export default mongoose.models.Order ||
   mongoose.model<IOrder>('Order', OrderSchema)

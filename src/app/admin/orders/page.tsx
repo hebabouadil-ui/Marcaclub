@@ -116,7 +116,10 @@ export default function AdminOrdersPage() {
       body: JSON.stringify({ action: 'unflag' }),
     })
     if (res.ok) {
-      setOrders((prev) => prev.map((o) => o._id === id ? { ...o, flagged: false, flagReason: undefined } : o))
+      setOrders((prev) => prev.map((o) => o._id === id
+        ? { ...o, flagged: false, flagReason: undefined, flagSeverity: undefined, flaggedOrderNumbers: [], aiVerdict: undefined, aiConfidence: undefined, aiReasoning: undefined }
+        : o
+      ))
       toast.success('Commande validée')
     } else {
       toast.error('Erreur')
@@ -326,7 +329,7 @@ export default function AdminOrdersPage() {
               })()}
 
               {/* AI verdict badge on collapsed row */}
-              {order.aiVerdict && !expanded && (
+              {order.aiVerdict && expanded !== order._id && (
                 <div className={`px-5 py-2 border-t flex items-center gap-2 ${
                   order.aiVerdict === 'SAFE' ? 'border-green-500/10 bg-green-500/5' :
                   order.aiVerdict === 'HIGH_RISK' ? 'border-red-500/10 bg-red-500/5' :

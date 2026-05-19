@@ -38,20 +38,33 @@ export async function POST(req: NextRequest) {
     const ip = getIP(req)
     const body = await req.json()
 
-    // Basic input validation
+    // Input validation — field presence + length caps
     if (!Array.isArray(body.items) || body.items.length === 0 || body.items.length > 50) {
       return NextResponse.json({ message: 'Commande invalide' }, { status: 400 })
     }
-    if (!body.customer?.name || !body.customer?.phone || !body.customer?.city || !body.customer?.address) {
+    const c = body.customer
+    if (!c?.name || !c?.phone || !c?.city || !c?.address) {
       return NextResponse.json({ message: 'Informations client manquantes' }, { status: 400 })
     }
+    if (
+      typeof c.name !== 'string' || c.name.length > 120 ||
+      typeof c.phone !== 'string' || c.phone.length > 30 ||
+      typeof c.city !== 'string' || c.city.length > 100 ||
+      typeof c.address !== 'string' || c.address.length > 300 ||
+      (c.email && (typeof c.email !== 'string' || c.email.length > 200 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email))) ||
+      (body.notes && (typeof body.notes !== 'string' || body.notes.length > 1000))
+    ) {
+      return NextResponse.json({ message: 'Données invalides' }, { status: 400 })
+    }
 
-    type OrderItem = { productId: string; size: string; quantity: number; name: string }
+    type OrderItem = { productId: string; size: string; quantity: number; name?: string }
     const items = body.items as OrderItem[]
 
     // Atomically decrement stock — validate + deduct in one operation per item
+    // Build server-trusted item lines from DB (don't trust client price/name/image)
     let serverTotal = 0
     const decremented: { productId: string; size: string; quantity: number }[] = []
+    const trustedItems: { productId: string; name: string; price: number; quantity: number; size: string; image: string }[] = []
 
     for (const item of items) {
       if (!item.productId || !item.size || !item.quantity || item.quantity < 1 || item.quantity > 100) {
@@ -79,14 +92,19 @@ export async function POST(req: NextRequest) {
         )
       }
 
-      // Recompute total stock field
-      const totalStock = updated.sizes.reduce((s: number, i: { stock: number }) => s + i.stock, 0)
-      await Product.findByIdAndUpdate(item.productId, { stock: totalStock })
+      // Use $inc to atomically update total stock (avoids race condition from recomputing)
+      await Product.findByIdAndUpdate(item.productId, { $inc: { stock: -item.quantity } })
 
       decremented.push({ productId: item.productId, size: item.size, quantity: item.quantity })
-
-      // Compute server-side total from actual DB price
       serverTotal += updated.price * item.quantity
+      trustedItems.push({
+        productId: String(updated._id),
+        name: updated.name,
+        price: updated.price,
+        quantity: item.quantity,
+        size: item.size,
+        image: updated.images?.[0] ?? '',
+      })
     }
 
     const orderNumber = generateOrderNumber()
@@ -233,9 +251,12 @@ export async function POST(req: NextRequest) {
       sameIpDiffCustomer.forEach((o) => { if (!flaggedOrderNumbers.includes(o.orderNumber)) flaggedOrderNumbers.push(o.orderNumber) })
     }
 
-    // Order at unusual hours (midnight–5am Morocco time, UTC+1) → LOW
-    const moroccohour = (new Date().getUTCHours() + 1) % 24
-    if (moroccohour >= 0 && moroccohour < 5) {
+    // Order at unusual hours (midnight–5am Morocco time, correct DST-aware)
+    const moroccohour = parseInt(
+      new Intl.DateTimeFormat('fr-MA', { timeZone: 'Africa/Casablanca', hour: 'numeric', hour12: false }).format(new Date()),
+      10
+    )
+    if (moroccohour >= 1 && moroccohour < 5) {
       addSignal(`commande passée la nuit (${moroccohour}h)`, 1)
     }
 
@@ -249,8 +270,8 @@ export async function POST(req: NextRequest) {
 
     const order = await Order.create({
       customer: body.customer,
-      items: body.items,
-      notes: body.notes,
+      items: trustedItems,
+      notes: body.notes || undefined,
       orderNumber,
       total: serverTotal,
       flagged,

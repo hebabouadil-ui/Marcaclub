@@ -256,7 +256,7 @@ export default function HighRiskPage() {
                       <button onClick={() => clearFlag(order._id)} className="flex items-center gap-1.5 bg-green-500/20 hover:bg-green-500/30 text-green-400 px-4 py-2 text-xs font-semibold tracking-widest uppercase transition-colors">
                         <ShieldCheck size={11} /> Valider — retirer des risques
                       </button>
-                      <button onClick={() => { clearFlag(order._id); window.open(`/admin/orders`, '_self') }} className="flex items-center gap-1.5 bg-white/5 hover:bg-white/10 text-white/40 px-4 py-2 text-xs font-semibold tracking-widest uppercase transition-colors">
+                      <button onClick={async () => { await clearFlag(order._id); window.location.href = '/admin/orders' }} className="flex items-center gap-1.5 bg-white/5 hover:bg-white/10 text-white/40 px-4 py-2 text-xs font-semibold tracking-widest uppercase transition-colors">
                         <Trash2 size={11} /> Ignorer
                       </button>
                     </div>
