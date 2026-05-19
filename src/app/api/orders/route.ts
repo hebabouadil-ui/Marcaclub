@@ -7,6 +7,7 @@ import Blocklist from '@/lib/models/Blocklist'
 import BlockedIP from '@/lib/models/BlockedIP'
 import { generateOrderNumber } from '@/lib/utils/generateOrderNumber'
 import { sendOrderConfirmationEmail, sendAdminOrderNotification } from '@/lib/utils/email'
+import { analyzeOrderRisk } from '@/lib/utils/riskAgent'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/authOptions'
 
@@ -280,6 +281,31 @@ export async function POST(req: NextRequest) {
       flaggedOrderNumbers: flaggedOrderNumbers.length ? flaggedOrderNumbers : undefined,
       ip: ip !== 'unknown' ? ip : undefined,
     })
+
+    // Auto-run risk analysis in background — does not block the response
+    const orderForRisk = {
+      orderId: String(order._id),
+      orderNumber: order.orderNumber,
+      customer: order.customer,
+      items: trustedItems.map((i) => ({ productId: i.productId, name: i.name, quantity: i.quantity, size: i.size, price: i.price })),
+      total: order.total,
+      ip: ip !== 'unknown' ? ip : undefined,
+      createdAt: order.createdAt?.toISOString?.() ?? new Date().toISOString(),
+    }
+    analyzeOrderRisk(orderForRisk).then(async (verdict) => {
+      const update: Record<string, unknown> = {
+        aiVerdict: verdict.verdict,
+        aiConfidence: verdict.confidence,
+        aiReasoning: verdict.reasoning,
+        aiAnalyzedAt: new Date(),
+      }
+      if (verdict.verdict === 'HIGH_RISK') {
+        update.flagged = true
+        update.flagSeverity = 'high'
+        update.flagReason = `[AI HIGH_RISK] ${verdict.recommendation}`
+      }
+      await Order.findByIdAndUpdate(order._id, { $set: update })
+    }).catch((err) => console.error('Auto risk analysis error:', err))
 
     const settings = await Settings.findOne().lean() as { emailNote?: string } | null
     const emailNote = settings?.emailNote
