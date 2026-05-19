@@ -167,8 +167,13 @@ export default function AdminOrdersPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId: order._id }),
       })
-      if (!res.ok) throw new Error('Analysis failed')
-      const result: AiResult = await res.json()
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data.message || 'Erreur analyse IA', { duration: 6000 })
+        setAiLoading(null)
+        return
+      }
+      const result: AiResult = data
       setAiResults((prev) => ({ ...prev, [order._id]: result }))
       // Update order in list with new AI verdict
       setOrders((prev) => prev.map((o) => o._id === order._id
@@ -176,8 +181,8 @@ export default function AdminOrdersPage() {
         : o
       ))
       toast.success(`Analyse IA: ${result.verdict}`)
-    } catch {
-      toast.error('Erreur lors de l\'analyse IA')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de l\'analyse IA')
     } finally {
       setAiLoading(null)
     }
