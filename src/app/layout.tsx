@@ -8,6 +8,7 @@ export const metadata: Metadata = {
     'Marcaclub — Vêtements et accessoires exclusifs importés de Primark Espagne. Drops limités, qualité premium. Livraison 24-48h, paiement à la livraison.',
   keywords: 'marcaclub, mode femme, vêtements, Primark, Espagne, Algérie, livraison, marca club',
   metadataBase: new URL('https://marca-club.com'),
+  verification: { google: 'i1_TysAAZ-m67oKRQv6n-O7XES5p5Nla6xJaIXbnius' },
   alternates: { canonical: 'https://marca-club.com' },
   icons: {
     icon: '/icon.svg',
