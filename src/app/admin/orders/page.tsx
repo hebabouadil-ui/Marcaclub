@@ -85,8 +85,12 @@ export default function AdminOrdersPage() {
 
   useEffect(() => {
     let data = orders
-    if (filter === 'flagged') data = data.filter((o) => o.flagged)
-    else if (filter !== 'all') data = data.filter((o) => o.status === filter)
+    if (filter === 'flagged') data = data.filter((o) => o.flagged && !o.trusted)
+    else {
+      // Hide flagged+untrusted orders — they belong in the Risques élevés page
+      data = data.filter((o) => !o.flagged || o.trusted)
+      if (filter !== 'all') data = data.filter((o) => o.status === filter)
+    }
     if (search) data = data.filter(
       (o) => o.orderNumber.includes(search) ||
         o.customer.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -212,7 +216,7 @@ export default function AdminOrdersPage() {
     } else toast.error('Erreur')
   }
 
-  const flaggedCount = orders.filter((o) => o.flagged).length
+  const flaggedCount = orders.filter((o) => o.flagged && !o.trusted).length
   const untouchedCount = orders.filter((o) => o.status === 'pending' && !o.flagged && !o.trusted).length
   const highRiskCount = orders.filter((o) => !o.trusted && (o.flagSeverity === 'high' || o.aiVerdict === 'HIGH_RISK')).length
 
