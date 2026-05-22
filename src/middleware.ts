@@ -9,23 +9,27 @@ export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
   if (isAdminSubdomain) {
-    // Rewrite /  → /admin/dashboard, /login → /admin/login, etc.
-    if (pathname === '/' || pathname === '') {
-      return NextResponse.rewrite(new URL('/admin/dashboard', req.url))
-    }
-    // Already has /admin prefix — pass through
-    if (pathname.startsWith('/admin') || pathname.startsWith('/api')) {
+    // Always pass API routes and Next internals through unchanged
+    if (pathname.startsWith('/api') || pathname.startsWith('/_next')) {
       return NextResponse.next()
     }
-    // Anything else on the admin subdomain → rewrite to /admin/<path>
+    // Root → admin dashboard
+    if (pathname === '/') {
+      return NextResponse.rewrite(new URL('/admin/dashboard', req.url))
+    }
+    // Already prefixed with /admin — pass through
+    if (pathname.startsWith('/admin')) {
+      return NextResponse.next()
+    }
+    // Any other path → rewrite under /admin
     return NextResponse.rewrite(new URL(`/admin${pathname}`, req.url))
   }
 
-  // On the main domain, block direct /admin access (redirect to admin subdomain)
+  // On the main domain, redirect /admin/* to the subdomain
   if (pathname.startsWith('/admin')) {
     const target = new URL(req.url)
     target.hostname = 'admin.marca-club.com'
-    return NextResponse.redirect(target)
+    return NextResponse.redirect(target, 308)
   }
 
   return NextResponse.next()
