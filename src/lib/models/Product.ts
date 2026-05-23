@@ -9,10 +9,12 @@ export interface IProduct extends Document {
   images: string[]
   originalImages: string[]
   category: string
-  sizes: Array<{ size: string; stock: number }>
+  sizes: Array<{ size: string; stock: number; cjVid?: string }>
   stock: number
   featured: boolean
   active: boolean
+  cjPid?: string
+  cjData?: Record<string, unknown>
   createdAt: Date
   updatedAt: Date
 }
@@ -27,10 +29,12 @@ const ProductSchema = new Schema<IProduct>(
     images: [{ type: String }],
     originalImages: [{ type: String }],
     category: { type: String, required: true },
-    sizes: [{ size: { type: String }, stock: { type: Number, default: 0 } }],
+    sizes: [{ size: { type: String }, stock: { type: Number, default: 0 }, cjVid: { type: String } }],
     stock: { type: Number, default: 0 },
     featured: { type: Boolean, default: false },
     active: { type: Boolean, default: true },
+    cjPid: { type: String },
+    cjData: { type: Schema.Types.Mixed },
   },
   { timestamps: true }
 )

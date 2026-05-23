@@ -4,13 +4,14 @@ import Link from 'next/link'
 import { signOut, useSession } from 'next-auth/react'
 import { SessionProvider } from 'next-auth/react'
 import {
-  LayoutDashboard, Package, ShoppingBag, Settings, LogOut, Radio, Menu, X, BarChart2, Users, Shield, XCircle,
+  LayoutDashboard, Package, ShoppingBag, Settings, LogOut, Radio, Menu, X, BarChart2, Users, Shield, XCircle, Download,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
 const navItems = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/products', label: 'Produits', icon: Package },
+  { href: '/admin/cj-import', label: 'CJ Import', icon: Download },
   { href: '/admin/orders', label: 'Commandes', icon: ShoppingBag, badgeKey: 'orders' },
   { href: '/admin/high-risk', label: 'Risques élevés', icon: XCircle, badgeKey: 'highRisk' },
   { href: '/admin/customers', label: 'Clients', icon: Users },
