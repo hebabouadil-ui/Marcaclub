@@ -1,111 +1,79 @@
 'use client'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Globe, Shield, Zap } from 'lucide-react'
 
-interface Props {
-  title: string
-  subtitle: string
-}
+interface Props { title: string; subtitle: string }
 
 export default function HomeHero({ title, subtitle }: Props) {
+  const defaultTitle = title === 'La Mode Exclusive' ? 'Everything You Need' : title
+  const defaultSubtitle = subtitle === "Collections importées directement de Primark Espagne"
+    ? 'Premium products worldwide — clothes, accessories, vitamins, lifestyle & more. Delivered to your door.'
+    : subtitle
+
   return (
-    <section
-      className="relative bg-brand-black flex items-center justify-center overflow-hidden min-h-[100svh] md:min-h-[70svh]"
-    >
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-brand-black via-brand-green/20 to-brand-black" />
+    <section className="relative bg-brand-black flex items-center justify-center overflow-hidden min-h-[100svh] md:min-h-[75svh]">
+      {/* Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a0a] via-[#111] to-[#0a0a0a]" />
+      <div className="absolute inset-0 opacity-[0.04]"
+        style={{ backgroundImage: 'linear-gradient(#C9A84C 1px, transparent 1px), linear-gradient(90deg, #C9A84C 1px, transparent 1px)', backgroundSize: '60px 60px' }} />
+      {/* Glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-brand-gold/5 blur-3xl pointer-events-none" />
 
-      {/* Decorative grid */}
-      <div
-        className="absolute inset-0 opacity-5"
-        style={{
-          backgroundImage:
-            'linear-gradient(#C9A84C 1px, transparent 1px), linear-gradient(90deg, #C9A84C 1px, transparent 1px)',
-          backgroundSize: '60px 60px',
-        }}
-      />
+      <div className="relative z-10 text-center px-4 max-w-5xl mx-auto py-16">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+          className="inline-flex items-center gap-2 border border-brand-gold/20 bg-brand-gold/5 text-brand-gold text-[10px] tracking-[0.3em] uppercase px-4 py-2 rounded-full mb-8">
+          <Globe size={10} /> Worldwide Shipping · Secure Checkout
+        </motion.div>
 
-      {/* Content */}
-      <div className="relative z-10 text-center px-4 max-w-5xl mx-auto py-12">
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-brand-gold text-[10px] md:text-xs tracking-[0.4em] uppercase mb-6 md:mb-8"
-        >
-          Collection Exclusive — Primark España
-        </motion.p>
-
-        <motion.h1
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.1 }}
-          className="font-display text-4xl md:text-6xl lg:text-7xl text-brand-white leading-none mb-4 md:mb-6"
-        >
-          {title}
+        <motion.h1 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.1 }}
+          className="font-display text-4xl md:text-6xl lg:text-7xl text-white leading-tight mb-6">
+          {defaultTitle}
         </motion.h1>
 
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="text-brand-white/50 text-sm md:text-base tracking-widest max-w-xl mx-auto mb-10 md:mb-14"
-        >
-          {subtitle}
+        <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.25 }}
+          className="text-white/50 text-sm md:text-base max-w-2xl mx-auto mb-10 leading-relaxed">
+          {defaultSubtitle}
         </motion.p>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.5 }}
-          className="flex flex-col sm:flex-row gap-4 justify-center"
-        >
-          <Link
-            href="/products"
-            className="group inline-flex items-center justify-center gap-2 bg-brand-gold text-brand-black px-8 py-4 text-xs tracking-[0.2em] uppercase font-semibold hover:bg-brand-white transition-colors duration-300"
-          >
-            Voir la Collection
-            <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.4 }}
+          className="flex flex-col sm:flex-row gap-4 justify-center mb-14">
+          <Link href="/products"
+            className="group inline-flex items-center justify-center gap-2 bg-brand-gold text-brand-black px-8 py-4 text-xs tracking-[0.2em] uppercase font-bold hover:bg-yellow-400 transition-colors duration-300">
+            Shop Now <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
           </Link>
-          <Link
-            href="/#live"
-            className="inline-flex items-center justify-center gap-2 border border-brand-white/20 text-brand-white/80 px-8 py-4 text-xs tracking-[0.2em] uppercase hover:border-brand-gold hover:text-brand-gold transition-colors duration-300"
-          >
-            Live Sessions
+          <Link href="/account/register"
+            className="inline-flex items-center justify-center gap-2 border border-white/15 text-white/70 px-8 py-4 text-xs tracking-[0.2em] uppercase hover:border-brand-gold hover:text-brand-gold transition-colors duration-300">
+            Create Free Account
           </Link>
         </motion.div>
 
-        {/* Scroll indicator */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.4 }}
-          className="mt-14 flex flex-col items-center gap-1"
-        >
-          {[0, 1, 2].map((i) => (
-            <motion.svg
-              key={i}
-              width="20"
-              height="12"
-              viewBox="0 0 20 12"
-              fill="none"
-              animate={{ opacity: [0.2, 1, 0.2] }}
-              transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2, ease: 'easeInOut' }}
-            >
-              <path d="M1 1L10 10L19 1" stroke="#C9A84C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </motion.svg>
+        {/* Trust bar */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}
+          className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10">
+          {[
+            { icon: Globe, text: 'Ships Worldwide' },
+            { icon: Shield, text: 'Secure Payment' },
+            { icon: Zap, text: 'Fast Delivery 7–12 days' },
+          ].map(({ icon: Icon, text }) => (
+            <div key={text} className="flex items-center gap-2 text-white/30 text-xs tracking-wider">
+              <Icon size={13} className="text-brand-gold/60" /> {text}
+            </div>
           ))}
         </motion.div>
       </div>
 
-      {/* Corner decorations */}
-      <div className="absolute top-24 left-8 text-brand-gold/10 font-display text-8xl font-bold pointer-events-none select-none">
-        M
-      </div>
-      <div className="absolute bottom-12 right-8 text-brand-gold/10 font-display text-8xl font-bold pointer-events-none select-none">
-        C
-      </div>
+      {/* Scroll indicator */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }}
+        className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1">
+        {[0, 1, 2].map((i) => (
+          <motion.svg key={i} width="16" height="10" viewBox="0 0 20 12" fill="none"
+            animate={{ opacity: [0.2, 1, 0.2] }}
+            transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2, ease: 'easeInOut' }}>
+            <path d="M1 1L10 10L19 1" stroke="#C9A84C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </motion.svg>
+        ))}
+      </motion.div>
     </section>
   )
 }

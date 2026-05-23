@@ -5,6 +5,7 @@ import AnnouncementBar from '@/components/store/AnnouncementBar'
 import LiveBanner from '@/components/store/LiveBanner'
 import VisitorTracker from '@/components/store/VisitorTracker'
 import { CurrencyProvider } from '@/lib/context/CurrencyContext'
+import { CustomerProvider } from '@/lib/context/CustomerContext'
 import { connectDB } from '@/lib/db'
 import Settings from '@/lib/models/Settings'
 
@@ -61,6 +62,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
 
   return (
     <CurrencyProvider>
+    <CustomerProvider>
     <div className="min-h-screen flex flex-col">
       {/* Fixed header */}
       <div className="fixed top-0 left-0 right-0 z-50 flex flex-col">
@@ -99,6 +101,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
       />
       <WhatsAppButton phone={s.whatsappNumber ?? ''} />
     </div>
+    </CustomerProvider>
     </CurrencyProvider>
   )
 }

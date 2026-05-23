@@ -1,5 +1,5 @@
 'use client'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCartStore, cartTotal } from '@/lib/store/cartStore'
 import { useCurrency } from '@/lib/context/CurrencyContext'
@@ -105,10 +105,21 @@ export default function CheckoutPage() {
   const router = useRouter()
   const { items, removeItem, updateQuantity, clearCart } = useCartStore()
   const total = cartTotal(items)
-  const { format, currency } = useCurrency()
-
+  const { format, currency, geo } = useCurrency()
   const [customer, setCustomer] = useState<CustomerForm>(emptyForm)
   const [clientSecret, setClientSecret] = useState<string | null>(null)
+
+  // Prefill from geo on first load
+  useEffect(() => {
+    if (geo) {
+      setCustomer(prev => ({
+        ...prev,
+        country: geo.countryCode === 'OTHER' ? 'US' : (geo.countryCode || prev.country),
+        state: prev.state || geo.regionCode || '',
+        city: prev.city || '',
+      }))
+    }
+  }, [geo])
   const [step, setStep] = useState<'cart' | 'info' | 'payment'>('cart')
   const [loadingIntent, setLoadingIntent] = useState(false)
 
