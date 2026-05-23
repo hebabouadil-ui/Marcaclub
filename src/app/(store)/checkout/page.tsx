@@ -142,7 +142,7 @@ function PaymentForm({ clientSecret, customer, items, total, onSuccess }: {
 export default function CheckoutPage() {
   const router = useRouter()
   const { items, removeItem, updateQuantity, clearCart } = useCartStore()
-  const total = useCartStore(cartTotal)
+  const total = cartTotal(items)
 
   const [customer, setCustomer] = useState<CustomerForm>(emptyForm)
   const [clientSecret, setClientSecret] = useState<string | null>(null)
@@ -165,7 +165,7 @@ export default function CheckoutPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: items.map((i) => ({ productId: i.id, size: i.size, quantity: i.quantity })),
+          items: items.map((i) => ({ productId: i.productId, size: i.size, quantity: i.quantity })),
           currency: 'usd',
         }),
       })
@@ -310,7 +310,7 @@ export default function CheckoutPage() {
                   <PaymentForm
                     clientSecret={clientSecret}
                     customer={customer}
-                    items={items.map((i) => ({ productId: i.id, size: i.size, quantity: i.quantity }))}
+                    items={items.map((i) => ({ productId: i.productId, size: i.size, quantity: i.quantity }))}
                     total={total}
                     onSuccess={handleSuccess}
                   />
@@ -325,7 +325,7 @@ export default function CheckoutPage() {
               <h2 className="text-xs font-bold tracking-widest text-white/40 uppercase mb-4">Order Summary</h2>
               <div className="space-y-3 max-h-80 overflow-y-auto">
                 {items.map((item) => (
-                  <div key={`${item.id}-${item.size}`} className="flex gap-3">
+                  <div key={`${item.productId}-${item.size}`} className="flex gap-3">
                     {item.image && (
                       <div className="w-14 h-14 relative flex-shrink-0 bg-white/5">
                         <Image src={item.image} alt={item.name} fill className="object-cover" />
@@ -335,12 +335,12 @@ export default function CheckoutPage() {
                       <p className="text-white text-xs font-medium truncate">{item.name}</p>
                       <p className="text-white/40 text-[10px]">Size: {item.size}</p>
                       <div className="flex items-center gap-2 mt-1">
-                        <button onClick={() => updateQuantity(item.id, item.size, item.quantity - 1)}
+                        <button onClick={() => updateQuantity(item.productId, item.size, item.quantity - 1)}
                           className="text-white/40 hover:text-white"><Minus size={10} /></button>
                         <span className="text-white/60 text-xs">{item.quantity}</span>
-                        <button onClick={() => updateQuantity(item.id, item.size, item.quantity + 1)}
+                        <button onClick={() => updateQuantity(item.productId, item.size, item.quantity + 1)}
                           className="text-white/40 hover:text-white"><Plus size={10} /></button>
-                        <button onClick={() => removeItem(item.id, item.size)}
+                        <button onClick={() => removeItem(item.productId, item.size)}
                           className="text-white/20 hover:text-red-400 ml-1"><Trash2 size={10} /></button>
                       </div>
                     </div>

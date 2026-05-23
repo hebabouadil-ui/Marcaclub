@@ -3,9 +3,10 @@ import Stripe from 'stripe'
 import { connectDB } from '@/lib/db'
 import Product from '@/lib/models/Product'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2025-04-30.basil' })
+export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' })
   try {
     const body = await req.json()
     const { items, currency = 'usd' } = body
@@ -15,7 +16,6 @@ export async function POST(req: NextRequest) {
 
     await connectDB()
 
-    // Build server-trusted total from DB prices
     let total = 0
     for (const item of items) {
       const product = await Product.findById(item.productId).lean() as { price: number } | null

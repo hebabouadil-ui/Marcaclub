@@ -3,9 +3,8 @@ import Stripe from 'stripe'
 import { connectDB } from '@/lib/db'
 import Order from '@/lib/models/Order'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2025-04-30.basil' })
-
 export async function POST(req: NextRequest) {
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' })
   const body = await req.text()
   const sig = req.headers.get('stripe-signature')!
 
