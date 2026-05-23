@@ -115,7 +115,7 @@ export default function CheckoutPage() {
       setCustomer(prev => ({
         ...prev,
         country: geo.countryCode === 'OTHER' ? 'US' : (geo.countryCode || prev.country),
-        state: prev.state || geo.regionCode || '',
+        state: prev.state || geo.region || '',
         city: prev.city || '',
       }))
     }

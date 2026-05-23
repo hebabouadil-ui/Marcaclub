@@ -1,7 +1,7 @@
 'use client'
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 
-export interface GeoInfo { country: string; countryCode: string; city?: string; region?: string; regionCode?: string }
+export interface GeoInfo { countryCode: string; region?: string; city?: string }
 
 interface CurrencyCtx {
   currency: string
@@ -19,11 +19,11 @@ export const CURRENCIES: { code: string; name: string; symbol: string }[] = [
   { code: 'EUR', name: 'Euro', symbol: '€' },
   { code: 'GBP', name: 'British Pound', symbol: '£' },
   { code: 'AUD', name: 'Australian Dollar', symbol: 'A$' },
-  { code: 'CHF', name: 'Swiss Franc', symbol: 'CHF' },
+  { code: 'CHF', name: 'Swiss Franc', symbol: 'CHF ' },
   { code: 'JPY', name: 'Japanese Yen', symbol: '¥' },
-  { code: 'AED', name: 'UAE Dirham', symbol: 'AED' },
-  { code: 'SAR', name: 'Saudi Riyal', symbol: 'SAR' },
-  { code: 'MAD', name: 'Moroccan Dirham', symbol: 'MAD' },
+  { code: 'AED', name: 'UAE Dirham', symbol: 'AED ' },
+  { code: 'SAR', name: 'Saudi Riyal', symbol: 'SAR ' },
+  { code: 'MAD', name: 'Moroccan Dirham', symbol: 'MAD ' },
   { code: 'BRL', name: 'Brazilian Real', symbol: 'R$' },
   { code: 'MXN', name: 'Mexican Peso', symbol: 'MX$' },
   { code: 'INR', name: 'Indian Rupee', symbol: '₹' },
@@ -33,8 +33,17 @@ export const CURRENCIES: { code: string; name: string; symbol: string }[] = [
 
 const COUNTRY_CURRENCY: Record<string, string> = {
   US: 'USD', CA: 'CAD', GB: 'GBP', AU: 'AUD', NZ: 'NZD',
-  FR: 'EUR', DE: 'EUR', ES: 'EUR', IT: 'EUR', NL: 'EUR', BE: 'EUR', PT: 'EUR', AT: 'EUR', IE: 'EUR',
-  CH: 'CHF', JP: 'JPY', SG: 'SGD', AE: 'AED', SA: 'SAR', MA: 'MAD', BR: 'BRL', MX: 'MXN', IN: 'INR',
+  FR: 'EUR', DE: 'EUR', ES: 'EUR', IT: 'EUR', NL: 'EUR', BE: 'EUR',
+  PT: 'EUR', AT: 'EUR', IE: 'EUR', FI: 'EUR', GR: 'EUR',
+  CH: 'CHF', JP: 'JPY', SG: 'SGD', AE: 'AED', SA: 'SAR',
+  MA: 'MAD', BR: 'BRL', MX: 'MXN', IN: 'INR',
+}
+
+// Fallback rates if the server endpoint fails
+const FALLBACK_RATES: Record<string, number> = {
+  USD: 1, CAD: 1.36, EUR: 0.92, GBP: 0.79, AUD: 1.53, CHF: 0.90,
+  JPY: 149.5, AED: 3.67, SAR: 3.75, MAD: 10.05, BRL: 4.97,
+  MXN: 17.2, INR: 83.1, SGD: 1.34, NZD: 1.63,
 }
 
 const DEFAULT: CurrencyCtx = {
@@ -59,48 +68,52 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
   const [currency, setCurrencyState] = useState('USD')
   const [rate, setRate] = useState(1)
   const [geo, setGeo] = useState<GeoInfo | null>(null)
-  const [rates, setRates] = useState<Record<string, number>>({})
+  const [rates, setRates] = useState<Record<string, number>>(FALLBACK_RATES)
 
-  const applyRate = useCallback((code: string, ratesMap: Record<string, number>) => {
-    const r = ratesMap[code] ?? 1
+  const applyCode = useCallback((code: string, ratesMap: Record<string, number>) => {
+    const r = ratesMap[code] ?? FALLBACK_RATES[code] ?? 1
     setRate(r)
     setCurrencyState(code)
     localStorage.setItem('mc-currency', code)
   }, [])
 
   const setCurrency = useCallback((code: string) => {
-    applyRate(code, rates)
-  }, [applyRate, rates])
+    applyCode(code, rates)
+  }, [applyCode, rates])
 
   useEffect(() => {
     const init = async () => {
-      // Fetch exchange rates
-      let ratesMap: Record<string, number> = {}
+      // Fetch exchange rates from our server endpoint (has fallback built in)
+      let ratesMap = FALLBACK_RATES
       try {
-        const r = await fetch('https://open.er-api.com/v6/latest/USD')
-        const d = await r.json()
-        ratesMap = d.rates ?? {}
-        setRates(ratesMap)
+        const r = await fetch('/api/rates')
+        if (r.ok) {
+          const d = await r.json()
+          if (d.rates) { ratesMap = d.rates; setRates(d.rates) }
+        }
       } catch {}
 
-      // Detect location
+      // Geo-detect via Vercel headers (server-side, no external API)
       let detectedCode = 'USD'
       try {
-        const g = await fetch('https://ipapi.co/json/')
-        const gd = await g.json()
-        setGeo({ country: gd.country_name, countryCode: gd.country_code, city: gd.city, region: gd.region, regionCode: gd.region_code })
-        detectedCode = COUNTRY_CURRENCY[gd.country_code as string] ?? 'USD'
+        const g = await fetch('/api/geo')
+        if (g.ok) {
+          const gd: GeoInfo = await g.json()
+          if (gd.countryCode) {
+            setGeo(gd)
+            detectedCode = COUNTRY_CURRENCY[gd.countryCode] ?? 'USD'
+          }
+        }
       } catch {}
 
-      // Manual override wins
+      // Manual override wins; otherwise use geo-detected currency
       const saved = localStorage.getItem('mc-currency')
-      const finalCode = saved ?? detectedCode
-      applyRate(finalCode, ratesMap)
+      applyCode(saved ?? detectedCode, ratesMap)
     }
     init()
-  }, [applyRate])
+  }, [applyCode])
 
-  const info = CURRENCIES.find(c => c.code === currency) ?? { symbol: '$', code: 'USD', name: 'US Dollar' }
+  const info = CURRENCIES.find(c => c.code === currency) ?? CURRENCIES[0]
 
   return (
     <Ctx.Provider value={{

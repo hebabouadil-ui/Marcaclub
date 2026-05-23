@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
     return res
   } catch (err) {
     console.error('Register error:', err)
-    return NextResponse.json({ error: 'Server error' }, { status: 500 })
+    const msg = err instanceof Error ? err.message : 'Server error'
+    return NextResponse.json({ error: msg.includes('duplicate') ? 'An account with this email already exists' : 'Server error. Please try again.' }, { status: 500 })
   }
 }
