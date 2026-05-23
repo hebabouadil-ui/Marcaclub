@@ -4,6 +4,7 @@ import WhatsAppButton from '@/components/ui/WhatsAppButton'
 import AnnouncementBar from '@/components/store/AnnouncementBar'
 import LiveBanner from '@/components/store/LiveBanner'
 import VisitorTracker from '@/components/store/VisitorTracker'
+import { CurrencyProvider } from '@/lib/context/CurrencyContext'
 import { connectDB } from '@/lib/db'
 import Settings from '@/lib/models/Settings'
 
@@ -14,7 +15,7 @@ async function getSettings() {
     return settings || {
       liveStatus: false,
       announcementActive: true,
-      announcementBar: 'Livraison 24-48h • Paiement à la livraison • Nouveautés chaque semaine',
+      announcementBar: 'Free Worldwide Shipping • Secure Payment • New Arrivals Every Week',
       instagramUrl: 'https://instagram.com/marcaclub',
       tiktokUrl: 'https://tiktok.com/@marcaclub',
       whatsappNumber: '+213000000000',
@@ -23,7 +24,7 @@ async function getSettings() {
     return {
       liveStatus: false,
       announcementActive: true,
-      announcementBar: 'Livraison 24-48h • Paiement à la livraison • Nouveautés chaque semaine',
+      announcementBar: 'Free Worldwide Shipping • Secure Payment • New Arrivals Every Week',
       instagramUrl: 'https://instagram.com/marcaclub',
       tiktokUrl: 'https://tiktok.com/@marcaclub',
       whatsappNumber: '+213000000000',
@@ -59,6 +60,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
     80
 
   return (
+    <CurrencyProvider>
     <div className="min-h-screen flex flex-col">
       {/* Fixed header */}
       <div className="fixed top-0 left-0 right-0 z-50 flex flex-col">
@@ -97,5 +99,6 @@ export default async function StoreLayout({ children }: { children: React.ReactN
       />
       <WhatsAppButton phone={s.whatsappNumber ?? ''} />
     </div>
+    </CurrencyProvider>
   )
 }
