@@ -16,10 +16,18 @@ export interface IOrder extends Document {
     phone: string
     address: string
     city: string
+    state?: string
+    country: string
+    postalCode?: string
     email?: string
   }
   items: IOrderItem[]
   total: number
+  currency: string
+  stripePaymentIntentId?: string
+  stripePaymentStatus?: string
+  cjOrderId?: string
+  cjTrackingNumber?: string
   status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled'
   flagged: boolean
   trusted?: boolean
@@ -44,6 +52,9 @@ const OrderSchema = new Schema<IOrder>(
       phone: { type: String, required: true },
       address: { type: String, required: true },
       city: { type: String, required: true },
+      state: { type: String },
+      country: { type: String, required: true, default: 'US' },
+      postalCode: { type: String },
       email: { type: String },
     },
     items: [
@@ -57,6 +68,11 @@ const OrderSchema = new Schema<IOrder>(
       },
     ],
     total: { type: Number, required: true },
+    currency: { type: String, default: 'usd' },
+    stripePaymentIntentId: { type: String },
+    stripePaymentStatus: { type: String },
+    cjOrderId: { type: String },
+    cjTrackingNumber: { type: String },
     status: {
       type: String,
       enum: ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'],

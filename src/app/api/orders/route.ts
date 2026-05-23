@@ -44,19 +44,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'Commande invalide' }, { status: 400 })
     }
     const c = body.customer
-    if (!c?.name || !c?.phone || !c?.city || !c?.address) {
-      return NextResponse.json({ message: 'Informations client manquantes' }, { status: 400 })
+    if (!c?.name || !c?.email || !c?.phone || !c?.city || !c?.address || !c?.country) {
+      return NextResponse.json({ message: 'Missing customer fields' }, { status: 400 })
     }
     if (
       typeof c.name !== 'string' || c.name.length > 120 ||
       typeof c.phone !== 'string' || c.phone.length > 30 ||
       typeof c.city !== 'string' || c.city.length > 100 ||
       typeof c.address !== 'string' || c.address.length > 300 ||
-      (c.email && (typeof c.email !== 'string' || c.email.length > 200 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email))) ||
+      typeof c.email !== 'string' || c.email.length > 200 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email) ||
       (body.notes && (typeof body.notes !== 'string' || body.notes.length > 1000))
     ) {
-      return NextResponse.json({ message: 'Données invalides' }, { status: 400 })
+      return NextResponse.json({ message: 'Invalid data' }, { status: 400 })
     }
+
+    // Extract Stripe payment intent ID from clientSecret
+    const stripePaymentIntentId = typeof body.stripeClientSecret === 'string'
+      ? body.stripeClientSecret.split('_secret_')[0]
+      : undefined
 
     type OrderItem = { productId: string; size: string; quantity: number; name?: string }
     const items = body.items as OrderItem[]
@@ -270,11 +275,24 @@ export async function POST(req: NextRequest) {
     }
 
     const order = await Order.create({
-      customer: body.customer,
+      customer: {
+        name: c.name,
+        phone: c.phone,
+        email: c.email,
+        address: c.address,
+        city: c.city,
+        state: c.state || undefined,
+        country: c.country || 'US',
+        postalCode: c.postalCode || undefined,
+      },
       items: trustedItems,
       notes: body.notes || undefined,
       orderNumber,
       total: serverTotal,
+      currency: 'usd',
+      stripePaymentIntentId: stripePaymentIntentId || undefined,
+      stripePaymentStatus: stripePaymentIntentId ? 'pending' : undefined,
+      status: 'pending',
       flagged,
       flagSeverity: flagSeverity || undefined,
       flagReason: flagReason || undefined,
