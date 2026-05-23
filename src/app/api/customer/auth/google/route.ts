@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
 
   const returnTo = req.nextUrl.searchParams.get('returnTo') ?? '/'
   const state = encodeURIComponent(returnTo)
-  const base = (process.env.NEXTAUTH_URL ?? 'https://marca-club.com').replace(/\/$/, '')
+  const base = (process.env.SITE_URL ?? 'https://marca-club.com').replace(/\/$/, '')
 
   const params = new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID,

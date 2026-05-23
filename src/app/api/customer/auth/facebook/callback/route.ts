@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
   const code = searchParams.get('code')
   const state = searchParams.get('state')
-  const base = (process.env.NEXTAUTH_URL ?? 'https://marca-club.com').replace(/\/$/, '')
+  const base = (process.env.SITE_URL ?? 'https://marca-club.com').replace(/\/$/, '')
 
   if (!code) {
     return NextResponse.redirect(new URL('/account/login?error=oauth_denied', req.url))
