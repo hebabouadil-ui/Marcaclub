@@ -41,14 +41,17 @@ export default function RegisterPage() {
     finally { setLoading(false) }
   }
 
+  const inputClass = "w-full bg-white border border-gray-300 text-gray-900 text-sm pl-9 pr-4 py-3 focus:outline-none focus:border-brand-gold placeholder:text-gray-400 rounded-none"
+  const iconClass = "absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+
   return (
-    <div className="min-h-[calc(100vh-200px)] flex items-center justify-center px-4 py-16">
+    <div className="min-h-[calc(100vh-200px)] bg-gray-50 flex items-center justify-center px-4 py-16">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="font-display text-3xl font-bold text-brand-white tracking-widest uppercase mb-2">Create Account</h1>
-          <p className="text-white/40 text-sm">Track orders, save preferences, faster checkout</p>
+          <h1 className="font-display text-3xl font-bold text-gray-900 tracking-widest uppercase mb-2">Create Account</h1>
+          <p className="text-gray-500 text-sm">Track orders, save preferences, faster checkout</p>
         </div>
-        <div className="bg-white/3 border border-white/8 p-8">
+        <div className="bg-white border border-gray-200 p-8 shadow-sm">
           <form onSubmit={handleSubmit} className="space-y-4">
             {[
               { key: 'name', label: 'FULL NAME', type: 'text', icon: User, placeholder: 'John Doe' },
@@ -57,24 +60,24 @@ export default function RegisterPage() {
               { key: 'phone', label: 'PHONE (optional)', type: 'tel', icon: Phone, placeholder: '+1 555 000 0000' },
             ].map(({ key, label, type, icon: Icon, placeholder }) => (
               <div key={key}>
-                <label className="block text-white/40 text-[10px] tracking-widest mb-2">{label}</label>
+                <label className="block text-gray-500 text-[10px] tracking-widest mb-2">{label}</label>
                 <div className="relative">
-                  <Icon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20" />
+                  <Icon size={14} className={iconClass} />
                   <input value={form[key as keyof typeof form]} onChange={set(key)} type={type}
                     required={key !== 'phone'}
-                    className="w-full bg-white/5 border border-white/10 text-white text-sm pl-9 pr-4 py-3 focus:outline-none focus:border-brand-gold/50 placeholder:text-white/20"
+                    className={inputClass}
                     placeholder={placeholder} />
                 </div>
               </div>
             ))}
             <div>
-              <label className="block text-white/40 text-[10px] tracking-widest mb-2">COUNTRY (optional)</label>
+              <label className="block text-gray-500 text-[10px] tracking-widest mb-2">COUNTRY (optional)</label>
               <div className="relative">
-                <Globe size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20" />
+                <Globe size={14} className={iconClass} />
                 <select value={form.country} onChange={set('country')}
-                  className="w-full bg-white/5 border border-white/10 text-white text-sm pl-9 pr-4 py-3 focus:outline-none focus:border-brand-gold/50 appearance-none">
-                  <option value="" className="bg-brand-black">Select country</option>
-                  {COUNTRIES.map(c => <option key={c} value={c} className="bg-brand-black">{c}</option>)}
+                  className="w-full bg-white border border-gray-300 text-gray-900 text-sm pl-9 pr-4 py-3 focus:outline-none focus:border-brand-gold appearance-none rounded-none">
+                  <option value="">Select country</option>
+                  {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
             </div>
@@ -84,9 +87,9 @@ export default function RegisterPage() {
               {loading ? 'Creating account...' : 'Create Account'}
             </button>
           </form>
-          <p className="text-center text-white/30 text-sm mt-6">
+          <p className="text-center text-gray-500 text-sm mt-6">
             Already have an account?{' '}
-            <Link href="/account/login" className="text-brand-gold hover:text-yellow-400 transition-colors">Sign in</Link>
+            <Link href="/account/login" className="text-brand-gold hover:text-yellow-600 font-medium transition-colors">Sign in</Link>
           </p>
         </div>
       </div>
