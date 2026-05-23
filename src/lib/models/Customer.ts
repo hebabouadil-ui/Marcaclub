@@ -6,6 +6,8 @@ export interface ICustomer extends Document {
   passwordHash: string
   phone?: string
   country?: string
+  googleId?: string
+  facebookId?: string
   createdAt: Date
   updatedAt: Date
 }
@@ -17,6 +19,8 @@ const CustomerSchema = new Schema<ICustomer>(
     passwordHash: { type: String, required: true },
     phone: { type: String },
     country: { type: String },
+    googleId: { type: String, sparse: true },
+    facebookId: { type: String, sparse: true },
   },
   { timestamps: true }
 )

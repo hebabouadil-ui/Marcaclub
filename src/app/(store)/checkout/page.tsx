@@ -3,10 +3,14 @@ import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCartStore, cartTotal } from '@/lib/store/cartStore'
 import { useCurrency } from '@/lib/context/CurrencyContext'
+import { useCustomer } from '@/lib/context/CustomerContext'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowLeft, Loader2, Trash2, Plus, Minus, ShoppingBag, Lock, ChevronRight, Shield, RotateCcw, Truck } from 'lucide-react'
+import {
+  ArrowLeft, Loader2, Trash2, Plus, Minus, ShoppingBag,
+  Lock, ChevronRight, Shield, RotateCcw, Truck, Mail, Eye, EyeOff, User,
+} from 'lucide-react'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 
@@ -35,6 +39,193 @@ interface CustomerForm {
 }
 const emptyForm: CustomerForm = {
   name: '', email: '', phone: '', address: '', city: '', state: '', postalCode: '', country: 'US',
+}
+
+// Google icon SVG
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18">
+      <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+      <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z" fill="#34A853"/>
+      <path d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.348 2.825.957 4.039l3.007-2.332z" fill="#FBBC05"/>
+      <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+    </svg>
+  )
+}
+
+// Facebook icon
+function FacebookIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="#1877F2">
+      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+    </svg>
+  )
+}
+
+// Inline auth step for checkout
+function AuthStep({
+  onGuest,
+  onSuccess,
+  returnTo,
+}: {
+  onGuest: () => void
+  onSuccess: () => void
+  returnTo: string
+}) {
+  const [mode, setMode] = useState<'choose' | 'signin' | 'register'>('choose')
+  const [showPass, setShowPass] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [form, setForm] = useState({ name: '', email: '', password: '' })
+  const { refresh } = useCustomer()
+
+  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm(p => ({ ...p, [k]: e.target.value }))
+
+  const handleEmailAuth = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    try {
+      if (mode === 'signin') {
+        const res = await fetch('/api/customer/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: form.email, password: form.password }),
+        })
+        const data = await res.json()
+        if (!res.ok) { toast.error(data.error ?? 'Login failed'); return }
+        await refresh()
+        toast.success(`Welcome back, ${data.name}!`)
+        onSuccess()
+      } else {
+        if (!form.name) { toast.error('Please enter your name'); return }
+        if (form.password.length < 8) { toast.error('Password must be at least 8 characters'); return }
+        const res = await fetch('/api/customer/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: form.name, email: form.email, password: form.password }),
+        })
+        const data = await res.json()
+        if (!res.ok) { toast.error(data.error ?? 'Registration failed'); return }
+        await refresh()
+        toast.success('Account created! Welcome to Marcaclub.')
+        onSuccess()
+      }
+    } catch { toast.error('Something went wrong') }
+    finally { setLoading(false) }
+  }
+
+  const inputCls = "w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="text-center mb-6">
+        <h2 className="font-semibold text-gray-900 text-lg mb-1">How would you like to continue?</h2>
+        <p className="text-gray-400 text-sm">Create an account to track your order, save your info, and checkout faster next time.</p>
+      </div>
+
+      {mode === 'choose' && (
+        <div className="space-y-3">
+          {/* Social buttons */}
+          <a
+            href={`/api/customer/auth/google?returnTo=${encodeURIComponent(returnTo)}`}
+            className="w-full flex items-center justify-center gap-3 border border-gray-300 rounded-lg px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            <GoogleIcon />
+            Continue with Google
+          </a>
+          <a
+            href={`/api/customer/auth/facebook?returnTo=${encodeURIComponent(returnTo)}`}
+            className="w-full flex items-center justify-center gap-3 border border-gray-300 rounded-lg px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            <FacebookIcon />
+            Continue with Facebook
+          </a>
+
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200" /></div>
+            <div className="relative flex justify-center text-xs text-gray-400 bg-white px-3 w-fit mx-auto">or</div>
+          </div>
+
+          {/* Email options */}
+          <button
+            onClick={() => setMode('signin')}
+            className="w-full flex items-center justify-center gap-2 border border-gray-300 rounded-lg px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            <Mail size={16} /> Sign in with Email
+          </button>
+          <button
+            onClick={() => setMode('register')}
+            className="w-full flex items-center justify-center gap-2 bg-brand-gold text-brand-black rounded-lg px-4 py-3 text-sm font-semibold hover:bg-yellow-400 transition-colors"
+          >
+            <User size={16} /> Create a Free Account
+          </button>
+
+          <div className="relative my-2">
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100" /></div>
+          </div>
+
+          {/* Guest */}
+          <button
+            onClick={onGuest}
+            className="w-full text-gray-400 text-sm hover:text-gray-600 transition-colors py-2 flex items-center justify-center gap-1"
+          >
+            Continue as Guest <ChevronRight size={14} />
+          </button>
+        </div>
+      )}
+
+      {(mode === 'signin' || mode === 'register') && (
+        <form onSubmit={handleEmailAuth} className="space-y-3">
+          <button type="button" onClick={() => setMode('choose')} className="text-sm text-gray-400 hover:text-gray-600 flex items-center gap-1 mb-2">
+            <ArrowLeft size={13} /> Back
+          </button>
+
+          {mode === 'register' && (
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">Full name</label>
+              <input value={form.name} onChange={set('name')} required placeholder="John Doe"
+                className={inputCls} />
+            </div>
+          )}
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">Email</label>
+            <input value={form.email} onChange={set('email')} type="email" required placeholder="your@email.com"
+              className={inputCls} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">Password {mode === 'register' && <span className="text-gray-400">(min. 8 characters)</span>}</label>
+            <div className="relative">
+              <input value={form.password} onChange={set('password')} type={showPass ? 'text' : 'password'} required placeholder="••••••••"
+                className={`${inputCls} pr-10`} />
+              <button type="button" onClick={() => setShowPass(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" disabled={loading}
+            className="w-full bg-gray-900 text-white rounded-lg py-3 text-sm font-semibold flex items-center justify-center gap-2 hover:bg-gray-800 transition-colors disabled:opacity-50">
+            {loading ? <Loader2 size={15} className="animate-spin" /> : null}
+            {loading ? 'Please wait...' : mode === 'signin' ? 'Sign In & Continue' : 'Create Account & Continue'}
+          </button>
+
+          <p className="text-center text-xs text-gray-400 mt-2">
+            {mode === 'signin' ? "Don't have an account?" : 'Already have an account?'}{' '}
+            <button type="button" onClick={() => setMode(mode === 'signin' ? 'register' : 'signin')} className="text-brand-gold font-medium">
+              {mode === 'signin' ? 'Create one' : 'Sign in'}
+            </button>
+          </p>
+
+          <div className="relative my-1">
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100" /></div>
+          </div>
+          <button type="button" onClick={onGuest} className="w-full text-gray-400 text-xs hover:text-gray-600 transition-colors py-1">
+            Skip — continue as guest
+          </button>
+        </form>
+      )}
+    </div>
+  )
 }
 
 function PaymentStep({ clientSecret, customer, items, total, onSuccess }: {
@@ -106,30 +297,81 @@ export default function CheckoutPage() {
   const { items, removeItem, updateQuantity, clearCart } = useCartStore()
   const total = cartTotal(items)
   const { format, currency, geo } = useCurrency()
-  const [customer, setCustomer] = useState<CustomerForm>(emptyForm)
+  const { customer, loading: authLoading } = useCustomer()
+  const [shippingForm, setShippingForm] = useState<CustomerForm>(emptyForm)
   const [clientSecret, setClientSecret] = useState<string | null>(null)
+  const [step, setStep] = useState<'cart' | 'auth' | 'info' | 'payment'>('cart')
+  const [loadingIntent, setLoadingIntent] = useState(false)
+  const [authReturnFromOAuth, setAuthReturnFromOAuth] = useState(false)
 
-  // Prefill from geo on first load
+  // Detect return from OAuth redirect (?auth=done)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('auth') === 'done') {
+      setAuthReturnFromOAuth(true)
+      const url = new URL(window.location.href)
+      url.searchParams.delete('auth')
+      window.history.replaceState({}, '', url)
+    }
+  }, [])
+
+  // After OAuth return, advance to info once customer loads
+  useEffect(() => {
+    if (authReturnFromOAuth && !authLoading && customer) {
+      setShippingForm(prev => ({
+        ...prev,
+        name: prev.name || customer.name,
+        email: prev.email || customer.email,
+      }))
+      setStep('info')
+      setAuthReturnFromOAuth(false)
+    }
+  }, [authReturnFromOAuth, authLoading, customer])
+
+  // Prefill from geo location
   useEffect(() => {
     if (geo) {
-      setCustomer(prev => ({
+      setShippingForm(prev => ({
         ...prev,
-        country: geo.countryCode === 'OTHER' ? 'US' : (geo.countryCode || prev.country),
+        country: COUNTRIES.find(c => c.code === geo.countryCode) ? geo.countryCode : prev.country,
         state: prev.state || geo.region || '',
-        city: prev.city || '',
       }))
     }
   }, [geo])
-  const [step, setStep] = useState<'cart' | 'info' | 'payment'>('cart')
-  const [loadingIntent, setLoadingIntent] = useState(false)
+
+  // When customer logs in during auth step, advance to info
+  const handleAuthSuccess = useCallback(() => {
+    if (customer) {
+      setShippingForm(prev => ({
+        ...prev,
+        name: prev.name || customer.name,
+        email: prev.email || customer.email,
+      }))
+    }
+    setStep('info')
+  }, [customer])
 
   const set = useCallback((key: keyof CustomerForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setCustomer((prev) => ({ ...prev, [key]: e.target.value }))
+    setShippingForm((prev) => ({ ...prev, [key]: e.target.value }))
   }, [])
+
+  const handleProceedFromCart = () => {
+    // If already logged in, skip auth step
+    if (!authLoading && customer) {
+      setShippingForm(prev => ({
+        ...prev,
+        name: prev.name || customer.name,
+        email: prev.email || customer.email,
+      }))
+      setStep('info')
+    } else {
+      setStep('auth')
+    }
+  }
 
   const handleInfoSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!customer.name || !customer.email || !customer.phone || !customer.address || !customer.city || !customer.postalCode) {
+    if (!shippingForm.name || !shippingForm.email || !shippingForm.phone || !shippingForm.address || !shippingForm.city || !shippingForm.postalCode) {
       toast.error('Please fill in all required fields')
       return
     }
@@ -168,7 +410,12 @@ export default function CheckoutPage() {
     )
   }
 
-  const countryName = COUNTRIES.find(c => c.code === customer.country)?.name ?? customer.country
+  const countryName = COUNTRIES.find(c => c.code === shippingForm.country)?.name ?? shippingForm.country
+  const returnToUrl = `/checkout?auth=done`
+
+  // Breadcrumb labels
+  const stepLabels = { cart: 'Cart', auth: 'Account', info: 'Information', payment: 'Payment' }
+  const stepOrder = ['cart', 'auth', 'info', 'payment'] as const
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -176,23 +423,22 @@ export default function CheckoutPage() {
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="font-display font-bold text-xl tracking-widest text-gray-900">MARCACLUB</Link>
-          <div className="flex items-center gap-2 text-xs text-gray-400">
-            <button onClick={() => setStep('cart')} className={step === 'cart' ? 'text-gray-900 font-semibold' : 'hover:text-gray-600'}>Cart</button>
-            <ChevronRight size={12} />
-            <button onClick={() => step === 'payment' && setStep('info')} className={step === 'info' ? 'text-gray-900 font-semibold' : step === 'payment' ? 'hover:text-gray-600' : 'text-gray-300'}>Information</button>
-            <ChevronRight size={12} />
-            <span className={step === 'payment' ? 'text-gray-900 font-semibold' : 'text-gray-300'}>Payment</span>
+          <div className="flex items-center gap-2 text-xs text-gray-400 flex-wrap justify-end">
+            {stepOrder.filter(s => s !== 'auth' || (!authLoading && !customer)).map((s, i, arr) => (
+              <span key={s} className="flex items-center gap-2">
+                <span className={step === s ? 'text-gray-900 font-semibold' : 'text-gray-400'}>{stepLabels[s]}</span>
+                {i < arr.length - 1 && <ChevronRight size={12} />}
+              </span>
+            ))}
           </div>
         </div>
       </div>
 
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-
-          {/* Left — steps */}
           <div className="lg:col-span-3">
 
-            {/* STEP 1: Cart review */}
+            {/* STEP: Cart */}
             {step === 'cart' && (
               <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-6">
@@ -224,60 +470,76 @@ export default function CheckoutPage() {
                     </div>
                   ))}
                 </div>
-                <button onClick={() => setStep('info')}
+                <button onClick={handleProceedFromCart}
                   className="w-full mt-6 bg-gray-900 text-white py-4 font-semibold rounded-lg hover:bg-gray-800 transition-colors flex items-center justify-center gap-2">
-                  Proceed to checkout <ChevronRight size={16} />
+                  Proceed to Checkout <ChevronRight size={16} />
                 </button>
               </div>
             )}
 
-            {/* STEP 2: Information */}
+            {/* STEP: Auth / Account choice */}
+            {step === 'auth' && (
+              <AuthStep
+                onGuest={() => setStep('info')}
+                onSuccess={handleAuthSuccess}
+                returnTo={returnToUrl}
+              />
+            )}
+
+            {/* STEP: Information */}
             {step === 'info' && (
               <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <h2 className="font-semibold text-gray-900 mb-6">Shipping Information</h2>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="font-semibold text-gray-900">Shipping Information</h2>
+                  {customer && (
+                    <span className="text-xs text-green-600 bg-green-50 border border-green-200 px-2 py-1 rounded-full">
+                      Signed in as {customer.name.split(' ')[0]}
+                    </span>
+                  )}
+                </div>
                 <form onSubmit={handleInfoSubmit} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1.5">Full name *</label>
-                      <input value={customer.name} onChange={set('name')} required placeholder="John Doe"
+                      <input value={shippingForm.name} onChange={set('name')} required placeholder="John Doe"
                         className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1.5">Email *</label>
-                      <input value={customer.email} onChange={set('email')} type="email" required placeholder="john@example.com"
+                      <input value={shippingForm.email} onChange={set('email')} type="email" required placeholder="john@example.com"
                         className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" />
                     </div>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1.5">Phone *</label>
-                    <input value={customer.phone} onChange={set('phone')} type="tel" required placeholder="+1 (555) 000-0000"
+                    <input value={shippingForm.phone} onChange={set('phone')} type="tel" required placeholder="+1 (555) 000-0000"
                       className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1.5">Street address *</label>
-                    <input value={customer.address} onChange={set('address')} required placeholder="123 Main St, Apt 4B"
+                    <input value={shippingForm.address} onChange={set('address')} required placeholder="123 Main St, Apt 4B"
                       className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" />
                   </div>
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1.5">City *</label>
-                      <input value={customer.city} onChange={set('city')} required placeholder="New York"
+                      <input value={shippingForm.city} onChange={set('city')} required placeholder="Montreal"
                         className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1.5">State / Province</label>
-                      <input value={customer.state} onChange={set('state')} placeholder="NY"
+                      <input value={shippingForm.state} onChange={set('state')} placeholder="QC"
                         className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1.5">Postal code *</label>
-                      <input value={customer.postalCode} onChange={set('postalCode')} required placeholder="10001"
+                      <input value={shippingForm.postalCode} onChange={set('postalCode')} required placeholder="H3A 1A1"
                         className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" />
                     </div>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1.5">Country *</label>
-                    <select value={customer.country} onChange={set('country')}
+                    <select value={shippingForm.country} onChange={set('country')}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent bg-white">
                       {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
                     </select>
@@ -292,15 +554,14 @@ export default function CheckoutPage() {
               </div>
             )}
 
-            {/* STEP 3: Payment */}
+            {/* STEP: Payment */}
             {step === 'payment' && clientSecret && (
               <div className="bg-white rounded-xl border border-gray-200 p-6">
-                {/* Shipping summary */}
                 <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
                   <div>
                     <p className="text-xs text-gray-400 mb-0.5">Shipping to</p>
-                    <p className="text-sm font-medium text-gray-900">{customer.name}</p>
-                    <p className="text-xs text-gray-500">{customer.address}, {customer.city}{customer.state ? `, ${customer.state}` : ''} {customer.postalCode} · {countryName}</p>
+                    <p className="text-sm font-medium text-gray-900">{shippingForm.name}</p>
+                    <p className="text-xs text-gray-500">{shippingForm.address}, {shippingForm.city}{shippingForm.state ? `, ${shippingForm.state}` : ''} {shippingForm.postalCode} · {countryName}</p>
                   </div>
                   <button onClick={() => setStep('info')} className="text-xs text-gray-400 hover:text-gray-600 underline">Change</button>
                 </div>
@@ -314,7 +575,7 @@ export default function CheckoutPage() {
                 }}>
                   <PaymentStep
                     clientSecret={clientSecret}
-                    customer={customer}
+                    customer={shippingForm}
                     items={items.map((i) => ({ productId: i.productId, size: i.size, quantity: i.quantity }))}
                     total={total}
                     onSuccess={handleSuccess}
@@ -339,7 +600,7 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          {/* Right — order summary */}
+          {/* Order summary sidebar */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-xl border border-gray-200 p-6 sticky top-6">
               <h2 className="font-semibold text-gray-900 mb-5">Order Summary</h2>
