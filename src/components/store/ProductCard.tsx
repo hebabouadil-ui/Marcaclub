@@ -2,8 +2,8 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { motion } from 'framer-motion'
 import { Eye } from 'lucide-react'
+import { useCurrency } from '@/lib/context/CurrencyContext'
 
 interface Props {
   product: {
@@ -21,6 +21,7 @@ interface Props {
 
 export default function ProductCard({ product }: Props) {
   const [hovered, setHovered] = useState(false)
+  const { format } = useCurrency()
   const discount = product.originalPrice
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : null
@@ -101,9 +102,9 @@ export default function ProductCard({ product }: Props) {
           {product.name}
         </Link>
         <div className="flex items-center gap-2 mt-1.5">
-          <span className="text-brand-black font-semibold text-sm">{product.price.toFixed(2)} MAD</span>
+          <span className="text-brand-black font-semibold text-sm">{format(product.price)}</span>
           {product.originalPrice && (
-            <span className="text-brand-gray text-xs line-through">{product.originalPrice.toFixed(2)} MAD</span>
+            <span className="text-brand-gray text-xs line-through">{format(product.originalPrice)}</span>
           )}
         </div>
         <div className="flex gap-1 mt-2 flex-wrap">

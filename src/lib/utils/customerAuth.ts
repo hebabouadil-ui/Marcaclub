@@ -21,7 +21,7 @@ export async function verifyCustomerToken(token: string) {
 }
 
 export async function getCustomerSession() {
-  const cookieStore = await cookies()
+  const cookieStore = cookies()
   const token = cookieStore.get(COOKIE)?.value
   if (!token) return null
   return verifyCustomerToken(token)

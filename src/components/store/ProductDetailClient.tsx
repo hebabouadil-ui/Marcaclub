@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ShoppingBag, ChevronLeft, ChevronRight, ArrowRight, ShoppingCart } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cartStore'
+import { useCurrency } from '@/lib/context/CurrencyContext'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -36,6 +37,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
   const [added, setAdded] = useState(false)
   const addItem = useCartStore((s) => s.addItem)
   const router = useRouter()
+  const { format } = useCurrency()
 
   // Reset state when navigating between products
   useEffect(() => {
@@ -195,10 +197,10 @@ export default function ProductDetailClient({ product }: { product: Product }) {
               </h1>
 
               <div className="flex items-center gap-3 mb-6">
-                <span className="text-xl font-semibold text-brand-black">{product.price.toFixed(2)} MAD</span>
+                <span className="text-xl font-semibold text-brand-black">{format(product.price)}</span>
                 {product.originalPrice && (
                   <>
-                    <span className="text-brand-gray line-through">{product.originalPrice.toFixed(2)} MAD</span>
+                    <span className="text-brand-gray line-through">{format(product.originalPrice)}</span>
                     <span className="bg-brand-gold text-brand-black text-xs font-bold px-2 py-0.5">-{discount}%</span>
                   </>
                 )}
