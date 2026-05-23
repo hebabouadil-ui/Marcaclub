@@ -8,281 +8,244 @@ function getResend() {
 }
 
 function getFrom() {
-  return process.env.EMAIL_FROM || 'Marcaclub <orders@marcaclub.ma>'
+  return process.env.EMAIL_FROM || 'Marcaclub <orders@marca-club.com>'
 }
 
-export async function sendOrderConfirmationEmail(order: IOrder, emailNote?: string) {
-  if (!order.customer.email) return
-  if (!process.env.RESEND_API_KEY) {
-    console.error('sendOrderConfirmationEmail skipped: RESEND_API_KEY is not set')
-    return
-  }
-
-  const note = emailNote || 'Notre équipe vous appellera pour confirmer votre commande. Pour toute question, contactez-nous sur WhatsApp au +212695504949.'
-
-  const itemsList = order.items
-    .map((item) => `  - ${item.name} (Taille: ${item.size}, Qté: ${item.quantity}) — ${(item.price * item.quantity).toFixed(2)} MAD`)
-    .join('\n')
-
-  const itemsHtml = order.items
-    .map((item) => `
-    <tr>
-      <td style="padding: 12px; border-bottom: 1px solid #f0ede8;">
-        <strong>${item.name}</strong><br/>
-        <span style="color: #6b6b6b; font-size: 14px;">Taille: ${item.size} &bull; Qté: ${item.quantity}</span>
-      </td>
-      <td style="padding: 12px; border-bottom: 1px solid #f0ede8; text-align: right;">
-        ${(item.price * item.quantity).toFixed(2)} MAD
-      </td>
-    </tr>`)
-    .join('')
-
-  const text = `
-Bonjour ${order.customer.name},
-
-Merci pour votre commande chez Marcaclub !
-Nous l'avons bien reçue et un agent vous contactera très prochainement pour confirmer.
-
-Numéro de commande : ${order.orderNumber}
-
-Articles commandés :
-${itemsList}
-
-Total : ${order.total.toFixed(2)} MAD (paiement à la livraison)
-
-Adresse de livraison :
-${order.customer.address || ''}
-${order.customer.city}
-Tel : ${order.customer.phone}
-
-${note}
-
----
-Marcaclub — Mode exclusive importée d'Espagne
-Instagram : @marcaclub
-`.trim()
-
-  const html = `<!DOCTYPE html>
-<html lang="fr">
+function baseHtml(content: string, preheader = '') {
+  return `<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Commande reçue — Marcaclub</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Marcaclub</title>
+  ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;">${preheader}</div>` : ''}
 </head>
-<body style="margin:0;padding:0;background-color:#f0ede8;font-family:Arial,sans-serif;">
-  <div style="max-width:600px;margin:40px auto;background:#fafafa;border-radius:4px;overflow:hidden;">
-    <div style="background:#0a0a0a;padding:40px;text-align:center;">
-      <h1 style="color:#c9a84c;margin:0;font-size:28px;letter-spacing:4px;text-transform:uppercase;">MARCACLUB</h1>
-      <p style="color:#6b6b6b;margin:8px 0 0;font-size:12px;letter-spacing:2px;text-transform:uppercase;">Commande Reçue</p>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <div style="max-width:600px;margin:32px auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+    <!-- Header -->
+    <div style="background:#111827;padding:32px;text-align:center;">
+      <h1 style="color:#f59e0b;margin:0;font-size:24px;letter-spacing:6px;font-weight:900;">MARCACLUB</h1>
+      <p style="color:#9ca3af;margin:6px 0 0;font-size:11px;letter-spacing:3px;text-transform:uppercase;">Premium Global Store</p>
     </div>
-    <div style="padding:40px;">
-      <p style="color:#0a0a0a;font-size:16px;">Bonjour <strong>${order.customer.name}</strong>,</p>
-      <p style="color:#6b6b6b;line-height:1.6;">Merci pour votre commande ! Nous l'avons bien reçue.<br/>Un de nos agents vous contactera <strong>très prochainement</strong> pour confirmer votre commande et les détails de livraison.</p>
-      <div style="background:#f0ede8;padding:20px;border-radius:4px;margin:24px 0;text-align:center;">
-        <p style="margin:0;color:#6b6b6b;font-size:12px;letter-spacing:2px;text-transform:uppercase;">Numéro de commande</p>
-        <p style="margin:8px 0 0;color:#0a0a0a;font-size:24px;font-weight:bold;letter-spacing:2px;">${order.orderNumber}</p>
-      </div>
-      <table style="width:100%;border-collapse:collapse;margin:24px 0;">
-        ${itemsHtml}
-        <tr>
-          <td style="padding:16px 12px;font-weight:bold;font-size:16px;">Total</td>
-          <td style="padding:16px 12px;font-weight:bold;font-size:16px;text-align:right;color:#c9a84c;">${order.total.toFixed(2)} MAD</td>
-        </tr>
-      </table>
-      <div style="border-top:1px solid #f0ede8;padding-top:24px;">
-        <h3 style="color:#0a0a0a;font-size:14px;letter-spacing:2px;text-transform:uppercase;">Adresse de livraison</h3>
-        <p style="color:#6b6b6b;line-height:1.6;margin:8px 0;">${order.customer.address || ''}<br/>${order.customer.city}<br/>Tél: ${order.customer.phone}</p>
-      </div>
-      <div style="background:#0a0a0a;color:#c9a84c;padding:16px;border-radius:4px;margin-top:24px;text-align:center;font-size:14px;">Paiement à la livraison (Cash on Delivery)</div>
-      <div style="background:#fff8e7;border-left:4px solid #c9a84c;padding:16px;margin-top:20px;border-radius:2px;">
-        <p style="margin:0;color:#333;font-size:14px;line-height:1.6;">${note}</p>
-      </div>
-    </div>
-    <div style="background:#f0ede8;padding:24px;text-align:center;">
-      <p style="color:#6b6b6b;font-size:12px;margin:0;">Marcaclub — Mode exclusive importée d'Espagne<br/>Instagram @marcaclub</p>
+    <!-- Content -->
+    ${content}
+    <!-- Footer -->
+    <div style="background:#f9fafb;padding:24px;text-align:center;border-top:1px solid #e5e7eb;">
+      <p style="color:#9ca3af;font-size:12px;margin:0 0 6px;">© ${new Date().getFullYear()} Marcaclub · All rights reserved</p>
+      <p style="color:#9ca3af;font-size:11px;margin:0;">Questions? <a href="mailto:support@marca-club.com" style="color:#6b7280;">support@marca-club.com</a></p>
     </div>
   </div>
 </body>
 </html>`
+}
+
+function itemsTable(order: IOrder) {
+  const rows = order.items.map((item) => `
+    <tr>
+      <td style="padding:14px 0;border-bottom:1px solid #f3f4f6;">
+        <p style="margin:0;font-size:14px;font-weight:600;color:#111827;">${item.name}</p>
+        <p style="margin:3px 0 0;font-size:12px;color:#9ca3af;">Size: ${item.size} &bull; Qty: ${item.quantity}</p>
+      </td>
+      <td style="padding:14px 0;border-bottom:1px solid #f3f4f6;text-align:right;font-size:14px;font-weight:600;color:#111827;">
+        $${(item.price * item.quantity).toFixed(2)}
+      </td>
+    </tr>`).join('')
+
+  return `<table style="width:100%;border-collapse:collapse;">${rows}
+    <tr>
+      <td style="padding:12px 0;color:#6b7280;font-size:13px;">Shipping</td>
+      <td style="padding:12px 0;text-align:right;font-size:13px;color:#16a34a;font-weight:600;">Free</td>
+    </tr>
+    <tr>
+      <td style="padding:14px 0 0;font-size:16px;font-weight:700;color:#111827;border-top:2px solid #111827;">Total Paid</td>
+      <td style="padding:14px 0 0;text-align:right;font-size:16px;font-weight:700;color:#111827;border-top:2px solid #111827;">$${order.total.toFixed(2)} USD</td>
+    </tr>
+  </table>`
+}
+
+function shippingBlock(order: IOrder) {
+  const c = order.customer
+  return `
+  <div style="background:#f9fafb;border-radius:8px;padding:16px;margin-top:20px;">
+    <p style="margin:0 0 8px;font-size:11px;font-weight:700;color:#9ca3af;letter-spacing:2px;text-transform:uppercase;">Ship To</p>
+    <p style="margin:0;font-size:14px;color:#374151;line-height:1.7;">
+      ${c.name}<br/>
+      ${c.address}<br/>
+      ${c.city}${c.state ? `, ${c.state}` : ''} ${c.postalCode ?? ''}<br/>
+      ${c.country}
+    </p>
+  </div>`
+}
+
+function badge(text: string, color: string) {
+  return `<div style="display:inline-block;background:${color}18;border:1px solid ${color}40;color:${color};padding:6px 16px;border-radius:99px;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">${text}</div>`
+}
+
+// ─── 1. Order Confirmation ──────────────────────────────────────────────────
+export async function sendOrderConfirmationEmail(order: IOrder, _emailNote?: string) {
+  if (!order.customer.email) return
+  if (!process.env.RESEND_API_KEY) { console.error('sendOrderConfirmationEmail: RESEND_API_KEY not set'); return }
+
+  const content = `
+  <div style="padding:32px;">
+    <div style="text-align:center;margin-bottom:28px;">
+      <div style="width:56px;height:56px;background:#dcfce7;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px;">
+        <span style="font-size:24px;">✓</span>
+      </div>
+      <h2 style="margin:0;font-size:22px;font-weight:700;color:#111827;">Order Confirmed!</h2>
+      <p style="margin:8px 0 0;color:#6b7280;font-size:14px;">Thank you for your purchase, ${order.customer.name}.</p>
+    </div>
+
+    <div style="background:#f9fafb;border-radius:8px;padding:16px;text-align:center;margin-bottom:24px;">
+      <p style="margin:0;font-size:11px;color:#9ca3af;letter-spacing:2px;text-transform:uppercase;">Order Number</p>
+      <p style="margin:6px 0 0;font-size:24px;font-weight:800;color:#111827;font-family:monospace;">#${order.orderNumber}</p>
+    </div>
+
+    <p style="color:#6b7280;font-size:14px;line-height:1.7;margin:0 0 24px;">Your payment has been processed successfully and your order is now being prepared. You'll receive a shipping notification with tracking information once your order is on its way.</p>
+
+    <h3 style="font-size:13px;font-weight:700;color:#111827;letter-spacing:1px;text-transform:uppercase;margin:0 0 16px;">Order Summary</h3>
+    ${itemsTable(order)}
+    ${shippingBlock(order)}
+
+    <div style="margin-top:24px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:16px;">
+      <p style="margin:0;font-size:13px;color:#92400e;line-height:1.6;">
+        📦 <strong>Estimated delivery:</strong> 7–12 business days<br/>
+        ✉️ A tracking number will be emailed to you once shipped
+      </p>
+    </div>
+  </div>`
 
   await getResend().emails.send({
     from: getFrom(),
     to: order.customer.email,
-    subject: `Commande reçue N°${order.orderNumber} — Marcaclub`,
-    text,
-    html,
+    replyTo: process.env.EMAIL_USER || undefined,
+    subject: `Order Confirmed #${order.orderNumber} — Marcaclub`,
+    html: baseHtml(content, `Your order #${order.orderNumber} is confirmed and being processed.`),
+    text: `Order Confirmed #${order.orderNumber}\n\nThank you ${order.customer.name}!\n\nYour payment was successful. Estimated delivery: 7–12 business days.\n\nTotal paid: $${order.total.toFixed(2)} USD\n\nQuestions? support@marca-club.com`,
   })
 }
 
+// ─── 2. Order Status Updates ────────────────────────────────────────────────
 export async function sendOrderStatusEmail(order: IOrder, status: string) {
   if (!order.customer.email) return
-  if (!process.env.RESEND_API_KEY) {
-    console.error('sendOrderStatusEmail skipped: RESEND_API_KEY is not set')
-    return
-  }
+  if (!process.env.RESEND_API_KEY) { console.error('sendOrderStatusEmail: RESEND_API_KEY not set'); return }
 
-  type StatusCfg = { subject: string; title: string; message: string; textMessage: string; color: string }
-  const statusConfig: Record<string, StatusCfg> = {
+  type Cfg = { subject: string; title: string; badgeText: string; badgeColor: string; body: string; emoji: string }
+  const configs: Record<string, Cfg> = {
     confirmed: {
-      subject: `Commande confirmée N°${order.orderNumber} — Marcaclub`,
-      title: 'Commande Confirmée',
-      message: 'Bonne nouvelle ! Votre commande a été confirmée par notre équipe et sera préparée pour l\'expédition très prochainement.',
-      textMessage: 'Bonne nouvelle ! Votre commande a été confirmée par notre équipe et sera préparée pour l\'expédition très prochainement.',
-      color: '#3b82f6',
+      subject: `Your order is confirmed #${order.orderNumber}`,
+      title: 'Order Confirmed',
+      badgeText: 'Confirmed',
+      badgeColor: '#3b82f6',
+      emoji: '✅',
+      body: `Great news! Your order has been confirmed and is being prepared for shipment. You'll receive another email with your tracking number once it ships.`,
     },
     shipped: {
-      subject: `Commande expédiée N°${order.orderNumber} — Marcaclub`,
-      title: 'Commande Expédiée',
-      message: 'Votre commande est en route ! La livraison prendra 24-48h.',
-      textMessage: 'Votre commande est en route ! La livraison prendra 24-48h.',
-      color: '#8b5cf6',
+      subject: `Your order has shipped #${order.orderNumber}`,
+      title: 'Order Shipped',
+      badgeText: 'Shipped',
+      badgeColor: '#8b5cf6',
+      emoji: '🚚',
+      body: `Your order is on its way!${order.cjTrackingNumber ? ` Your tracking number is <strong style="font-family:monospace;">${order.cjTrackingNumber}</strong>. Use this to track your package online.` : ' Estimated delivery: 7–12 business days from your order date.'}`,
     },
     delivered: {
-      subject: `Commande livrée N°${order.orderNumber} — Marcaclub`,
-      title: 'Commande Livrée',
-      message: 'DELIVERED_SPECIAL',
-      textMessage: 'Votre commande a bien été livrée. Merci pour votre confiance ! شكراً جزيلاً — في انتظار لقائكم مجدداً.',
-      color: '#22c55e',
+      subject: `Your order has been delivered #${order.orderNumber}`,
+      title: 'Order Delivered',
+      badgeText: 'Delivered',
+      badgeColor: '#16a34a',
+      emoji: '🎉',
+      body: `Your order has been delivered! We hope you love your purchase. If you have any questions or concerns, don't hesitate to reach out — we're here to help.`,
     },
     cancelled: {
-      subject: `Commande annulée N°${order.orderNumber} — Marcaclub`,
-      title: 'Commande Annulée',
-      message: 'Votre commande a été annulée. Pour toute question, contactez-nous sur WhatsApp.',
-      textMessage: 'Votre commande a été annulée. Pour toute question, contactez-nous sur WhatsApp au +212695504949.',
-      color: '#ef4444',
+      subject: `Order cancelled #${order.orderNumber}`,
+      title: 'Order Cancelled',
+      badgeText: 'Cancelled',
+      badgeColor: '#ef4444',
+      emoji: '❌',
+      body: `Your order has been cancelled. If you were charged, a full refund will be processed to your original payment method within 5–10 business days. Need help? Contact us at support@marca-club.com.`,
     },
   }
 
-  const cfg = statusConfig[status]
+  const cfg = configs[status]
   if (!cfg) return
 
-  const text = `
-Bonjour ${order.customer.name},
-
-${cfg.textMessage}
-
-Numéro de commande : ${order.orderNumber}
-Statut : ${cfg.title}
-
-Pour toute question, contactez-nous sur WhatsApp au +212695504949.
-
----
-Marcaclub — Mode exclusive importée d'Espagne
-`.trim()
-
-  const html = `<!DOCTYPE html>
-<html lang="fr">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${cfg.title} — Marcaclub</title></head>
-<body style="margin:0;padding:0;background-color:#f0ede8;font-family:Arial,sans-serif;">
-  <div style="max-width:600px;margin:40px auto;background:#fafafa;border-radius:4px;overflow:hidden;">
-    <div style="background:#0a0a0a;padding:40px;text-align:center;">
-      <h1 style="color:#c9a84c;margin:0;font-size:28px;letter-spacing:4px;text-transform:uppercase;">MARCACLUB</h1>
-      <p style="color:#6b6b6b;margin:8px 0 0;font-size:12px;letter-spacing:2px;text-transform:uppercase;">${cfg.title}</p>
+  const content = `
+  <div style="padding:32px;">
+    <div style="text-align:center;margin-bottom:28px;">
+      <div style="font-size:40px;margin-bottom:12px;">${cfg.emoji}</div>
+      <h2 style="margin:0;font-size:22px;font-weight:700;color:#111827;">${cfg.title}</h2>
+      <div style="margin-top:10px;">${badge(cfg.badgeText, cfg.badgeColor)}</div>
     </div>
-    <div style="padding:40px;">
-      <p style="color:#0a0a0a;font-size:16px;">Bonjour <strong>${order.customer.name}</strong>,</p>
-      ${cfg.message === 'DELIVERED_SPECIAL' ? `
-      <p style="color:#6b6b6b;line-height:1.6;">Votre commande a bien été livrée. Nous espérons que vous êtes satisfait(e) de votre achat !</p>
-      <div style="background:#f9f6f0;border:1px solid #c9a84c33;padding:24px;border-radius:4px;margin:20px 0;text-align:center;direction:rtl;">
-        <p style="margin:0 0 8px;color:#c9a84c;font-size:22px;">شكراً جزيلاً</p>
-        <p style="margin:0;color:#555;font-size:15px;line-height:1.8;">ثقتكم فينا هي أغلى شيء نملكه<br/>في انتظار لقائكم مجدداً</p>
-      </div>` : `<p style="color:#6b6b6b;line-height:1.6;">${cfg.message}</p>`}
-      <div style="background:#f0ede8;padding:20px;border-radius:4px;margin:24px 0;text-align:center;">
-        <p style="margin:0;color:#6b6b6b;font-size:12px;letter-spacing:2px;text-transform:uppercase;">Numéro de commande</p>
-        <p style="margin:8px 0 0;color:#0a0a0a;font-size:24px;font-weight:bold;letter-spacing:2px;">${order.orderNumber}</p>
-      </div>
-      <div style="background:${cfg.color}18;border-left:4px solid ${cfg.color};padding:16px;margin-top:20px;border-radius:2px;text-align:center;">
-        <p style="margin:0;color:${cfg.color};font-size:16px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;">${cfg.title}</p>
-      </div>
-      <div style="background:#fff8e7;border-left:4px solid #c9a84c;padding:16px;margin-top:20px;border-radius:2px;">
-        <p style="margin:0;color:#333;font-size:14px;line-height:1.6;">Pour toute question, contactez-nous sur WhatsApp au +212695504949.</p>
-      </div>
+
+    <div style="background:#f9fafb;border-radius:8px;padding:16px;text-align:center;margin-bottom:24px;">
+      <p style="margin:0;font-size:11px;color:#9ca3af;letter-spacing:2px;text-transform:uppercase;">Order Number</p>
+      <p style="margin:6px 0 0;font-size:22px;font-weight:800;color:#111827;font-family:monospace;">#${order.orderNumber}</p>
     </div>
-    <div style="background:#f0ede8;padding:24px;text-align:center;">
-      <p style="color:#6b6b6b;font-size:12px;margin:0;">Marcaclub — Mode exclusive importée d'Espagne</p>
+
+    <p style="color:#374151;font-size:14px;line-height:1.8;margin:0 0 24px;">Hi <strong>${order.customer.name}</strong>, ${cfg.body}</p>
+
+    <h3 style="font-size:13px;font-weight:700;color:#111827;letter-spacing:1px;text-transform:uppercase;margin:0 0 16px;">Order Summary</h3>
+    ${itemsTable(order)}
+    ${shippingBlock(order)}
+
+    <div style="margin-top:24px;text-align:center;">
+      <a href="https://marca-club.com" style="display:inline-block;background:#111827;color:#ffffff;padding:14px 32px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600;">Shop More at Marcaclub</a>
     </div>
-  </div>
-</body>
-</html>`
+  </div>`
 
   await getResend().emails.send({
     from: getFrom(),
     to: order.customer.email,
+    replyTo: process.env.EMAIL_USER || undefined,
     subject: cfg.subject,
-    text,
-    html,
+    html: baseHtml(content, cfg.body.replace(/<[^>]+>/g, '')),
+    text: `${cfg.title} — Order #${order.orderNumber}\n\nHi ${order.customer.name},\n\n${cfg.body.replace(/<[^>]+>/g, '')}\n\nTotal: $${order.total.toFixed(2)} USD\n\nQuestions? support@marca-club.com`,
   })
 }
 
+// ─── 3. Admin Notification ──────────────────────────────────────────────────
 export async function sendAdminOrderNotification(order: IOrder) {
   const adminEmail = process.env.ADMIN_EMAIL
-  if (!adminEmail) {
-    console.error('Admin notification skipped: ADMIN_EMAIL env var is not set')
-    return
-  }
-  console.log('Sending admin notification to:', adminEmail)
+  if (!adminEmail) { console.error('Admin notification skipped: ADMIN_EMAIL not set'); return }
 
-  const itemsHtml = order.items
-    .map((item) => `
+  const c = order.customer
+  const itemsText = order.items.map((i) => `  • ${i.name} (${i.size}) × ${i.quantity} — $${(i.price * i.quantity).toFixed(2)}`).join('\n')
+  const itemsHtml = order.items.map((i) => `
     <tr>
-      <td style="padding:10px 12px;border-bottom:1px solid #eee;">${item.name} — ${item.size} x ${item.quantity}</td>
-      <td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:right;">${(item.price * item.quantity).toFixed(2)} MAD</td>
-    </tr>`)
-    .join('')
+      <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;font-size:13px;color:#374151;">${i.name} <span style="color:#9ca3af;">× ${i.quantity} · ${i.size}</span></td>
+      <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;text-align:right;font-size:13px;font-weight:600;color:#111827;">$${(i.price * i.quantity).toFixed(2)}</td>
+    </tr>`).join('')
 
-  const text = `
-Nouvelle commande : ${order.orderNumber}
-Total : ${order.total.toFixed(0)} MAD
-
-Client : ${order.customer.name}
-Tel : ${order.customer.phone}
-Ville : ${order.customer.city}
-${order.customer.email ? `Email : ${order.customer.email}` : ''}
-
-Articles :
-${order.items.map((i) => `  - ${i.name} (${i.size}) x${i.quantity}`).join('\n')}
-
-Admin : ${process.env.NEXTAUTH_URL || 'https://marcaclub.vercel.app'}/admin/orders
-`.trim()
-
-  const html = `<!DOCTYPE html>
-<html>
-<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
-  <div style="max-width:600px;margin:30px auto;background:#fff;border-radius:4px;overflow:hidden;border:1px solid #e0e0e0;">
-    <div style="background:#c9a84c;padding:24px;text-align:center;">
-      <h1 style="color:#0a0a0a;margin:0;font-size:20px;letter-spacing:2px;text-transform:uppercase;">Nouvelle Commande</h1>
+  const content = `
+  <div style="padding:28px;">
+    <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:14px;margin-bottom:20px;text-align:center;">
+      <p style="margin:0;font-size:13px;font-weight:700;color:#92400e;">🛒 NEW ORDER RECEIVED</p>
     </div>
-    <div style="padding:32px;">
-      <div style="background:#f9f9f9;padding:16px;border-radius:4px;margin-bottom:24px;">
-        <p style="margin:0 0 4px;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Numéro de commande</p>
-        <p style="margin:0;font-size:22px;font-weight:bold;color:#0a0a0a;">${order.orderNumber}</p>
-      </div>
-      <h3 style="color:#0a0a0a;font-size:13px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Client</h3>
-      <p style="color:#444;margin:0 0 4px;"><strong>${order.customer.name}</strong></p>
-      <p style="color:#444;margin:0 0 4px;">${order.customer.phone}</p>
-      <p style="color:#444;margin:0 0 4px;">${order.customer.city}</p>
-      ${order.customer.email ? `<p style="color:#444;margin:0 0 4px;">${order.customer.email}</p>` : ''}
-      <h3 style="color:#0a0a0a;font-size:13px;text-transform:uppercase;letter-spacing:1px;margin:24px 0 8px;">Articles</h3>
-      <table style="width:100%;border-collapse:collapse;">
-        ${itemsHtml}
-        <tr>
-          <td style="padding:12px;font-weight:bold;">Total</td>
-          <td style="padding:12px;font-weight:bold;text-align:right;color:#c9a84c;">${order.total.toFixed(2)} MAD</td>
-        </tr>
-      </table>
-      <div style="margin-top:24px;text-align:center;">
-        <a href="${process.env.NEXTAUTH_URL || 'https://marcaclub.vercel.app'}/admin/orders" style="background:#0a0a0a;color:#c9a84c;padding:12px 32px;text-decoration:none;font-size:13px;letter-spacing:2px;text-transform:uppercase;border-radius:2px;display:inline-block;">Voir dans l'admin</a>
-      </div>
+    <div style="background:#f9fafb;border-radius:8px;padding:16px;text-align:center;margin-bottom:20px;">
+      <p style="margin:0;font-size:11px;color:#9ca3af;letter-spacing:2px;text-transform:uppercase;">Order #</p>
+      <p style="margin:6px 0 0;font-size:24px;font-weight:800;color:#111827;font-family:monospace;">${order.orderNumber}</p>
+      <p style="margin:6px 0 0;font-size:20px;font-weight:700;color:#16a34a;">$${order.total.toFixed(2)} USD</p>
     </div>
-  </div>
-</body>
-</html>`
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+      <tr><td style="padding:8px 0;font-size:13px;color:#6b7280;">Customer</td><td style="padding:8px 0;font-size:13px;font-weight:600;color:#111827;text-align:right;">${c.name}</td></tr>
+      <tr><td style="padding:8px 0;font-size:13px;color:#6b7280;">Phone</td><td style="padding:8px 0;font-size:13px;color:#111827;text-align:right;">${c.phone}</td></tr>
+      ${c.email ? `<tr><td style="padding:8px 0;font-size:13px;color:#6b7280;">Email</td><td style="padding:8px 0;font-size:13px;color:#111827;text-align:right;">${c.email}</td></tr>` : ''}
+      <tr><td style="padding:8px 0;font-size:13px;color:#6b7280;">Ship To</td><td style="padding:8px 0;font-size:13px;color:#111827;text-align:right;">${c.city}, ${c.country}</td></tr>
+    </table>
+    <h3 style="font-size:12px;color:#9ca3af;letter-spacing:1px;text-transform:uppercase;margin:0 0 12px;">Items</h3>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">${itemsHtml}
+      <tr><td style="padding:12px 0;font-weight:700;color:#111827;">Total</td><td style="padding:12px 0;text-align:right;font-weight:700;color:#16a34a;">$${order.total.toFixed(2)} USD</td></tr>
+    </table>
+    <div style="text-align:center;">
+      <a href="https://admin.marca-club.com" style="display:inline-block;background:#111827;color:#f59e0b;padding:14px 32px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:700;letter-spacing:1px;">VIEW IN ADMIN</a>
+    </div>
+  </div>`
 
   await getResend().emails.send({
     from: getFrom(),
     to: adminEmail,
-    subject: `Nouvelle commande ${order.orderNumber} — ${order.total.toFixed(0)} MAD`,
-    text,
-    html,
+    subject: `New Order #${order.orderNumber} — $${order.total.toFixed(2)} — ${c.name}`,
+    html: baseHtml(content, `New order from ${c.name} · $${order.total.toFixed(2)}`),
+    text: `New Order #${order.orderNumber}\n\nCustomer: ${c.name}\nPhone: ${c.phone}\nCity: ${c.city}, ${c.country}\nTotal: $${order.total.toFixed(2)} USD\n\nItems:\n${itemsText}\n\nAdmin: https://admin.marca-club.com`,
   })
 }
