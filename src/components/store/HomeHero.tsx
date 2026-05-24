@@ -2,14 +2,12 @@
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { ArrowRight, Globe, Shield, Zap } from 'lucide-react'
+import { useLanguage } from '@/lib/i18n'
 
 interface Props { title: string; subtitle: string }
 
 export default function HomeHero({ title, subtitle }: Props) {
-  const defaultTitle = title === 'La Mode Exclusive' ? 'Everything You Need' : title
-  const defaultSubtitle = subtitle === "Collections importées directement de Primark Espagne"
-    ? 'Premium products worldwide — clothes, accessories, vitamins, lifestyle & more. Delivered to your door.'
-    : subtitle
+  const { tr } = useLanguage()
 
   return (
     <section className="relative bg-brand-black flex items-center justify-center overflow-hidden min-h-[100svh] md:min-h-[75svh]">
@@ -23,28 +21,28 @@ export default function HomeHero({ title, subtitle }: Props) {
       <div className="relative z-10 text-center px-4 max-w-5xl mx-auto py-16">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
           className="inline-flex items-center gap-2 border border-brand-gold/20 bg-brand-gold/5 text-brand-gold text-[10px] tracking-[0.3em] uppercase px-4 py-2 rounded-full mb-8">
-          <Globe size={10} /> Worldwide Shipping · Secure Checkout
+          <Globe size={10} /> {tr.hero.badge}
         </motion.div>
 
         <motion.h1 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.1 }}
           className="font-display text-4xl md:text-6xl lg:text-7xl text-white leading-tight mb-6">
-          {defaultTitle}
+          {title}
         </motion.h1>
 
         <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.25 }}
           className="text-white/50 text-sm md:text-base max-w-2xl mx-auto mb-10 leading-relaxed">
-          {defaultSubtitle}
+          {subtitle}
         </motion.p>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.4 }}
           className="flex flex-col sm:flex-row gap-4 justify-center mb-14">
           <Link href="/products"
             className="group inline-flex items-center justify-center gap-2 bg-brand-gold text-brand-black px-8 py-4 text-xs tracking-[0.2em] uppercase font-bold hover:bg-yellow-400 transition-colors duration-300">
-            Shop Now <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+            {tr.hero.shopNow} <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
           </Link>
           <Link href="/account/register"
             className="inline-flex items-center justify-center gap-2 border border-white/15 text-white/70 px-8 py-4 text-xs tracking-[0.2em] uppercase hover:border-brand-gold hover:text-brand-gold transition-colors duration-300">
-            Create Free Account
+            {tr.hero.createAccount}
           </Link>
         </motion.div>
 
@@ -52,9 +50,9 @@ export default function HomeHero({ title, subtitle }: Props) {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}
           className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10">
           {[
-            { icon: Globe, text: 'Ships Worldwide' },
-            { icon: Shield, text: 'Secure Payment' },
-            { icon: Zap, text: 'Fast Delivery 7–12 days' },
+            { icon: Globe, text: tr.hero.shipsWorldwide },
+            { icon: Shield, text: tr.hero.securePayment },
+            { icon: Zap, text: tr.hero.fastDelivery },
           ].map(({ icon: Icon, text }) => (
             <div key={text} className="flex items-center gap-2 text-white/30 text-xs tracking-wider">
               <Icon size={13} className="text-brand-gold/60" /> {text}

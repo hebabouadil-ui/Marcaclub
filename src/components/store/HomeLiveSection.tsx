@@ -1,6 +1,7 @@
 'use client'
 import { motion } from 'framer-motion'
 import InstagramIcon from '@/components/ui/InstagramIcon'
+import { useLanguage } from '@/lib/i18n'
 
 function TikTokIcon() {
   return (
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export default function HomeLiveSection({ liveStatus, instagramUrl, tiktokUrl }: Props) {
+  const { tr } = useLanguage()
   return (
     <section id="live" className="py-16 md:py-24 bg-brand-black">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -26,11 +28,10 @@ export default function HomeLiveSection({ liveStatus, instagramUrl, tiktokUrl }:
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <p className="text-[10px] tracking-[0.3em] text-brand-gold uppercase mb-4">Live Shopping</p>
-            <h2 className="font-display text-3xl md:text-5xl text-brand-white mb-6">Rejoignez nos Lives</h2>
+            <p className="text-[10px] tracking-[0.3em] text-brand-gold uppercase mb-4">{tr.live.title}</p>
+            <h2 className="font-display text-3xl md:text-5xl text-brand-white mb-6">{tr.live.subtitle}</h2>
             <p className="text-brand-white/50 text-sm md:text-base leading-relaxed mb-10 max-w-xl mx-auto">
-              Découvrez nos nouvelles collections en avant-première lors de nos sessions live sur
-              Instagram et TikTok. Commandes en direct, prix exclusifs.
+              {tr.live.description}
             </p>
           </motion.div>
 
@@ -42,7 +43,7 @@ export default function HomeLiveSection({ liveStatus, instagramUrl, tiktokUrl }:
             >
               <div className="flex items-center gap-3 bg-red-600 px-6 py-3 rounded-full">
                 <div className="w-2.5 h-2.5 bg-white rounded-full live-dot" />
-                <span className="text-white font-semibold tracking-widest uppercase text-sm">LIVE en cours</span>
+                <span className="text-white font-semibold tracking-widest uppercase text-sm">{tr.live.liveNow}</span>
               </div>
               <div className="flex gap-4">
                 <a
@@ -52,7 +53,7 @@ export default function HomeLiveSection({ liveStatus, instagramUrl, tiktokUrl }:
                   className="flex items-center gap-2 bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400 text-white px-6 py-3 text-sm font-semibold tracking-wider"
                 >
                   <InstagramIcon size={16} />
-                  Instagram Live
+                  {tr.live.joinInstagram}
                 </a>
                 <a
                   href={tiktokUrl}
@@ -61,7 +62,7 @@ export default function HomeLiveSection({ liveStatus, instagramUrl, tiktokUrl }:
                   className="flex items-center gap-2 bg-[#010101] border border-white/20 text-white px-6 py-3 text-sm font-semibold tracking-wider"
                 >
                   <TikTokIcon />
-                  TikTok Live
+                  {tr.live.joinTikTok}
                 </a>
               </div>
             </motion.div>
@@ -79,7 +80,7 @@ export default function HomeLiveSection({ liveStatus, instagramUrl, tiktokUrl }:
                 className="flex items-center justify-center gap-2 border border-white/20 text-brand-white/80 px-8 py-4 text-xs tracking-[0.2em] uppercase hover:border-brand-gold hover:text-brand-gold transition-colors"
               >
                 <InstagramIcon size={16} />
-                Suivre sur Instagram
+                {tr.live.followInstagram}
               </a>
               <a
                 href={tiktokUrl}
@@ -88,7 +89,7 @@ export default function HomeLiveSection({ liveStatus, instagramUrl, tiktokUrl }:
                 className="flex items-center justify-center gap-2 border border-white/20 text-brand-white/80 px-8 py-4 text-xs tracking-[0.2em] uppercase hover:border-brand-gold hover:text-brand-gold transition-colors"
               >
                 <TikTokIcon />
-                Suivre sur TikTok
+                {tr.live.followTikTok}
               </a>
             </motion.div>
           )}

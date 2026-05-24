@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Eye } from 'lucide-react'
 import { useCurrency } from '@/lib/context/CurrencyContext'
+import { useLanguage } from '@/lib/i18n'
 
 interface Props {
   product: {
@@ -22,6 +23,7 @@ interface Props {
 export default function ProductCard({ product }: Props) {
   const [hovered, setHovered] = useState(false)
   const { format } = useCurrency()
+  const { tr } = useLanguage()
   const discount = product.originalPrice
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : null
@@ -67,12 +69,12 @@ export default function ProductCard({ product }: Props) {
           <div className="absolute top-3 left-3 flex flex-col gap-1 z-10">
             {product.stock <= 3 && product.stock > 0 && (
               <span className="bg-brand-black text-brand-beige text-[9px] tracking-widest px-2 py-0.5 uppercase">
-                Dernières pièces
+                {tr.productCard.lastItems}
               </span>
             )}
             {product.stock === 0 && (
               <span className="bg-brand-gray text-white text-[9px] tracking-widest px-2 py-0.5 uppercase">
-                Épuisé
+                {tr.productCard.outOfStock}
               </span>
             )}
             {discount && (
@@ -86,7 +88,7 @@ export default function ProductCard({ product }: Props) {
           <div className={`absolute bottom-0 left-0 right-0 p-3 z-10 transition-all duration-200 ${hovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
             <div className="flex items-center justify-center gap-2 bg-brand-black/90 text-brand-white text-xs tracking-widest uppercase py-2.5 hover:bg-brand-gold hover:text-brand-black transition-colors duration-200">
               <Eye size={14} />
-              Voir le produit
+              {tr.productCard.view}
             </div>
           </div>
         </div>

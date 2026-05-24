@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { signOut, useSession } from 'next-auth/react'
 import { SessionProvider } from 'next-auth/react'
 import {
-  LayoutDashboard, Package, ShoppingBag, Settings, LogOut, Radio, Menu, X, BarChart2, Users, Shield, XCircle, Download,
+  LayoutDashboard, Package, ShoppingBag, Settings, LogOut, Radio, Menu, X, BarChart2, Users, Download,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
@@ -13,18 +13,16 @@ const navItems = [
   { href: '/admin/products', label: 'Products', icon: Package },
   { href: '/admin/cj-import', label: 'CJ Import', icon: Download },
   { href: '/admin/orders', label: 'Orders', icon: ShoppingBag, badgeKey: 'orders' },
-  { href: '/admin/high-risk', label: 'High Risk', icon: XCircle, badgeKey: 'highRisk' },
   { href: '/admin/customers', label: 'Customers', icon: Users },
-  { href: '/admin/blocked-ips', label: 'Blocked IPs', icon: Shield },
   { href: '/admin/reports', label: 'Reports', icon: BarChart2 },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
   { href: '/admin/live', label: 'Live', icon: Radio },
 ]
 
-interface Badges { orders: number; highRisk: number }
+interface Badges { orders: number }
 
 function useBadges(): Badges {
-  const [badges, setBadges] = useState<Badges>({ orders: 0, highRisk: 0 })
+  const [badges, setBadges] = useState<Badges>({ orders: 0 })
   const { data: session } = useSession()
 
   useEffect(() => {
@@ -32,9 +30,9 @@ function useBadges(): Badges {
     const fetch_ = () => {
       fetch('/api/admin/counts', { credentials: 'include' })
         .then((r) => r.json())
-        .then((data: { pendingUntouched: number; highRisk: number }) => {
+        .then((data: { pendingUntouched: number }) => {
           if (typeof data?.pendingUntouched !== 'number') return
-          setBadges({ orders: data.pendingUntouched, highRisk: data.highRisk })
+          setBadges({ orders: data.pendingUntouched })
         })
         .catch(() => {})
     }
@@ -68,11 +66,7 @@ function NavLink({ item, active, badges, onClick }: {
       <Icon size={16} />
       <span className="flex-1">{item.label}</span>
       {count > 0 && (
-        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center ${
-          item.badgeKey === 'highRisk'
-            ? 'bg-red-500 text-white'
-            : 'bg-amber-500 text-black'
-        }`}>
+        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center bg-amber-500 text-black">
           {count}
         </span>
       )}
@@ -126,15 +120,8 @@ function AdminNav() {
           MARCACLUB
         </h1>
         <div className="flex items-center gap-3">
-          {(badges.orders > 0 || badges.highRisk > 0) && (
-            <div className="flex items-center gap-1.5">
-              {badges.orders > 0 && (
-                <span className="text-[10px] font-bold bg-amber-500 text-black px-1.5 py-0.5 rounded-full">{badges.orders}</span>
-              )}
-              {badges.highRisk > 0 && (
-                <span className="text-[10px] font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-full">{badges.highRisk}</span>
-              )}
-            </div>
+          {badges.orders > 0 && (
+            <span className="text-[10px] font-bold bg-amber-500 text-black px-1.5 py-0.5 rounded-full">{badges.orders}</span>
           )}
           <button onClick={() => setOpen(!open)} className="text-white">
             {open ? <X size={20} /> : <Menu size={20} />}
@@ -162,9 +149,7 @@ function AdminNav() {
                   <Icon size={18} />
                   <span className="flex-1">{item.label}</span>
                   {count > 0 && (
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                      item.badgeKey === 'highRisk' ? 'bg-red-500 text-white' : 'bg-amber-500 text-black'
-                    }`}>{count}</span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500 text-black">{count}</span>
                   )}
                 </Link>
               )

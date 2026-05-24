@@ -1,5 +1,7 @@
+'use client'
 import Link from 'next/link'
 import InstagramIcon from '@/components/ui/InstagramIcon'
+import { useLanguage } from '@/lib/i18n'
 
 function TikTokIcon() {
   return (
@@ -27,6 +29,7 @@ interface FooterProps {
 }
 
 export default function Footer({ instagramUrl, tiktokUrl, facebookUrl, contactEmail, contactPhone, whatsappNumber }: FooterProps) {
+  const { tr } = useLanguage()
   const ig = instagramUrl || 'https://instagram.com/marcaclub'
   const tt = tiktokUrl || 'https://tiktok.com/@marcaclub'
   const fb = facebookUrl || ''
@@ -38,11 +41,9 @@ export default function Footer({ instagramUrl, tiktokUrl, facebookUrl, contactEm
           <div className="col-span-2 md:col-span-1">
             <div className="mb-4">
               <h3 className="text-brand-gold font-display font-bold text-xl tracking-widest uppercase">MARCACLUB</h3>
-              <p className="text-[9px] tracking-[0.3em] uppercase text-brand-white/30 mt-0.5">Mode Exclusive</p>
+              <p className="text-[9px] tracking-[0.3em] uppercase text-brand-white/30 mt-0.5">{tr.footer.tagline}</p>
             </div>
-            <p className="text-sm leading-relaxed text-brand-white/50 max-w-xs">
-              Vêtements et accessoires exclusifs importés directement de Primark Espagne. Drops limités, qualité premium.
-            </p>
+            <p className="text-sm leading-relaxed text-brand-white/50 max-w-xs">{tr.footer.description}</p>
             <div className="flex gap-3 mt-5">
               <a href={ig} target="_blank" rel="noopener noreferrer" className="p-2 border border-white/10 hover:border-brand-gold hover:text-brand-gold transition-colors" title="Instagram">
                 <InstagramIcon size={16} />
@@ -59,13 +60,13 @@ export default function Footer({ instagramUrl, tiktokUrl, facebookUrl, contactEm
           </div>
 
           <div>
-            <h4 className="text-[10px] tracking-[0.2em] uppercase text-brand-white/40 mb-4">Boutique</h4>
+            <h4 className="text-[10px] tracking-[0.2em] uppercase text-brand-white/40 mb-4">{tr.footer.shop}</h4>
             <ul className="space-y-3 text-sm">
               {[
-                { href: '/products', label: 'Collection' },
-                { href: '/products?featured=true', label: 'Nouveautés' },
-                { href: '/products?category=femme', label: 'Femme' },
-                { href: '/products?category=homme', label: 'Homme' },
+                { href: '/products', label: tr.footer.collection },
+                { href: '/products?featured=true', label: tr.footer.newArrivals },
+                { href: '/products?category=femme', label: tr.footer.women },
+                { href: '/products?category=homme', label: tr.footer.men },
               ].map((l) => (
                 <li key={l.href}>
                   <Link href={l.href} className="hover:text-brand-gold transition-colors">{l.label}</Link>
@@ -75,18 +76,18 @@ export default function Footer({ instagramUrl, tiktokUrl, facebookUrl, contactEm
           </div>
 
           <div>
-            <h4 className="text-[10px] tracking-[0.2em] uppercase text-brand-white/40 mb-4">Informations</h4>
+            <h4 className="text-[10px] tracking-[0.2em] uppercase text-brand-white/40 mb-4">{tr.footer.info}</h4>
             <ul className="space-y-3 text-sm">
-              <li><Link href="/#live" className="hover:text-brand-gold transition-colors">Live Sessions</Link></li>
-              <li><Link href="/cart" className="hover:text-brand-gold transition-colors">Mon Panier</Link></li>
+              <li><Link href="/#live" className="hover:text-brand-gold transition-colors">{tr.footer.liveSessions}</Link></li>
+              <li><Link href="/cart" className="hover:text-brand-gold transition-colors">{tr.footer.myCart}</Link></li>
               <li className="text-brand-white/40 text-xs leading-relaxed pt-1">
-                Paiement à la livraison<br />Livraison 24-48h
+                {tr.footer.securePayment}<br />{tr.footer.delivery}
               </li>
             </ul>
           </div>
 
           <div>
-            <h4 className="text-[10px] tracking-[0.2em] uppercase text-brand-white/40 mb-4">Nous contacter</h4>
+            <h4 className="text-[10px] tracking-[0.2em] uppercase text-brand-white/40 mb-4">{tr.footer.contact}</h4>
             <ul className="space-y-3 text-sm">
               <li>
                 <a href={ig} target="_blank" rel="noopener noreferrer" className="hover:text-brand-gold transition-colors">
@@ -119,8 +120,8 @@ export default function Footer({ instagramUrl, tiktokUrl, facebookUrl, contactEm
         </div>
 
         <div className="border-t border-white/5 py-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-brand-white/30">
-          <p>© {new Date().getFullYear()} Marcaclub. Tous droits réservés.</p>
-          <p>Mode importée d&apos;Espagne — Livraison dans tout le Maroc</p>
+          <p>© {new Date().getFullYear()} Marcaclub. {tr.footer.rights}</p>
+          <p>{tr.footer.worldwide}</p>
         </div>
       </div>
     </footer>

@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useCartStore } from '@/lib/store/cartStore'
 import { useCurrency, CURRENCIES } from '@/lib/context/CurrencyContext'
 import { useCustomer } from '@/lib/context/CustomerContext'
+import { useLanguage } from '@/lib/i18n'
 
 function CurrencySwitcher() {
   const { currency, setCurrency } = useCurrency()
@@ -56,11 +57,13 @@ function AccountMenu() {
 
   if (loading) return null
 
+  const { tr } = useLanguage()
+
   if (!customer) {
     return (
       <Link href="/account/login" className="hidden md:flex items-center gap-1.5 text-brand-white/50 hover:text-brand-gold transition-colors">
         <User size={16} />
-        <span className="text-[10px] tracking-widest">SIGN IN</span>
+        <span className="text-[10px] tracking-widest">{tr.nav.signIn.toUpperCase()}</span>
       </Link>
     )
   }
@@ -81,8 +84,8 @@ function AccountMenu() {
             <p className="text-white/30 text-[10px] truncate">{customer.email}</p>
           </div>
           {[
-            { href: '/account/orders', icon: Package, label: 'My Orders' },
-            { href: '/account/profile', icon: User, label: 'Profile' },
+            { href: '/account/orders', icon: Package, label: tr.nav.myOrders },
+            { href: '/account/profile', icon: User, label: tr.nav.profile },
           ].map(({ href, icon: Icon, label }) => (
             <Link key={href} href={href} onClick={() => setOpen(false)}
               className="flex items-center gap-2.5 px-4 py-3 text-xs text-white/60 hover:text-white hover:bg-white/5 transition-colors">
@@ -91,7 +94,7 @@ function AccountMenu() {
           ))}
           <button onClick={async () => { setOpen(false); await logout(); router.refresh() }}
             className="w-full flex items-center gap-2.5 px-4 py-3 text-xs text-red-400/70 hover:text-red-400 hover:bg-white/5 transition-colors border-t border-white/5">
-            <LogOut size={13} /> Sign Out
+            <LogOut size={13} /> {tr.nav.signOut}
           </button>
         </div>
       )}
@@ -107,6 +110,7 @@ export default function Navbar() {
   const cartCount = items.reduce((sum, i) => sum + i.quantity, 0)
   const { customer, logout } = useCustomer()
   const { currency, setCurrency } = useCurrency()
+  const { lang, setLang, tr } = useLanguage()
   const router = useRouter()
 
   useEffect(() => {
@@ -123,9 +127,9 @@ export default function Navbar() {
   }, [menuOpen])
 
   const links = [
-    { href: '/products', label: 'Shop' },
-    { href: '/#featured', label: 'New Arrivals' },
-    { href: '/#live', label: 'Live' },
+    { href: '/products', label: tr.nav.shop },
+    { href: '/#featured', label: tr.nav.newArrivals },
+    { href: '/#live', label: tr.nav.live },
   ]
 
   return (
@@ -151,6 +155,12 @@ export default function Navbar() {
 
             {/* Right icons */}
             <div className="flex items-center gap-4 flex-shrink-0">
+              <button
+                onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')}
+                className="hidden md:flex items-center gap-1 text-[10px] tracking-widest text-white/50 hover:text-brand-gold transition-colors border border-white/10 hover:border-brand-gold/40 px-2 py-1"
+              >
+                {lang === 'fr' ? 'EN' : 'FR'}
+              </button>
               <CurrencySwitcher />
               <AccountMenu />
               <Link href="/cart" className="relative">
@@ -187,16 +197,29 @@ export default function Navbar() {
               ))}
               {customer ? (
                 <>
-                  <Link href="/account/orders" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-white/60 text-lg tracking-widest uppercase pb-4 border-b border-white/10"><Package size={18} /> My Orders</Link>
-                  <Link href="/account/profile" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-white/60 text-lg tracking-widest uppercase pb-4 border-b border-white/10"><User size={18} /> Profile</Link>
-                  <button onClick={async () => { setMenuOpen(false); await logout(); router.refresh() }} className="flex items-center gap-2 text-red-400/70 text-lg tracking-widest uppercase pb-4"><LogOut size={18} /> Sign Out</button>
+                  <Link href="/account/orders" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-white/60 text-lg tracking-widest uppercase pb-4 border-b border-white/10"><Package size={18} /> {tr.nav.myOrders}</Link>
+                  <Link href="/account/profile" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-white/60 text-lg tracking-widest uppercase pb-4 border-b border-white/10"><User size={18} /> {tr.nav.profile}</Link>
+                  <button onClick={async () => { setMenuOpen(false); await logout(); router.refresh() }} className="flex items-center gap-2 text-red-400/70 text-lg tracking-widest uppercase pb-4"><LogOut size={18} /> {tr.nav.signOut}</button>
                 </>
               ) : (
-                <Link href="/account/login" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-white/60 text-lg tracking-widest uppercase pb-4 border-b border-white/10"><User size={18} /> Sign In</Link>
+                <Link href="/account/login" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-white/60 text-lg tracking-widest uppercase pb-4 border-b border-white/10"><User size={18} /> {tr.nav.signIn}</Link>
               )}
+              {/* Mobile language toggle */}
+              <div>
+                <p className="text-white/30 text-[10px] tracking-widest uppercase mb-3">{tr.nav.currency === 'Devise' ? 'Langue' : 'Language'}</p>
+                <div className="flex gap-2">
+                  {(['fr', 'en'] as const).map((l) => (
+                    <button key={l} onClick={() => setLang(l)}
+                      className={`flex-1 py-2 text-xs border uppercase tracking-widest transition-colors ${lang === l ? 'border-brand-gold text-brand-gold' : 'border-white/10 text-white/40'}`}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Mobile currency selector */}
               <div>
-                <p className="text-white/30 text-[10px] tracking-widest uppercase mb-3">Currency</p>
+                <p className="text-white/30 text-[10px] tracking-widest uppercase mb-3">{tr.nav.currency}</p>
                 <div className="grid grid-cols-3 gap-2">
                   {CURRENCIES.slice(0, 9).map(c => (
                     <button key={c.code} onClick={() => setCurrency(c.code)}

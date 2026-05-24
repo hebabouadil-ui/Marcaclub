@@ -1,15 +1,18 @@
 'use client'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-
-const categories = [
-  { label: 'Femme', value: 'femme', description: 'Robes, tops, pantalons' },
-  { label: 'Homme', value: 'homme', description: 'T-shirts, jeans, vestes' },
-  { label: 'Accessoires', value: 'accessoires', description: 'Sacs, bijoux, ceintures' },
-  { label: 'Nouveautés', value: 'featured=true', description: 'Derniers arrivages' },
-]
+import { useLanguage } from '@/lib/i18n'
 
 export default function HomeCategories() {
+  const { tr } = useLanguage()
+
+  const categories = [
+    { label: tr.categories.women, value: 'femme', description: tr.categories.womenSub },
+    { label: tr.categories.men, value: 'homme', description: tr.categories.menSub },
+    { label: tr.categories.accessories, value: 'accessoires', description: tr.categories.accessoriesSub },
+    { label: tr.categories.newArrivals, value: 'featured=true', description: tr.categories.newArrivalsSub },
+  ]
+
   return (
     <section className="py-16 md:py-24 bg-brand-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -19,8 +22,8 @@ export default function HomeCategories() {
           viewport={{ once: true }}
           className="text-center mb-12"
         >
-          <p className="text-[10px] tracking-[0.3em] text-brand-gold uppercase mb-2">Explorer</p>
-          <h2 className="font-display text-3xl md:text-4xl text-brand-black">Nos Catégories</h2>
+          <p className="text-[10px] tracking-[0.3em] text-brand-gold uppercase mb-2">{tr.categories.explore}</p>
+          <h2 className="font-display text-3xl md:text-4xl text-brand-black">{tr.categories.title}</h2>
         </motion.div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">

@@ -4,6 +4,7 @@ import WhatsAppButton from '@/components/ui/WhatsAppButton'
 import VisitorTracker from '@/components/store/VisitorTracker'
 import { CurrencyProvider } from '@/lib/context/CurrencyContext'
 import { CustomerProvider } from '@/lib/context/CustomerContext'
+import { LanguageProvider } from '@/lib/i18n'
 import { connectDB } from '@/lib/db'
 import Settings from '@/lib/models/Settings'
 
@@ -37,6 +38,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
   }
 
   return (
+    <LanguageProvider>
     <CurrencyProvider>
     <CustomerProvider>
     <div className="min-h-screen flex flex-col">
@@ -62,5 +64,6 @@ export default async function StoreLayout({ children }: { children: React.ReactN
     </div>
     </CustomerProvider>
     </CurrencyProvider>
+    </LanguageProvider>
   )
 }

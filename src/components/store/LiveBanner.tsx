@@ -1,6 +1,7 @@
 'use client'
 import { motion } from 'framer-motion'
 import InstagramIcon from '@/components/ui/InstagramIcon'
+import { useLanguage } from '@/lib/i18n'
 
 interface Props {
   liveStatus: boolean
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export default function LiveBanner({ liveStatus, liveUrl, instagramUrl }: Props) {
+  const { tr } = useLanguage()
   if (!liveStatus) return null
 
   return (
@@ -22,7 +24,7 @@ export default function LiveBanner({ liveStatus, liveUrl, instagramUrl }: Props)
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 bg-white rounded-full live-dot" />
           <span className="text-sm font-semibold tracking-widest uppercase">
-            We are LIVE now
+            {tr.liveBanner.text}
           </span>
           <div className="w-2 h-2 bg-white rounded-full live-dot" />
         </div>
@@ -34,7 +36,7 @@ export default function LiveBanner({ liveStatus, liveUrl, instagramUrl }: Props)
             className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 rounded px-3 py-1 text-xs font-semibold tracking-wider uppercase transition-colors"
           >
             <InstagramIcon size={12} />
-            Join us
+            {tr.liveBanner.join}
           </a>
         </div>
       </div>

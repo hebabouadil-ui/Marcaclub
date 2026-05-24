@@ -5,8 +5,7 @@ import ProductCard from './ProductCard'
 import SkeletonCard from '@/components/ui/SkeletonCard'
 import { Search, SlidersHorizontal } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-
-const CATEGORIES = ['Tous', 'femme', 'homme', 'accessoires', 'enfant']
+import { useLanguage } from '@/lib/i18n'
 
 interface Props {
   products: Array<{
@@ -25,8 +24,10 @@ interface Props {
 
 export default function ProductsClient({ products, filters }: Props) {
   const router = useRouter()
+  const { tr } = useLanguage()
   const [search, setSearch] = useState(filters.q || '')
   const [loading] = useState(false)
+  const CATEGORIES = [tr.products.all, 'femme', 'homme', 'accessoires', 'enfant']
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -38,7 +39,7 @@ export default function ProductsClient({ products, filters }: Props) {
 
   const handleCategory = (cat: string) => {
     const params = new URLSearchParams()
-    if (cat !== 'Tous') params.set('category', cat)
+    if (cat !== tr.products.all) params.set('category', cat)
     if (search) params.set('q', search)
     router.push(`/products?${params.toString()}`)
   }
@@ -48,10 +49,10 @@ export default function ProductsClient({ products, filters }: Props) {
       {/* Page Header */}
       <div className="bg-brand-black text-brand-white py-16 md:py-24">
         <div className="max-w-7xl mx-auto px-4 text-center">
-          <p className="text-[10px] tracking-[0.3em] text-brand-gold uppercase mb-3">Boutique</p>
-          <h1 className="font-display text-4xl md:text-6xl">Notre Collection</h1>
+          <p className="text-[10px] tracking-[0.3em] text-brand-gold uppercase mb-3">{tr.nav.shop}</p>
+          <h1 className="font-display text-4xl md:text-6xl">{tr.products.title}</h1>
           <p className="text-brand-white/40 text-sm mt-3 tracking-widest">
-            {products.length} pièce{products.length !== 1 ? 's' : ''} disponible{products.length !== 1 ? 's' : ''}
+            {tr.products.available(products.length)}
           </p>
         </div>
       </div>
@@ -65,14 +66,14 @@ export default function ProductsClient({ products, filters }: Props) {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher..."
+              placeholder={tr.products.search}
               className="w-full pl-10 pr-4 py-3 border border-brand-light-gray bg-transparent text-sm focus:outline-none focus:border-brand-black transition-colors"
             />
           </form>
           <div className="flex gap-2 items-center overflow-x-auto pb-1 sm:pb-0">
             <SlidersHorizontal size={14} className="text-brand-gray flex-shrink-0" />
             {CATEGORIES.map((cat) => {
-              const active = cat === 'Tous' ? !filters.category : filters.category === cat
+              const active = cat === tr.products.all ? !filters.category : filters.category === cat
               return (
                 <button
                   key={cat}
@@ -101,8 +102,8 @@ export default function ProductsClient({ products, filters }: Props) {
             animate={{ opacity: 1 }}
             className="text-center py-24 text-brand-gray"
           >
-            <p className="font-display text-2xl mb-2">Aucun résultat</p>
-            <p className="text-sm tracking-widest">Essayez une autre catégorie ou recherche</p>
+            <p className="font-display text-2xl mb-2">{tr.products.noResults}</p>
+            <p className="text-sm tracking-widest">{tr.products.noResultsSub}</p>
           </motion.div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
