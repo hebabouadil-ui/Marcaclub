@@ -76,18 +76,17 @@ function makeFormat(symbol: string, currency: string, rate: number) {
   return (mad: number) => {
     const v = mad * rate
     if (currency === 'JPY') return `${symbol}${Math.round(v).toLocaleString()}`
-    if (currency === 'MAD') return `${symbol}${Math.round(v).toLocaleString()} MAD`
+    if (currency === 'MAD') return `${Math.round(v).toLocaleString()} MAD`
     return `${symbol}${v.toFixed(2)}`
   }
 }
 
-// Convert a USD amount (e.g. CJ shipping price) to display currency
 function makeFormatUSD(symbol: string, currency: string, rate: number, usdRate: number) {
   return (usd: number) => {
-    const mad = usd / usdRate  // USD → MAD
-    const v = mad * rate        // MAD → display currency
+    const mad = usd / usdRate
+    const v = mad * rate
     if (currency === 'JPY') return `${symbol}${Math.round(v).toLocaleString()}`
-    if (currency === 'MAD') return `${symbol}${Math.round(v).toLocaleString()} MAD`
+    if (currency === 'MAD') return `${Math.round(v).toLocaleString()} MAD`
     return `${symbol}${v.toFixed(2)}`
   }
 }

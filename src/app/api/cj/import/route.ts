@@ -43,7 +43,12 @@ export async function POST(req: NextRequest) {
       const vid = v.vid ?? v.variantId ?? ''
       const adminPrice = variantPricesMap?.[vid]
       return {
-        size: v.variantNameEn || v.variantName || v.variantKey || v.variantProperty || 'One Size',
+        size: (() => {
+          const full = v.variantNameEn || v.variantName || ''
+          const short = v.variantKey || v.variantProperty || ''
+          if (!full || full.length > 40) return short || full || 'One Size'
+          return full || short || 'One Size'
+        })(),
         stock: v.variantStock ?? v.variantInventory ?? v.stock ?? 100,
         cjVid: vid,
         variantPrice: adminPrice != null ? adminPrice : (v.variantSellPrice ?? v.variantPrice ?? v.sellPrice ?? undefined),

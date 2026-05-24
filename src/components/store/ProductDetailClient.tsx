@@ -196,7 +196,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
         <div className="grid md:grid-cols-[1fr_420px] gap-8 lg:gap-12 items-start">
           {/* Images */}
           <div className="space-y-3">
-            <div className="relative overflow-hidden bg-brand-light-gray w-full md:max-w-[420px] group cursor-zoom-in" style={{ paddingBottom: '100%' }}>
+            <div className="relative overflow-hidden bg-white w-full md:max-w-[420px] group cursor-zoom-in" style={{ paddingBottom: '100%' }}>
               <AnimatePresence initial={false} custom={dir}>
                 <motion.div
                   key={imgIdx}
@@ -214,7 +214,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                       alt={product.name}
                       fill
                       unoptimized={isExternal(images[imgIdx])}
-                      className="object-cover transition-transform duration-500 ease-out group-hover:scale-110"
+                      className="object-contain transition-transform duration-500 ease-out group-hover:scale-105"
                       sizes="(max-width: 768px) 100vw, 50vw"
                       priority
                     />
@@ -251,7 +251,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                   <button key={i} onClick={() => goTo(i)}
                     className={`relative flex-shrink-0 w-14 overflow-hidden border-2 transition-all duration-200 ${i === imgIdx ? 'border-brand-black opacity-100' : 'border-transparent opacity-50 hover:opacity-80'}`}
                     style={{ height: '72px' }}>
-                    <Image src={img} alt="" fill unoptimized={isExternal(img)} className="object-cover" sizes="56px" />
+                    <Image src={img} alt="" fill unoptimized={isExternal(img)} className="object-contain bg-white" sizes="56px" />
                   </button>
                 ))}
               </div>
@@ -307,7 +307,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                         key={s}
                         onClick={() => { setSelectedSize(s); setQty(1); setAdded(false) }}
                         disabled={sStock === 0}
-                        className={`min-w-[44px] px-2 h-11 text-sm border-2 transition-all duration-200 ${
+                        className={`px-3 py-2 text-xs border-2 transition-all duration-200 max-w-[180px] text-center leading-tight ${
                           sStock === 0
                             ? 'border-brand-light-gray text-brand-gray/40 cursor-not-allowed line-through'
                             : selectedSize === s

@@ -44,7 +44,13 @@ function normalizeVariant(v: any): CJVariant {
   return {
     vid: v.vid ?? v.variantId ?? v.id ?? '',
     variantSku: v.variantSku ?? v.sku ?? '',
-    variantNameEn: v.variantNameEn || v.variantName || v.variantKey || v.variantProperty || v.propertyValueEn || v.propertyValue || '',
+    variantNameEn: (() => {
+      const full = v.variantNameEn || v.variantName || ''
+      const short = v.variantKey || v.variantProperty || v.propertyValueEn || v.propertyValue || ''
+      // Prefer the short key when the full name is the entire product title repeated
+      if (!full || full.length > 40) return short || full
+      return full || short
+    })(),
     variantPrice: v.variantSellPrice ?? v.variantPrice ?? v.sellPrice ?? v.price ?? v.costPrice ?? 0,
     variantStock: v.variantStock ?? v.variantInventory ?? v.inventory ?? v.stock ?? v.inventoryCount ?? v.availableInventory ?? 100,
     variantWeight: v.variantWeight ?? v.weight ?? v.productWeight ?? 0,
