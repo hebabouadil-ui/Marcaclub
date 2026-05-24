@@ -208,19 +208,32 @@ export default function CJImportPage() {
     setShippingOptions([])
     try {
       const firstVariant = product.variants?.[0]
-      const weight = product.productWeight ?? (firstVariant?.variantWeight ?? 200)
+      // productWeight can be a range string like "130-390" — parse it to a number
+      const parseWeight = (w: string | number | undefined): number => {
+        if (!w) return firstVariant?.variantWeight ?? 200
+        if (typeof w === 'number' && !isNaN(w)) return w
+        const s = String(w)
+        if (s.includes('-')) {
+          const parts = s.split('-').map(Number).filter((n) => !isNaN(n))
+          return parts.length ? Math.round(parts.reduce((a, b) => a + b, 0) / parts.length) : 200
+        }
+        return Number(s) || 200
+      }
+      const weight = parseWeight(product.productWeight)
       const vidParam = firstVariant?.vid ? `&vid=${encodeURIComponent(firstVariant.vid)}` : ''
       const res = await fetch(
         `/api/cj/shipping?endCountryCode=${country}&weight=${weight}&quantity=1${vidParam}`,
         { credentials: 'include' }
       )
       const data = await res.json()
+      // Log raw to console so we can inspect actual field names
+      console.log('CJ shipping raw options:', JSON.stringify(data?.data?.[0]))
       if (data.result && Array.isArray(data.data)) {
         setShippingOptions(data.data.map(normalizeShipping))
         setShippingLoaded(true)
         setShowShipping(true)
       } else {
-        toast.error(data.message || data.error || 'Could not load shipping options')
+        toast.error(data.message || data.error || `Shipping error: ${JSON.stringify(data).slice(0, 100)}`)
       }
     } catch {
       toast.error('Shipping fetch failed')

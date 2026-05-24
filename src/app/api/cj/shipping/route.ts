@@ -25,6 +25,8 @@ export async function GET(req: NextRequest) {
       vid,
       variantSku,
     })
+    // Log raw response so we can see actual field names in Vercel logs
+    console.log('CJ shipping raw:', JSON.stringify(data).slice(0, 2000))
     return NextResponse.json(data)
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
