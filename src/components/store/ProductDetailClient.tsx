@@ -88,7 +88,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
           let agingMin = opt.agingMin ?? opt.ageMin ?? 0
           let agingMax = opt.agingMax ?? opt.ageMax ?? 0
           if (!agingMin || !agingMax) {
-            const s = opt.logisticAge ?? opt.aging ?? opt.deliveryTime ?? ''
+            const s = opt.logisticAging ?? opt.logisticAge ?? opt.aging ?? opt.deliveryTime ?? ''
             if (s) { const p = String(s).split('-'); agingMin = parseInt(p[0]) || 0; agingMax = parseInt(p[1] ?? p[0]) || 0 }
           }
           return { ...opt, agingMin, agingMax }

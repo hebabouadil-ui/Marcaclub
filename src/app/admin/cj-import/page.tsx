@@ -103,7 +103,7 @@ function normalizeShipping(opt: any): ShippingOption {
   let agingMax = opt.agingMax ?? opt.ageMax ?? 0
   if (!agingMin || !agingMax) {
     // CJ v2 uses "logisticAge" like "7-20", fallback to other string fields
-    const agingStr = opt.logisticAge ?? opt.aging ?? opt.deliveryTime ?? opt.shippingTime ?? ''
+    const agingStr = opt.logisticAging ?? opt.logisticAge ?? opt.aging ?? opt.deliveryTime ?? opt.shippingTime ?? ''
     if (agingStr) {
       const parts = String(agingStr).split('-')
       agingMin = parseInt(parts[0]) || 0
