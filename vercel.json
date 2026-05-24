@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cj/sync-tracking",
-      "schedule": "0 * * * *"
+      "schedule": "0 9 * * *"
     }
   ]
 }
