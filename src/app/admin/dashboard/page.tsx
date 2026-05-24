@@ -2,8 +2,8 @@
 import { useEffect, useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import {
-  ShoppingBag, Package, TrendingUp, Clock, Radio,
-  AlertTriangle, Ban, Star, BarChart2, Users, CheckCircle, Eye,
+  ShoppingBag, Package, TrendingUp, Clock,
+  Radio, Star, BarChart2, Users, CheckCircle, Eye,
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -14,12 +14,6 @@ interface Order {
   items: Array<{ name: string; quantity: number; price: number }>
   total: number
   status: string
-  flagged: boolean
-  trusted?: boolean
-  flagSeverity?: 'low' | 'medium' | 'high'
-  aiVerdict?: 'SAFE' | 'SUSPICIOUS' | 'HIGH_RISK'
-  flagReason?: string
-  ip?: string
   createdAt: string
 }
 
@@ -42,11 +36,8 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: 'text-red-400 bg-red-400/10',
 }
 const STATUS_BAR: Record<string, string> = {
-  pending: 'bg-amber-400',
-  confirmed: 'bg-blue-400',
-  shipped: 'bg-purple-400',
-  delivered: 'bg-green-400',
-  cancelled: 'bg-red-400',
+  pending: 'bg-amber-400', confirmed: 'bg-blue-400',
+  shipped: 'bg-purple-400', delivered: 'bg-green-400', cancelled: 'bg-red-400',
 }
 
 function fmt(n: number) {
@@ -59,7 +50,6 @@ export default function DashboardPage() {
   const [liveStatus, setLiveStatus] = useState(false)
   const [loading, setLoading] = useState(true)
   const [visitors, setVisitors] = useState<number | null>(null)
-  const [visitorList, setVisitorList] = useState<{ ip: string; page: string; lastSeen: string }[]>([])
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
   useEffect(() => {
@@ -79,10 +69,7 @@ export default function DashboardPage() {
     const fetchVisitors = () => {
       fetch('/api/visitors', { credentials: 'include' })
         .then((r) => r.json())
-        .then((d) => {
-          setVisitors(d.count ?? 0)
-          if (Array.isArray(d.visitors)) setVisitorList(d.visitors)
-        })
+        .then((d) => setVisitors(d.count ?? 0))
         .catch(() => {})
     }
 
@@ -90,10 +77,7 @@ export default function DashboardPage() {
     fetchVisitors()
     const dataInterval = setInterval(() => { if (!document.hidden) fetchData() }, 30_000)
     const visitorInterval = setInterval(() => { if (!document.hidden) fetchVisitors() }, 30_000)
-    return () => {
-      clearInterval(dataInterval)
-      clearInterval(visitorInterval)
-    }
+    return () => { clearInterval(dataInterval); clearInterval(visitorInterval) }
   }, [])
 
   const toggleLive = async () => {
@@ -113,49 +97,33 @@ export default function DashboardPage() {
     const delivered = orders.filter((o) => o.status === 'delivered')
     const cancelled = orders.filter((o) => o.status === 'cancelled')
     const pending = orders.filter((o) => o.status === 'pending')
-    const flagged = orders.filter((o) => o.flagged)
-    // Untouched = pending AND not flagged AND not trusted (never acted on)
-    const untouched = orders.filter((o) => o.status === 'pending' && !o.flagged && !o.trusted)
-    // High risk waiting = flagged or AI HIGH_RISK and not yet trusted
-    const highRiskWaiting = orders.filter((o) =>
-      !o.trusted && (o.flagSeverity === 'high' || o.aiVerdict === 'HIGH_RISK')
-    )
     const avgOrder = active.length > 0 ? revenue / active.length : 0
     const nonCancelled = orders.filter((o) => o.status !== 'cancelled')
     const deliveryRate = nonCancelled.length > 0 ? (delivered.length / nonCancelled.length) * 100 : 0
 
-    // Revenue last 7 days
-    const days: { label: string; value: number; date: string }[] = []
+    const days: { label: string; value: number }[] = []
     for (let i = 6; i >= 0; i--) {
-      const d = new Date()
-      d.setDate(d.getDate() - i)
-      d.setHours(0, 0, 0, 0)
+      const d = new Date(); d.setDate(d.getDate() - i); d.setHours(0, 0, 0, 0)
       const next = new Date(d); next.setDate(next.getDate() + 1)
-      const dayRevenue = orders
-        .filter((o) => {
+      days.push({
+        label: d.toLocaleDateString('en-US', { weekday: 'short' }),
+        value: orders.filter((o) => {
           const t = new Date(o.createdAt).getTime()
           return t >= d.getTime() && t < next.getTime() &&
             ['confirmed', 'shipped', 'delivered'].includes(o.status)
-        })
-        .reduce((s, o) => s + o.total, 0)
-      days.push({
-        label: d.toLocaleDateString('en-US', { weekday: 'short' }),
-        date: d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' }),
-        value: dayRevenue,
+        }).reduce((s, o) => s + o.total, 0),
       })
     }
 
-    // Orders count last 7 days (all statuses)
-    const ordersByDay = days.map((d, idx) => {
+    const ordersByDay = days.map((_, idx) => {
       const dd = new Date(); dd.setDate(dd.getDate() - (6 - idx)); dd.setHours(0, 0, 0, 0)
-      const next = new Date(dd); next.setDate(next.getDate() + 1)
+      const nxt = new Date(dd); nxt.setDate(nxt.getDate() + 1)
       return orders.filter((o) => {
         const t = new Date(o.createdAt).getTime()
-        return t >= dd.getTime() && t < next.getTime()
+        return t >= dd.getTime() && t < nxt.getTime()
       }).length
     })
 
-    // Top products by sales count
     const productSales: Record<string, { name: string; qty: number; revenue: number }> = {}
     for (const o of active) {
       for (const item of o.items) {
@@ -166,13 +134,10 @@ export default function DashboardPage() {
     }
     const topProducts = Object.values(productSales).sort((a, b) => b.qty - a.qty).slice(0, 5)
 
-    // Status breakdown
     const statusBreakdown = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'].map((s) => ({
-      status: s,
-      count: orders.filter((o) => o.status === s).length,
+      status: s, count: orders.filter((o) => o.status === s).length,
     }))
 
-    // Top cities
     const cities: Record<string, number> = {}
     for (const o of orders) {
       const c = o.customer.city?.trim() || 'Unknown'
@@ -180,121 +145,79 @@ export default function DashboardPage() {
     }
     const topCities = Object.entries(cities).sort((a, b) => b[1] - a[1]).slice(0, 5)
 
-    // Unique customers
     const phones = new Set(orders.map((o) => (o.customer.phone || '').replace(/\D/g, '').slice(-9)).filter(Boolean))
 
     return {
       revenue, avgOrder, deliveryRate,
       total: orders.length, pending: pending.length, cancelled: cancelled.length,
-      flagged: flagged.length, delivered: delivered.length,
-      uniqueCustomers: phones.size,
-      untouched: untouched.length,
-      highRiskWaiting: highRiskWaiting.length,
-      recentOrders: orders.slice(0, 6),
-      revenueByDay: days,
-      ordersByDay,
-      topProducts,
-      statusBreakdown,
-      topCities,
+      delivered: delivered.length, uniqueCustomers: phones.size,
+      recentOrders: orders.slice(0, 8),
+      revenueByDay: days, ordersByDay, topProducts, statusBreakdown, topCities,
     }
   }, [orders])
 
   const maxRevDay = Math.max(...(stats?.revenueByDay.map((d) => d.value) ?? [1]), 1)
   const maxOrdDay = Math.max(...(stats?.ordersByDay ?? [1]), 1)
 
+  const kpis = [
+    { label: 'Total Revenue', value: loading ? '—' : `$${fmt(stats.revenue)}`, icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-400/10', sub: `${loading ? '—' : stats.delivered} delivered orders` },
+    { label: 'Total Orders', value: loading ? '—' : fmt(stats.total), icon: ShoppingBag, color: 'text-brand-gold', bg: 'bg-brand-gold/10', sub: `${loading ? '—' : stats.pending} pending` },
+    { label: 'Customers', value: loading ? '—' : fmt(stats.uniqueCustomers), icon: Users, color: 'text-blue-400', bg: 'bg-blue-400/10', sub: 'unique buyers' },
+    { label: 'Delivery Rate', value: loading ? '—' : `${stats.deliveryRate.toFixed(0)}%`, icon: CheckCircle, color: 'text-purple-400', bg: 'bg-purple-400/10', sub: 'of non-cancelled orders' },
+    { label: 'Avg. Order', value: loading ? '—' : `$${fmt(stats.avgOrder)}`, icon: BarChart2, color: 'text-cyan-400', bg: 'bg-cyan-400/10', sub: 'confirmed orders' },
+    { label: 'Products', value: loading ? '—' : fmt(products.length), icon: Package, color: 'text-amber-400', bg: 'bg-amber-400/10', sub: `${loading ? '—' : products.filter((p) => p.stock === 0).length} out of stock` },
+    { label: 'Visitors Now', value: visitors === null ? '—' : fmt(visitors), icon: Eye, color: 'text-green-300', bg: 'bg-green-300/10', sub: 'active in last 2 min', live: true },
+    { label: 'Cancelled', value: loading ? '—' : fmt(stats.cancelled), icon: Clock, color: 'text-red-400', bg: 'bg-red-400/10', sub: `${loading ? '—' : stats.total > 0 ? ((stats.cancelled / stats.total) * 100).toFixed(0) : 0}% of total` },
+  ]
+
   return (
-    <div className="p-6 md:p-8 max-w-7xl space-y-8">
+    <div className="p-6 md:p-8 max-w-7xl space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-white text-2xl font-semibold">Dashboard</h1>
+          <h1 className="text-white text-2xl font-semibold tracking-tight">Dashboard</h1>
           <p className="text-white/40 text-sm mt-0.5">
             {lastUpdated
-              ? <>Updated at {lastUpdated.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse align-middle ml-1" /></>
+              ? <>Updated {lastUpdated.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse align-middle ml-1" /></>
               : 'Store overview'
             }
           </p>
         </div>
-        <button
-          onClick={toggleLive}
-          className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold tracking-wider transition-all ${
-            liveStatus ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-white/10 text-white/70 hover:bg-white/20'
-          }`}
-        >
-          <Radio size={14} className={liveStatus ? 'live-dot' : ''} />
-          {liveStatus ? 'LIVE ON' : 'LIVE OFF'}
-        </button>
+        <div className="flex items-center gap-3">
+          {stats.pending > 0 && (
+            <Link href="/admin/orders" className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs px-4 py-2 hover:bg-amber-500/20 transition-colors">
+              <Clock size={12} />
+              {stats.pending} pending order{stats.pending > 1 ? 's' : ''}
+            </Link>
+          )}
+          <button
+            onClick={toggleLive}
+            className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold tracking-wider transition-all ${liveStatus ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-white/10 text-white/70 hover:bg-white/20'}`}
+          >
+            <Radio size={14} />
+            {liveStatus ? 'LIVE ON' : 'LIVE OFF'}
+          </button>
+        </div>
       </div>
 
-      {/* Notification bar */}
-      {!loading && (stats.untouched > 0 || stats.highRiskWaiting > 0) && (
-        <div className="flex flex-col sm:flex-row gap-2">
-          {stats.untouched > 0 && (
-            <Link
-              href="/admin/orders"
-              className="flex-1 flex items-center gap-3 bg-amber-500/10 border border-amber-500/30 px-5 py-3 hover:bg-amber-500/15 transition-colors"
-            >
-              <Clock size={15} className="text-amber-400 flex-shrink-0" />
-              <div className="flex-1">
-                <span className="text-amber-400 text-sm font-semibold">
-                  {stats.untouched} untouched pending order{stats.untouched > 1 ? 's' : ''}
-                </span>
-                <p className="text-amber-400/50 text-[11px]">New orders awaiting confirmation</p>
-              </div>
-              <span className="text-amber-400/50 text-xs shrink-0">View →</span>
-            </Link>
-          )}
-          {stats.highRiskWaiting > 0 && (
-            <Link
-              href="/admin/high-risk"
-              className="flex-1 flex items-center gap-3 bg-red-500/10 border border-red-500/30 px-5 py-3 hover:bg-red-500/15 transition-colors"
-            >
-              <AlertTriangle size={15} className="text-red-400 flex-shrink-0" />
-              <div className="flex-1">
-                <span className="text-red-400 text-sm font-semibold">
-                  {stats.highRiskWaiting} high-risk order{stats.highRiskWaiting > 1 ? 's' : ''} waiting
-                </span>
-                <p className="text-red-400/50 text-[11px]">Decision required before shipping</p>
-              </div>
-              <span className="text-red-400/50 text-xs shrink-0">View →</span>
-            </Link>
-          )}
-        </div>
-      )}
-
-      {/* KPI cards */}
+      {/* KPI grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: 'Revenue', value: loading ? '—' : `${fmt(stats.revenue)} MAD`, icon: TrendingUp, color: 'text-green-400', sub: 'active orders' },
-          { label: 'Orders', value: loading ? '—' : fmt(stats.total), icon: ShoppingBag, color: 'text-brand-gold', sub: `${loading ? '—' : stats.pending} pending` },
-          { label: 'Unique Customers', value: loading ? '—' : fmt(stats.uniqueCustomers), icon: Users, color: 'text-blue-400', sub: 'by phone' },
-          { label: 'Delivery Rate', value: loading ? '—' : `${stats.deliveryRate.toFixed(0)}%`, icon: CheckCircle, color: 'text-purple-400', sub: `${loading ? '—' : stats.delivered} delivered` },
-          { label: 'Avg. Order Value', value: loading ? '—' : `${fmt(stats.avgOrder)} MAD`, icon: BarChart2, color: 'text-cyan-400', sub: 'confirmed orders' },
-          { label: 'Cancelled', value: loading ? '—' : fmt(stats.cancelled), icon: Ban, color: 'text-red-400', sub: `${loading ? '—' : stats.total > 0 ? ((stats.cancelled / stats.total) * 100).toFixed(0) : 0}% of total` },
-          { label: 'Products', value: loading ? '—' : fmt(products.length), icon: Package, color: 'text-amber-400', sub: `${loading ? '—' : products.filter((p) => p.stock === 0).length} out of stock` },
-          { label: 'Flagged', value: loading ? '—' : fmt(stats.flagged), icon: AlertTriangle, color: 'text-orange-400', sub: 'to review' },
-          { label: 'On site now', value: visitors === null ? '—' : fmt(visitors), icon: Eye, color: 'text-green-300', sub: 'active visitors (2 min)', live: true },
-        ].map((card, i) => {
+        {kpis.map((card, i) => {
           const Icon = card.icon
           return (
-            <motion.div
-              key={card.label}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              className="bg-white/5 border border-white/5 p-5"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-1.5">
-                  <p className="text-white/40 text-[10px] tracking-widest uppercase">{card.label}</p>
+            <motion.div key={card.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
+              className="bg-white/5 border border-white/5 p-5 hover:border-white/10 transition-colors">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-white/40 text-[10px] tracking-widest uppercase">{card.label}</p>
+                <div className={`p-1.5 rounded-md ${card.bg}`}>
+                  <Icon size={13} className={card.color} />
                   {'live' in card && card.live && (
-                    <span className="relative flex h-2 w-2">
+                    <span className="relative flex h-1.5 w-1.5 ml-0.5 -mt-0.5 inline-block">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-400" />
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-400" />
                     </span>
                   )}
                 </div>
-                <Icon size={14} className={card.color} />
               </div>
               <p className={`text-2xl font-bold ${card.color}`}>{card.value}</p>
               <p className="text-white/25 text-[10px] mt-1">{card.sub}</p>
@@ -303,115 +226,67 @@ export default function DashboardPage() {
         })}
       </div>
 
-      {/* Active visitors IP list */}
-      {visitorList.length > 0 && (
+      {/* Charts */}
+      <div className="grid lg:grid-cols-2 gap-6">
         <div className="bg-white/5 border border-white/5 p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-400" />
-            </span>
-            <h3 className="text-white/60 text-xs uppercase tracking-widest">Active Visitors — IP Addresses</h3>
-            <span className="ml-auto text-green-400 text-xs font-bold">{visitorList.length} online</span>
-          </div>
-          <div className="divide-y divide-white/5">
-            {visitorList.map((v, i) => (
-              <div key={i} className="flex items-center justify-between py-2 gap-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <Eye size={12} className="text-green-400 shrink-0" />
-                  <span className="text-white font-mono text-xs">{v.ip || 'unknown'}</span>
+          <h3 className="text-white/60 text-[10px] uppercase tracking-widest mb-5">Revenue — Last 7 Days</h3>
+          <div className="flex items-end gap-1.5 h-36">
+            {stats.revenueByDay.map((d, i) => (
+              <div key={i} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end group relative">
+                <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-black border border-white/10 px-2 py-1 text-[10px] text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
+                  ${fmt(d.value)}
                 </div>
-                <span className="text-white/40 text-xs truncate max-w-[200px]">{v.page}</span>
-                <span className="text-white/25 text-[10px] shrink-0">
-                  {new Date(v.lastSeen).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                </span>
+                <div className="w-full bg-brand-gold/70 hover:bg-brand-gold rounded-sm transition-colors"
+                  style={{ height: `${maxRevDay > 0 ? (d.value / maxRevDay) * 100 : 0}%`, minHeight: d.value > 0 ? '4px' : '0' }} />
+                <span className="text-white/30 text-[9px]">{d.label}</span>
               </div>
             ))}
           </div>
         </div>
-      )}
 
-      {/* Charts row */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Revenue last 7 days */}
         <div className="bg-white/5 border border-white/5 p-5">
-          <h3 className="text-white/60 text-xs uppercase tracking-widest mb-4">Revenue — Last 7 Days</h3>
-          {loading ? (
-            <div className="skeleton h-40 rounded" />
-          ) : (
-            <div className="flex items-end gap-2 h-40">
-              {stats.revenueByDay.map((d, i) => (
-                <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full justify-end group relative">
-                  <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-brand-black border border-white/10 px-2 py-1 text-[10px] text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                    {fmt(d.value)} MAD
-                  </div>
-                  <div
-                    className="w-full bg-brand-gold/70 hover:bg-brand-gold transition-colors rounded-sm"
-                    style={{ height: `${maxRevDay > 0 ? (d.value / maxRevDay) * 100 : 0}%`, minHeight: d.value > 0 ? '4px' : '0' }}
-                  />
-                  <span className="text-white/30 text-[9px] capitalize">{d.label}</span>
+          <h3 className="text-white/60 text-[10px] uppercase tracking-widest mb-5">Orders — Last 7 Days</h3>
+          <div className="flex items-end gap-1.5 h-36">
+            {stats.revenueByDay.map((d, i) => (
+              <div key={i} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end group relative">
+                <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-black border border-white/10 px-2 py-1 text-[10px] text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
+                  {stats.ordersByDay[i]} order{stats.ordersByDay[i] !== 1 ? 's' : ''}
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Orders count last 7 days */}
-        <div className="bg-white/5 border border-white/5 p-5">
-          <h3 className="text-white/60 text-xs uppercase tracking-widest mb-4">Orders — Last 7 Days</h3>
-          {loading ? (
-            <div className="skeleton h-40 rounded" />
-          ) : (
-            <div className="flex items-end gap-2 h-40">
-              {stats.revenueByDay.map((d, i) => (
-                <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full justify-end group relative">
-                  <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-brand-black border border-white/10 px-2 py-1 text-[10px] text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                    {stats.ordersByDay[i]} order{stats.ordersByDay[i] !== 1 ? 's' : ''}
-                  </div>
-                  <div
-                    className="w-full bg-blue-400/60 hover:bg-blue-400 transition-colors rounded-sm"
-                    style={{ height: `${maxOrdDay > 0 ? (stats.ordersByDay[i] / maxOrdDay) * 100 : 0}%`, minHeight: stats.ordersByDay[i] > 0 ? '4px' : '0' }}
-                  />
-                  <span className="text-white/30 text-[9px] capitalize">{d.label}</span>
-                </div>
-              ))}
-            </div>
-          )}
+                <div className="w-full bg-blue-400/60 hover:bg-blue-400 rounded-sm transition-colors"
+                  style={{ height: `${maxOrdDay > 0 ? (stats.ordersByDay[i] / maxOrdDay) * 100 : 0}%`, minHeight: stats.ordersByDay[i] > 0 ? '4px' : '0' }} />
+                <span className="text-white/30 text-[9px]">{d.label}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Bottom row */}
+      {/* Bottom row: status + top products + top cities */}
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Status breakdown */}
         <div className="bg-white/5 border border-white/5 p-5">
-          <h3 className="text-white/60 text-xs uppercase tracking-widest mb-4">Status Breakdown</h3>
-          {loading ? <div className="skeleton h-32 rounded" /> : (
-            <div className="space-y-2.5">
-              {stats.statusBreakdown.map(({ status, count }) => (
-                <div key={status}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className={`text-xs ${STATUS_COLORS[status]?.split(' ')[0] || 'text-white/40'}`}>{STATUS_LABELS[status]}</span>
-                    <span className="text-white/50 text-xs">{count}</span>
-                  </div>
-                  <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full ${STATUS_BAR[status] || 'bg-white/20'} transition-all`}
-                      style={{ width: `${stats.total > 0 ? (count / stats.total) * 100 : 0}%` }}
-                    />
-                  </div>
+          <h3 className="text-white/60 text-[10px] uppercase tracking-widest mb-4">Order Status</h3>
+          <div className="space-y-3">
+            {stats.statusBreakdown.map(({ status, count }) => (
+              <div key={status}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className={`text-xs ${STATUS_COLORS[status]?.split(' ')[0] || 'text-white/40'}`}>{STATUS_LABELS[status]}</span>
+                  <span className="text-white/50 text-xs">{count}</span>
                 </div>
-              ))}
-            </div>
-          )}
+                <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full ${STATUS_BAR[status] || 'bg-white/20'} transition-all`}
+                    style={{ width: `${stats.total > 0 ? (count / stats.total) * 100 : 0}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Top products */}
         <div className="bg-white/5 border border-white/5 p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-white/60 text-xs uppercase tracking-widest">Top Products</h3>
+            <h3 className="text-white/60 text-[10px] uppercase tracking-widest">Top Products</h3>
             <Star size={12} className="text-brand-gold" />
           </div>
-          {loading ? <div className="skeleton h-32 rounded" /> : stats.topProducts.length === 0 ? (
+          {stats.topProducts.length === 0 ? (
             <p className="text-white/20 text-xs">No sales yet</p>
           ) : (
             <div className="space-y-3">
@@ -420,7 +295,7 @@ export default function DashboardPage() {
                   <span className="text-white/20 text-xs w-4">{i + 1}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-white text-xs truncate">{p.name}</p>
-                    <p className="text-white/30 text-[10px]">{fmt(p.revenue)} MAD</p>
+                    <p className="text-white/30 text-[10px]">${fmt(p.revenue)}</p>
                   </div>
                   <span className="text-brand-gold text-xs font-semibold flex-shrink-0">×{p.qty}</span>
                 </div>
@@ -429,24 +304,21 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Top cities */}
         <div className="bg-white/5 border border-white/5 p-5">
-          <h3 className="text-white/60 text-xs uppercase tracking-widest mb-4">Top Cities</h3>
-          {loading ? <div className="skeleton h-32 rounded" /> : stats.topCities.length === 0 ? (
+          <h3 className="text-white/60 text-[10px] uppercase tracking-widest mb-4">Top Cities</h3>
+          {stats.topCities.length === 0 ? (
             <p className="text-white/20 text-xs">No data</p>
           ) : (
-            <div className="space-y-2.5">
+            <div className="space-y-3">
               {stats.topCities.map(([city, count]) => (
                 <div key={city}>
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-white/70 text-xs">{city}</span>
                     <span className="text-white/40 text-xs">{count}</span>
                   </div>
-                  <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-brand-gold/50 transition-all"
-                      style={{ width: `${stats.total > 0 ? (count / stats.total) * 100 : 0}%` }}
-                    />
+                  <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full bg-brand-gold/50 transition-all"
+                      style={{ width: `${stats.total > 0 ? (count / stats.total) * 100 : 0}%` }} />
                   </div>
                 </div>
               ))}
@@ -459,33 +331,31 @@ export default function DashboardPage() {
       <div className="bg-white/5 border border-white/5">
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
           <h2 className="text-white font-medium text-sm">Recent Orders</h2>
-          <Link href="/admin/orders" className="text-brand-gold text-xs tracking-widest uppercase hover:underline">
-            View all
-          </Link>
+          <Link href="/admin/orders" className="text-brand-gold text-xs tracking-widest uppercase hover:underline">View all →</Link>
         </div>
         {loading ? (
-          <div className="p-6 space-y-3">{[1, 2, 3].map((i) => <div key={i} className="skeleton h-12 rounded" />)}</div>
+          <div className="p-6 space-y-3">{[1, 2, 3].map((i) => <div key={i} className="h-12 bg-white/5 animate-pulse rounded" />)}</div>
         ) : stats.recentOrders.length === 0 ? (
           <p className="text-white/30 text-sm p-6">No orders yet</p>
         ) : (
           <div className="divide-y divide-white/5">
             {stats.recentOrders.map((order) => (
-              <div key={order._id} className="flex items-center justify-between px-6 py-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  {order.flagged && <AlertTriangle size={12} className="text-orange-400 flex-shrink-0" />}
-                  <div className="min-w-0">
-                    <p className="text-white text-sm font-medium">{order.orderNumber}</p>
-                    <p className="text-white/40 text-xs truncate">{order.customer.name} — {order.customer.city}</p>
-                    {order.ip && <p className="text-white/25 font-mono text-[10px]">{order.ip}</p>}
-                  </div>
+              <Link key={order._id} href={`/admin/orders`}
+                className="flex items-center justify-between px-6 py-3.5 hover:bg-white/3 transition-colors">
+                <div className="min-w-0">
+                  <p className="text-white text-sm font-medium">{order.orderNumber}</p>
+                  <p className="text-white/40 text-xs">{order.customer.name} · {order.customer.city}</p>
                 </div>
-                <div className="text-right flex-shrink-0 ml-4">
-                  <p className="text-white text-sm">{fmt(order.total)} MAD</p>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider ${STATUS_COLORS[order.status] || 'text-white/40'}`}>
+                <div className="flex items-center gap-4 flex-shrink-0 ml-4">
+                  <span className="text-white/60 text-xs hidden sm:block">
+                    {new Date(order.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </span>
+                  <p className="text-white text-sm font-semibold">${fmt(order.total)}</p>
+                  <span className={`text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider font-medium ${STATUS_COLORS[order.status] || 'text-white/40 bg-white/5'}`}>
                     {STATUS_LABELS[order.status] || order.status}
                   </span>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}

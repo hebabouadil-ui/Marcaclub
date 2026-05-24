@@ -2,12 +2,20 @@
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ShoppingBag, ChevronLeft, ChevronRight, ArrowRight, ShoppingCart } from 'lucide-react'
+import { ShoppingBag, ChevronLeft, ChevronRight, ArrowRight, ShoppingCart, Truck, MapPin } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cartStore'
 import { useCurrency } from '@/lib/context/CurrencyContext'
+import { useLanguage } from '@/lib/i18n'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+
+interface SizeEntry {
+  size: string
+  stock: number
+  cjVid?: string
+  variantPrice?: number
+}
 
 interface Product {
   _id: string
@@ -18,8 +26,19 @@ interface Product {
   originalPrice?: number
   images: string[]
   stock: number
-  sizes: Array<{ size: string; stock: number }>
+  sizes: SizeEntry[]
   category: string
+  cjPid?: string
+  cjLogisticName?: string
+  productWeight?: number
+}
+
+interface ShippingOption {
+  logisticName: string
+  logisticNameEn: string
+  logisticPrice: number
+  agingMin: number
+  agingMax: number
 }
 
 const swipeVariants = {
@@ -27,10 +46,9 @@ const swipeVariants = {
   center: { x: 0, opacity: 1 },
   exit: (dir: number) => ({ x: dir > 0 ? '-100%' : '100%', opacity: 0 }),
 }
-
 const swipeTransition = { duration: 0.4, ease: 'easeInOut' as const }
 
-export default function ProductDetailClient({ product }: { product: Product }) {
+export default function ProductDetailClient({ product, detectedCountry }: { product: Product; detectedCountry?: string }) {
   const [[imgIdx, dir], setPage] = useState([0, 0])
   const [selectedSize, setSelectedSize] = useState('')
   const [qty, setQty] = useState(1)
@@ -38,23 +56,81 @@ export default function ProductDetailClient({ product }: { product: Product }) {
   const addItem = useCartStore((s) => s.addItem)
   const router = useRouter()
   const { format } = useCurrency()
+  const { tr } = useLanguage()
 
-  // Reset state when navigating between products
+  const [shipping, setShipping] = useState<ShippingOption | null>(null)
+  const [shippingLoading, setShippingLoading] = useState(false)
+  const [userCountry, setUserCountry] = useState(detectedCountry || '')
+
   useEffect(() => {
     setAdded(false)
     setSelectedSize('')
     setQty(1)
   }, [product._id])
 
+  // Detect country and fetch shipping if this is a CJ product
+  useEffect(() => {
+    if (!product.cjPid) return
+
+    const loadShipping = async (country: string) => {
+      if (!country) return
+      setShippingLoading(true)
+      try {
+        const firstSize = product.sizes?.find((s) => s.cjVid)
+        const vid = firstSize?.cjVid ?? ''
+        const weight = product.productWeight ?? 200
+        const params = new URLSearchParams({ country, weight: String(weight) })
+        if (vid) params.set('vid', vid)
+        const res = await fetch(`/api/shipping?${params}`)
+        const data = await res.json()
+        const options: ShippingOption[] = data.options ?? []
+        if (options.length === 0) return
+
+        // Prefer the stored logistic name, else fastest affordable option
+        const preferred = product.cjLogisticName
+          ? options.find((o) => o.logisticName === product.cjLogisticName)
+          : null
+        setShipping(preferred ?? options.sort((a, b) => a.agingMin - b.agingMin)[0])
+      } catch {
+        // ignore shipping errors — not critical
+      } finally {
+        setShippingLoading(false)
+      }
+    }
+
+    if (detectedCountry) {
+      setUserCountry(detectedCountry)
+      loadShipping(detectedCountry)
+    } else {
+      // Fallback: ask Vercel geo
+      fetch('/api/geo')
+        .then((r) => r.json())
+        .then((d) => {
+          const c = d.countryCode || 'US'
+          setUserCountry(c)
+          loadShipping(c)
+        })
+        .catch(() => loadShipping('US'))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product._id, product.cjPid])
+
   const sizes = product.sizes ?? []
   const images = product.images ?? []
   const isExternal = (url: string) => !url.includes('cloudinary.com')
+
   const selectedSizeEntry = sizes.find((s) => s.size === selectedSize)
   const selectedStock = selectedSizeEntry?.stock ?? 0
   const totalStock = sizes.reduce((s, i) => s + i.stock, 0)
 
-  const discount = product.originalPrice
-    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+  // Price: use variant-specific price if available, else product price
+  const displayPrice = selectedSizeEntry?.variantPrice
+    ? selectedSizeEntry.variantPrice
+    : product.price
+
+  const originalPrice = product.originalPrice
+  const discount = originalPrice && displayPrice < originalPrice
+    ? Math.round(((originalPrice - displayPrice) / originalPrice) * 100)
     : null
 
   const goTo = (idx: number) => {
@@ -65,12 +141,12 @@ export default function ProductDetailClient({ product }: { product: Product }) {
   const next = () => setPage(([i]) => [(i + 1) % images.length, 1])
 
   const handleAddToCart = () => {
-    if (!selectedSize) { toast.error('Veuillez choisir une taille'); return }
+    if (!selectedSize) { toast.error(tr.product?.chooseSize ?? 'Veuillez choisir une taille'); return }
     if (selectedStock === 0) { toast.error('Taille épuisée'); return }
     addItem({
       productId: product._id,
       name: product.name,
-      price: product.price,
+      price: displayPrice,
       quantity: qty,
       size: selectedSize,
       image: images[0] || '',
@@ -80,13 +156,13 @@ export default function ProductDetailClient({ product }: { product: Product }) {
   }
 
   const handleGoToCheckout = () => {
-    if (!selectedSize) { toast.error('Veuillez choisir une taille'); return }
+    if (!selectedSize) { toast.error(tr.product?.chooseSize ?? 'Veuillez choisir une taille'); return }
     if (selectedStock === 0) { toast.error('Taille épuisée'); return }
     if (!added) {
       addItem({
         productId: product._id,
         name: product.name,
-        price: product.price,
+        price: displayPrice,
         quantity: qty,
         size: selectedSize,
         image: images[0] || '',
@@ -111,7 +187,6 @@ export default function ProductDetailClient({ product }: { product: Product }) {
         <div className="grid md:grid-cols-[1fr_420px] gap-8 lg:gap-12 items-start">
           {/* Images */}
           <div className="space-y-3">
-            {/* Aspect-ratio wrapper keeps the container height stable during slide transitions */}
             <div className="relative overflow-hidden bg-brand-light-gray w-full md:max-w-[420px] group cursor-zoom-in" style={{ paddingBottom: '125%' }}>
               <AnimatePresence initial={false} custom={dir}>
                 <motion.div
@@ -132,7 +207,6 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                       unoptimized={isExternal(images[imgIdx])}
                       className="object-cover object-top transition-transform duration-500 ease-out group-hover:scale-110"
                       sizes="(max-width: 768px) 100vw, 50vw"
-                      quality={90}
                       priority
                     />
                   ) : (
@@ -145,28 +219,16 @@ export default function ProductDetailClient({ product }: { product: Product }) {
 
               {images.length > 1 && (
                 <>
-                  <button
-                    onClick={prev}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white p-2.5 shadow-md transition-all hover:scale-110 active:scale-95"
-                  >
+                  <button onClick={prev} className="absolute left-3 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white p-2.5 shadow-md transition-all hover:scale-110 active:scale-95">
                     <ChevronLeft size={18} />
                   </button>
-                  <button
-                    onClick={next}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white p-2.5 shadow-md transition-all hover:scale-110 active:scale-95"
-                  >
+                  <button onClick={next} className="absolute right-3 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white p-2.5 shadow-md transition-all hover:scale-110 active:scale-95">
                     <ChevronRight size={18} />
                   </button>
-
                   <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 z-10">
                     {images.map((_, i) => (
-                      <button
-                        key={i}
-                        onClick={() => goTo(i)}
-                        className={`rounded-full transition-all duration-300 ${
-                          i === imgIdx ? 'w-6 h-2 bg-white shadow' : 'w-2 h-2 bg-white/50 hover:bg-white/80'
-                        }`}
-                      />
+                      <button key={i} onClick={() => goTo(i)}
+                        className={`rounded-full transition-all duration-300 ${i === imgIdx ? 'w-6 h-2 bg-white shadow' : 'w-2 h-2 bg-white/50 hover:bg-white/80'}`} />
                     ))}
                   </div>
                 </>
@@ -177,14 +239,9 @@ export default function ProductDetailClient({ product }: { product: Product }) {
             {images.length > 1 && (
               <div className="flex gap-2 overflow-x-auto pb-1">
                 {images.map((img, i) => (
-                  <button
-                    key={i}
-                    onClick={() => goTo(i)}
-                    className={`relative flex-shrink-0 w-14 overflow-hidden border-2 transition-all duration-200 ${
-                      i === imgIdx ? 'border-brand-black opacity-100' : 'border-transparent opacity-50 hover:opacity-80'
-                    }`}
-                    style={{ height: '72px' }}
-                  >
+                  <button key={i} onClick={() => goTo(i)}
+                    className={`relative flex-shrink-0 w-14 overflow-hidden border-2 transition-all duration-200 ${i === imgIdx ? 'border-brand-black opacity-100' : 'border-transparent opacity-50 hover:opacity-80'}`}
+                    style={{ height: '72px' }}>
                     <Image src={img} alt="" fill unoptimized={isExternal(img)} className="object-cover object-top" sizes="56px" />
                   </button>
                 ))}
@@ -192,24 +249,27 @@ export default function ProductDetailClient({ product }: { product: Product }) {
             )}
           </div>
 
-          {/* Info */}
+          {/* Info panel */}
           <div className="flex flex-col">
             <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }}>
               <p className="text-[10px] tracking-[0.3em] text-brand-gold uppercase mb-2">{product.category}</p>
-              <h1 className="font-display text-2xl md:text-3xl text-brand-black leading-tight mb-4">
-                {product.name}
-              </h1>
+              <h1 className="font-display text-2xl md:text-3xl text-brand-black leading-tight mb-4">{product.name}</h1>
 
-              <div className="flex items-center gap-3 mb-6">
-                <span className="text-xl font-semibold text-brand-black">{format(product.price)}</span>
-                {product.originalPrice && (
+              {/* Price */}
+              <div className="flex items-center gap-3 mb-2">
+                <span className="text-2xl font-bold text-brand-black">{format(displayPrice)}</span>
+                {originalPrice && originalPrice > displayPrice && (
                   <>
-                    <span className="text-brand-gray line-through">{format(product.originalPrice)}</span>
-                    <span className="bg-brand-gold text-brand-black text-xs font-bold px-2 py-0.5">-{discount}%</span>
+                    <span className="text-brand-gray line-through text-base">{format(originalPrice)}</span>
+                    {discount && <span className="bg-brand-gold text-brand-black text-xs font-bold px-2 py-0.5">-{discount}%</span>}
                   </>
                 )}
               </div>
+              {selectedSizeEntry?.variantPrice && selectedSizeEntry.variantPrice !== product.price && (
+                <p className="text-xs text-brand-gray mb-4">Price for selected variant</p>
+              )}
 
+              {/* Stock status */}
               <div className="mb-6">
                 {totalStock === 0 ? (
                   <span className="text-sm text-brand-gray tracking-widest uppercase">Épuisé</span>
@@ -226,18 +286,19 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                 )}
               </div>
 
+              {/* Sizes */}
               {sizes.length > 0 && (
                 <div className="mb-6">
                   <p className="text-xs tracking-[0.2em] uppercase text-brand-gray mb-3">
                     Taille — <span className="text-brand-black">{selectedSize || 'Choisir'}</span>
                   </p>
                   <div className="flex gap-2 flex-wrap">
-                    {sizes.map(({ size: s, stock: sStock }) => (
+                    {sizes.map(({ size: s, stock: sStock, variantPrice: vp }) => (
                       <button
                         key={s}
                         onClick={() => { setSelectedSize(s); setQty(1); setAdded(false) }}
                         disabled={sStock === 0}
-                        className={`w-11 h-11 text-sm border-2 transition-all duration-200 relative ${
+                        className={`min-w-[44px] px-2 h-11 text-sm border-2 transition-all duration-200 ${
                           sStock === 0
                             ? 'border-brand-light-gray text-brand-gray/40 cursor-not-allowed line-through'
                             : selectedSize === s
@@ -245,13 +306,17 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                             : 'border-brand-light-gray text-brand-black hover:border-brand-black'
                         }`}
                       >
-                        {s}
+                        <span>{s}</span>
+                        {vp && vp !== product.price && (
+                          <span className="block text-[9px] leading-none opacity-60 mt-0.5">{format(vp)}</span>
+                        )}
                       </button>
                     ))}
                   </div>
                 </div>
               )}
 
+              {/* Quantity */}
               <div className="mb-7">
                 <p className="text-xs tracking-[0.2em] uppercase text-brand-gray mb-3">Quantité</p>
                 <div className="flex items-center border border-brand-light-gray w-fit">
@@ -261,6 +326,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                 </div>
               </div>
 
+              {/* CTA buttons */}
               {totalStock === 0 ? (
                 <button disabled className="w-full flex items-center justify-center gap-3 py-4 text-sm tracking-[0.2em] uppercase font-semibold bg-brand-light-gray text-brand-gray cursor-not-allowed">
                   <ShoppingBag size={18} /> Épuisé
@@ -276,42 +342,55 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                 </button>
               ) : (
                 <AnimatePresence mode="wait">
-                  <motion.div
-                    key="added-state"
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex flex-col gap-3"
-                  >
-                    <button
-                      onClick={handleGoToCheckout}
-                      className="w-full flex items-center justify-center gap-3 py-4 text-sm tracking-[0.2em] uppercase font-semibold bg-brand-gold text-brand-black hover:bg-brand-black hover:text-brand-white transition-all duration-300"
-                    >
-                      <ShoppingCart size={18} />
-                      Commander maintenant
+                  <motion.div key="added-state" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-3">
+                    <button onClick={handleGoToCheckout}
+                      className="w-full flex items-center justify-center gap-3 py-4 text-sm tracking-[0.2em] uppercase font-semibold bg-brand-gold text-brand-black hover:bg-brand-black hover:text-brand-white transition-all duration-300">
+                      <ShoppingCart size={18} /> Commander maintenant
                     </button>
-                    <button
-                      onClick={() => setAdded(false)}
-                      className="w-full flex items-center justify-center gap-3 py-3 text-xs tracking-[0.2em] uppercase border border-brand-light-gray text-brand-gray hover:border-brand-black hover:text-brand-black transition-all duration-300"
-                    >
-                      <ArrowRight size={14} />
-                      Continuer mes achats
+                    <button onClick={() => setAdded(false)}
+                      className="w-full flex items-center justify-center gap-3 py-3 text-xs tracking-[0.2em] uppercase border border-brand-light-gray text-brand-gray hover:border-brand-black hover:text-brand-black transition-all duration-300">
+                      <ArrowRight size={14} /> Continuer mes achats
                     </button>
                   </motion.div>
                 </AnimatePresence>
               )}
 
+              {/* Shipping estimate */}
+              <div className="mt-5 border border-brand-light-gray p-4">
+                {shippingLoading ? (
+                  <div className="flex items-center gap-2 text-xs text-brand-gray">
+                    <Truck size={14} className="animate-pulse" />
+                    <span>Estimating delivery to your location...</span>
+                  </div>
+                ) : shipping ? (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2 text-xs text-brand-black font-medium">
+                      <Truck size={14} />
+                      <span>{shipping.logisticNameEn || shipping.logisticName}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-brand-gray">
+                      <MapPin size={12} />
+                      <span>
+                        Delivers to <strong>{userCountry}</strong> in {shipping.agingMin}–{shipping.agingMax} days
+                        {shipping.logisticPrice > 0 && <> · ${shipping.logisticPrice.toFixed(2)} shipping</>}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <p className="text-xs text-brand-gray flex items-center gap-2"><Truck size={14} /> Livraison 7–15 jours ouvrés</p>
+                    <p className="text-xs text-brand-gray">✓ Paiement sécurisé</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Description */}
               {product.description && (
-                <div className="mt-8 pt-6 border-t border-brand-light-gray">
+                <div className="mt-6 pt-6 border-t border-brand-light-gray">
                   <p className="text-xs tracking-[0.2em] uppercase text-brand-gray mb-2">Description</p>
                   <p className="text-sm text-brand-gray leading-relaxed">{product.description}</p>
                 </div>
               )}
-
-              <div className="mt-5 bg-brand-light-gray p-4 space-y-1.5">
-                <p className="text-xs text-brand-gray">✓ Paiement à la livraison</p>
-                <p className="text-xs text-brand-gray">✓ Livraison 24-48h selon votre ville</p>
-                <p className="text-xs text-brand-gray">✓ Importé directement d&apos;Espagne</p>
-              </div>
             </motion.div>
           </div>
         </div>

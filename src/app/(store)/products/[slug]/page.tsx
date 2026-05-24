@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import { headers } from 'next/headers'
 import { connectDB } from '@/lib/db'
 import Product from '@/lib/models/Product'
 import ProductDetailClient from '@/components/store/ProductDetailClient'
@@ -24,9 +25,9 @@ export async function generateMetadata({ params }: Props) {
   }
 }
 
-function normalizeSizes(sizes: unknown[]): { size: string; stock: number }[] {
+function normalizeSizes(sizes: unknown[]): { size: string; stock: number; cjVid?: string; variantPrice?: number }[] {
   return sizes.map((s) =>
-    typeof s === 'string' ? { size: s, stock: 0 } : (s as { size: string; stock: number })
+    typeof s === 'string' ? { size: s, stock: 0 } : (s as { size: string; stock: number; cjVid?: string; variantPrice?: number })
   )
 }
 
@@ -37,5 +38,10 @@ export default async function ProductPage({ params }: Props) {
   const product = JSON.parse(JSON.stringify(raw))
   product.images = Array.isArray(product.images) ? product.images.filter(Boolean) : []
   product.sizes = Array.isArray(product.sizes) ? normalizeSizes(product.sizes) : []
-  return <ProductDetailClient product={product} />
+
+  // Detect customer country from Vercel headers
+  const hdrs = headers()
+  const detectedCountry = hdrs.get('x-vercel-ip-country') || undefined
+
+  return <ProductDetailClient product={product} detectedCountry={detectedCountry} />
 }
