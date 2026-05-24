@@ -13,6 +13,8 @@ export async function GET(req: NextRequest) {
   const endCountryCode = searchParams.get('endCountryCode') ?? 'US'
   const productWeight = Number(searchParams.get('weight') ?? 200)
   const quantity = Number(searchParams.get('quantity') ?? 1)
+  const vid = searchParams.get('vid') ?? undefined
+  const variantSku = searchParams.get('variantSku') ?? undefined
 
   try {
     const data = await getCJShippingInfo({
@@ -20,6 +22,8 @@ export async function GET(req: NextRequest) {
       endCountryCode,
       productWeight,
       quantity,
+      vid,
+      variantSku,
     })
     return NextResponse.json(data)
   } catch (err) {

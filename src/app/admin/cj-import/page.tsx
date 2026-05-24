@@ -114,9 +114,11 @@ export default function CJImportPage() {
     setShippingLoaded(false)
     setShippingOptions([])
     try {
-      const weight = product.productWeight ?? (product.variants?.[0]?.variantWeight ?? 200)
+      const firstVariant = product.variants?.[0]
+      const weight = product.productWeight ?? (firstVariant?.variantWeight ?? 200)
+      const vidParam = firstVariant?.vid ? `&vid=${encodeURIComponent(firstVariant.vid)}` : ''
       const res = await fetch(
-        `/api/cj/shipping?endCountryCode=${country}&weight=${weight}&quantity=1`,
+        `/api/cj/shipping?endCountryCode=${country}&weight=${weight}&quantity=1${vidParam}`,
         { credentials: 'include' }
       )
       const data = await res.json()

@@ -87,13 +87,20 @@ export async function getCJShippingInfo(params: {
   endCountryCode: string
   productWeight: number
   quantity: number
+  vid?: string
+  variantSku?: string
 }) {
   const data = await cjFetch('/logistic/freightCalculate', {
     method: 'POST',
     body: JSON.stringify({
       startCountryCode: params.startCountryCode,
       endCountryCode: params.endCountryCode,
-      products: [{ quantity: params.quantity, weight: params.productWeight }],
+      products: [{
+        quantity: params.quantity,
+        weight: params.productWeight,
+        ...(params.vid ? { vid: params.vid } : {}),
+        ...(params.variantSku ? { variantSku: params.variantSku } : {}),
+      }],
     }),
   })
   return data
