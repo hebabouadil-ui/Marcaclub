@@ -38,15 +38,18 @@ export async function POST(req: NextRequest) {
     if (order && !order.cjOrderId) {
       try {
         const cjProducts: { vid: string; quantity: number }[] = []
+        let cjLogisticName: string | undefined
         for (const item of order.items) {
           const product = await Product.findById(item.productId).lean() as {
             cjPid?: string
+            cjLogisticName?: string
             sizes?: Array<{ size: string; cjVid?: string }>
           } | null
           if (!product?.cjPid) continue
           const sizeEntry = product.sizes?.find((s) => s.size === item.size)
           if (!sizeEntry?.cjVid) continue
           cjProducts.push({ vid: sizeEntry.cjVid, quantity: item.quantity })
+          if (product.cjLogisticName && !cjLogisticName) cjLogisticName = product.cjLogisticName
         }
 
         if (cjProducts.length > 0) {
@@ -68,6 +71,7 @@ export async function POST(req: NextRequest) {
               zip: order.customer.postalCode ?? '',
             },
             products: cjProducts,
+            logisticName: cjLogisticName,
           })
 
           if (cjRes.result && cjRes.data?.orderId) {

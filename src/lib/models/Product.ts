@@ -14,6 +14,7 @@ export interface IProduct extends Document {
   featured: boolean
   active: boolean
   cjPid?: string
+  cjLogisticName?: string
   cjData?: Record<string, unknown>
   createdAt: Date
   updatedAt: Date
@@ -34,6 +35,7 @@ const ProductSchema = new Schema<IProduct>(
     featured: { type: Boolean, default: false },
     active: { type: Boolean, default: true },
     cjPid: { type: String },
+    cjLogisticName: { type: String },
     cjData: { type: Schema.Types.Mixed },
   },
   { timestamps: true }
