@@ -42,7 +42,7 @@ export default function ProductCard({ product }: Props) {
     >
       {/* Image */}
       <Link href={`/products/${product.slug}`}>
-        <div className="relative w-full overflow-hidden bg-brand-light-gray" style={{ paddingBottom: '133%' }}>
+        <div className="relative w-full overflow-hidden bg-white" style={{ paddingBottom: '100%' }}>
           {img0 ? (
             <>
               <Image
@@ -50,7 +50,7 @@ export default function ProductCard({ product }: Props) {
                 alt={product.name}
                 fill
                 unoptimized={unopt0}
-                className={`object-cover object-top transition-all duration-500 ${hovered && img1 ? 'opacity-0' : 'opacity-100'}`}
+                className={`object-contain transition-all duration-500 ${hovered && img1 ? 'opacity-0' : 'opacity-100'}`}
                 sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
               />
               {img1 && (
@@ -59,7 +59,7 @@ export default function ProductCard({ product }: Props) {
                   alt={product.name}
                   fill
                   unoptimized={unopt1}
-                  className={`object-cover object-top transition-all duration-500 ${hovered ? 'opacity-100 scale-105' : 'opacity-0 scale-100'}`}
+                  className={`object-contain transition-all duration-500 ${hovered ? 'opacity-100 scale-105' : 'opacity-0 scale-100'}`}
                   sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                 />
               )}
@@ -113,13 +113,6 @@ export default function ProductCard({ product }: Props) {
           {product.originalPrice && (
             <span className="text-brand-gray text-xs line-through">{format(product.originalPrice)}</span>
           )}
-        </div>
-        <div className="flex gap-1 mt-2 flex-wrap">
-          {product.sizes.filter(s => s.stock > 0).slice(0, 4).map(({ size: s }) => (
-            <span key={s} className="text-[9px] tracking-wider border border-brand-light-gray text-brand-gray px-1.5 py-0.5 uppercase">
-              {s}
-            </span>
-          ))}
         </div>
       </div>
     </div>
