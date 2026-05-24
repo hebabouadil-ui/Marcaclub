@@ -17,7 +17,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { pid, name, description, price, category, selectedVariants, cjLogisticName } = body
+    const { pid, name, description, price, category, selectedVariants, cjLogisticName, variantPrices } = body
+    const variantPricesMap: Record<string, number> | undefined = variantPrices
 
     if (!pid || !name || !price || !category) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -38,14 +39,22 @@ export async function POST(req: NextRequest) {
       : cjProduct.variants ?? []
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sizes = variants.map((v: any) => ({
-      size: v.variantNameEn || v.variantName || v.variantKey || v.variantProperty || 'One Size',
-      stock: v.variantStock ?? v.variantInventory ?? v.stock ?? 100,
-      cjVid: v.vid ?? v.variantId ?? '',
-      variantPrice: v.variantSellPrice ?? v.variantPrice ?? v.sellPrice ?? undefined,
-    }))
+    const sizes = variants.map((v: any) => {
+      const vid = v.vid ?? v.variantId ?? ''
+      const adminPrice = variantPricesMap?.[vid]
+      return {
+        size: v.variantNameEn || v.variantName || v.variantKey || v.variantProperty || 'One Size',
+        stock: v.variantStock ?? v.variantInventory ?? v.stock ?? 100,
+        cjVid: vid,
+        variantPrice: adminPrice != null ? adminPrice : (v.variantSellPrice ?? v.variantPrice ?? v.sellPrice ?? undefined),
+      }
+    })
 
     const totalStock = sizes.reduce((sum: number, s: { stock: number }) => sum + s.stock, 0)
+
+    const productPrice = variantPricesMap
+      ? Math.min(...sizes.map((s: { variantPrice?: number }) => s.variantPrice ?? Number(price)))
+      : Number(price)
 
     // Use CJ images — handle both productImageSet (objects) and imageList (strings)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -78,7 +87,7 @@ export async function POST(req: NextRequest) {
       name,
       slug: slugify(name),
       description: description || cjProduct.productNameEn,
-      price: Number(price),
+      price: productPrice,
       originalPrice: undefined,
       images,
       originalImages: images,

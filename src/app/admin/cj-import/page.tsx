@@ -132,6 +132,8 @@ interface ImportForm {
   category: string
   selectedVariants: string[]
   cjLogisticName: string
+  markupX: string
+  variantPrices: Record<string, string>
 }
 
 const COUNTRIES = [
@@ -168,7 +170,7 @@ export default function CJImportPage() {
   const [activeImg, setActiveImg] = useState(0)
   const [form, setForm] = useState<ImportForm>({
     name: '', description: '', price: '', category: 'clothing',
-    selectedVariants: [], cjLogisticName: '',
+    selectedVariants: [], cjLogisticName: '', markupX: '3', variantPrices: {},
   })
   const [importing, setImporting] = useState(false)
   const [imported, setImported] = useState<Set<string>>(new Set())
@@ -239,14 +241,23 @@ export default function CJImportPage() {
       const data = await res.json()
       const detail: CJProduct = normalizeProduct(data.data ?? product)
       setPreview(detail)
-      const variantPrice = detail.variants?.[0]?.variantPrice ?? detail.sellingPrice ?? 0
+      const markup = 3
+      const vPrices: Record<string, string> = {}
+      for (const v of detail.variants ?? []) {
+        vPrices[v.vid] = String(Math.ceil(v.variantPrice * markup))
+      }
+      const minPrice = Object.values(vPrices).length > 0
+        ? String(Math.min(...Object.values(vPrices).map(Number)))
+        : ''
       setForm({
         name: detail.productNameEn ?? product.productNameEn,
         description: detail.description ? stripHtml(detail.description) : '',
-        price: variantPrice ? String(Math.ceil(variantPrice * 3)) : '',
+        price: minPrice,
         category: 'clothing',
         selectedVariants: (detail.variants ?? []).map((v) => v.vid),
         cjLogisticName: '',
+        markupX: String(markup),
+        variantPrices: vPrices,
       })
       fetchShipping(detail, shippingCountry)
     } catch {
@@ -285,6 +296,7 @@ export default function CJImportPage() {
           category: form.category,
           selectedVariants: form.selectedVariants,
           cjLogisticName: form.cjLogisticName || undefined,
+          variantPrices: form.variantPrices,
         }),
       })
       const data = await res.json()
@@ -321,11 +333,23 @@ export default function CJImportPage() {
   })()
 
   const selectedShipping = shippingOptions.find((o) => o.logisticName === form.cjLogisticName)
-  const totalCjCost = cjCost + (selectedShipping?.logisticPrice ?? 0)
-  const margin = form.price ? Number(form.price) - totalCjCost : null
+  const margin = form.price ? Number(form.price) - cjCost : null
 
   const selectedVariantObjs = (preview?.variants ?? []).filter((v) => form.selectedVariants.includes(v.vid))
   const totalStock = selectedVariantObjs.reduce((s, v) => s + (v.variantStock ?? 0), 0)
+
+  // Per-variant cost/margin calculations
+  const MAD_PER_USD = 10.05
+  const selectedCjCosts = selectedVariantObjs.map((v) => v.variantPrice)
+  const minCjCost = selectedCjCosts.length > 0 ? Math.min(...selectedCjCosts) : cjCost
+  const maxCjCost = selectedCjCosts.length > 0 ? Math.max(...selectedCjCosts) : cjCost
+  const avgMarginMAD = selectedVariantObjs.length > 0
+    ? selectedVariantObjs.reduce((sum, v) => {
+        const sell = Number(form.variantPrices[v.vid] || 0)
+        const cost = v.variantPrice * MAD_PER_USD
+        return sum + (sell - cost)
+      }, 0) / selectedVariantObjs.length
+    : null
 
   return (
     <div className="p-6 max-w-6xl">
@@ -565,19 +589,17 @@ export default function CJImportPage() {
                 {/* Cost breakdown */}
                 <div className="bg-white/3 border border-white/8 px-4 py-3 text-xs space-y-1.5">
                   <div className="flex justify-between text-white/50">
-                    <span>CJ product cost</span><span>${cjCost.toFixed(2)}</span>
+                    <span>CJ cost (range)</span>
+                    <span>${minCjCost.toFixed(2)}{maxCjCost !== minCjCost ? `–$${maxCjCost.toFixed(2)}` : ''}</span>
                   </div>
                   <div className="flex justify-between text-white/50">
                     <span>Shipping</span>
                     <span>{selectedShipping ? `$${(selectedShipping.logisticPrice ?? 0).toFixed(2)}` : '—'}</span>
                   </div>
-                  <div className="flex justify-between border-t border-white/10 pt-1.5 text-white font-semibold">
-                    <span>Total CJ cost</span><span>${totalCjCost.toFixed(2)}</span>
-                  </div>
-                  {margin !== null && (
-                    <div className={`flex justify-between font-bold ${margin > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      <span>Your margin</span>
-                      <span>${margin.toFixed(2)} ({form.price ? Math.round((margin / Number(form.price)) * 100) : 0}%)</span>
+                  {avgMarginMAD !== null && (
+                    <div className={`flex justify-between border-t border-white/10 pt-1.5 font-bold ${avgMarginMAD > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      <span>Avg margin</span>
+                      <span>{avgMarginMAD.toFixed(0)} MAD</span>
                     </div>
                   )}
                 </div>
@@ -598,13 +620,29 @@ export default function CJImportPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-white/40 text-[10px] tracking-widest mb-1.5">SELLING PRICE (MAD) *</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm">$</span>
-                      <input value={form.price} onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))}
-                        type="number" step="0.01" min="0"
-                        className="w-full bg-white/5 border border-white/10 text-white text-sm pl-7 pr-4 py-2.5 focus:outline-none focus:border-brand-gold/50" />
-                    </div>
+                    <label className="block text-white/40 text-[10px] tracking-widest mb-1.5">MARKUP MULTIPLIER</label>
+                    <input
+                      value={form.markupX}
+                      onChange={(e) => {
+                        const markupX = e.target.value
+                        const mul = parseFloat(markupX)
+                        if (!isNaN(mul) && mul >= 1 && preview) {
+                          const newVP: Record<string, string> = {}
+                          for (const v of preview.variants ?? []) {
+                            newVP[v.vid] = String(Math.ceil(v.variantPrice * mul))
+                          }
+                          const selectedPrices = form.selectedVariants
+                            .map((vid) => Number(newVP[vid] || 0))
+                            .filter((n) => n > 0)
+                          const minP = selectedPrices.length > 0 ? String(Math.min(...selectedPrices)) : ''
+                          setForm((p) => ({ ...p, markupX, variantPrices: newVP, price: minP }))
+                        } else {
+                          setForm((p) => ({ ...p, markupX }))
+                        }
+                      }}
+                      type="number" step="0.1" min="1"
+                      className="w-full bg-white/5 border border-white/10 text-white text-sm px-4 py-2.5 focus:outline-none focus:border-brand-gold/50"
+                    />
                   </div>
                   <div>
                     <label className="block text-white/40 text-[10px] tracking-widest mb-1.5">CATEGORY *</label>
@@ -620,7 +658,7 @@ export default function CJImportPage() {
                   </div>
                 </div>
 
-                {/* Variant selection */}
+                {/* Variant pricing table */}
                 {(preview.variants?.length ?? 0) > 0 && (
                   <div>
                     <div className="flex items-center justify-between mb-2">
@@ -628,28 +666,67 @@ export default function CJImportPage() {
                         VARIANTS ({form.selectedVariants.length}/{preview.variants!.length} · {totalStock} units)
                       </label>
                       <div className="flex gap-2">
-                        <button onClick={() => setForm((p) => ({ ...p, selectedVariants: (preview.variants ?? []).map((v) => v.vid) }))}
-                          className="text-[10px] text-white/30 hover:text-white transition-colors">All</button>
-                        <button onClick={() => setForm((p) => ({ ...p, selectedVariants: [] }))}
+                        <button onClick={() => {
+                          const allVids = (preview.variants ?? []).map((v) => v.vid)
+                          const prices = allVids.map((vid) => Number(form.variantPrices[vid] || 0)).filter((n) => n > 0)
+                          const minP = prices.length > 0 ? String(Math.min(...prices)) : form.price
+                          setForm((p) => ({ ...p, selectedVariants: allVids, price: minP }))
+                        }} className="text-[10px] text-white/30 hover:text-white transition-colors">All</button>
+                        <button onClick={() => setForm((p) => ({ ...p, selectedVariants: [], price: '' }))}
                           className="text-[10px] text-white/30 hover:text-white transition-colors">None</button>
-                        <button onClick={() => setForm((p) => ({ ...p, selectedVariants: (preview.variants ?? []).filter((v) => v.variantStock > 0).map((v) => v.vid) }))}
-                          className="text-[10px] text-white/30 hover:text-white transition-colors">In stock</button>
+                        <button onClick={() => {
+                          const inStockVids = (preview.variants ?? []).filter((v) => v.variantStock > 0).map((v) => v.vid)
+                          const prices = inStockVids.map((vid) => Number(form.variantPrices[vid] || 0)).filter((n) => n > 0)
+                          const minP = prices.length > 0 ? String(Math.min(...prices)) : form.price
+                          setForm((p) => ({ ...p, selectedVariants: inStockVids, price: minP }))
+                        }} className="text-[10px] text-white/30 hover:text-white transition-colors">In stock</button>
                       </div>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      {(preview.variants ?? []).map((v) => (
-                        <button key={v.vid} onClick={() => toggleVariant(v.vid)}
-                          className={`text-xs px-3 py-1.5 border transition-colors ${
-                            form.selectedVariants.includes(v.vid)
-                              ? 'border-brand-gold text-brand-gold bg-brand-gold/10'
-                              : v.variantStock === 0
-                              ? 'border-white/5 text-white/20'
-                              : 'border-white/10 text-white/40 hover:border-white/30'
-                          }`}>
-                          {v.variantNameEn}
-                          {v.variantStock === 0 && <span className="ml-1 text-red-400/50">OOS</span>}
-                        </button>
-                      ))}
+                    <div className="border border-white/10 overflow-hidden">
+                      <div className="grid grid-cols-[20px_1fr_56px_80px_52px_44px] text-[9px] text-white/30 px-2 py-1.5 border-b border-white/10 bg-white/3 gap-1.5">
+                        <span></span><span>Name</span><span>CJ $</span><span>Sell MAD</span><span>Margin</span><span>%</span>
+                      </div>
+                      <div className="max-h-56 overflow-y-auto">
+                        {(preview.variants ?? []).map((v) => {
+                          const selected = form.selectedVariants.includes(v.vid)
+                          const autoPrice = String(Math.ceil(v.variantPrice * parseFloat(form.markupX || '3')))
+                          const sellStr = form.variantPrices[v.vid] ?? autoPrice
+                          const sellMAD = Number(sellStr || 0)
+                          const costMAD = v.variantPrice * MAD_PER_USD
+                          const marginMAD = sellMAD - costMAD
+                          const marginPct = sellMAD > 0 ? Math.round((marginMAD / sellMAD) * 100) : 0
+                          const isModified = sellStr !== autoPrice
+                          const pctColor = marginPct < 30 ? 'text-red-400' : marginPct <= 50 ? 'text-yellow-400' : 'text-green-400'
+                          return (
+                            <div key={v.vid} className={`grid grid-cols-[20px_1fr_56px_80px_52px_44px] items-center px-2 py-1.5 border-b border-white/5 gap-1.5 ${selected ? '' : 'opacity-40'}`}>
+                              <input type="checkbox" checked={selected} onChange={() => {
+                                const newSel = selected
+                                  ? form.selectedVariants.filter((id) => id !== v.vid)
+                                  : [...form.selectedVariants, v.vid]
+                                const prices = newSel.map((vid) => Number(form.variantPrices[vid] || 0)).filter((n) => n > 0)
+                                const minP = prices.length > 0 ? String(Math.min(...prices)) : ''
+                                setForm((p) => ({ ...p, selectedVariants: newSel, price: minP }))
+                              }} className="accent-brand-gold w-3.5 h-3.5" />
+                              <span className="text-white text-[10px] truncate">{v.variantNameEn || 'One Size'}</span>
+                              <span className="text-brand-gold text-[10px]">${v.variantPrice.toFixed(2)}</span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={sellStr}
+                                onChange={(e) => {
+                                  const newVP = { ...form.variantPrices, [v.vid]: e.target.value }
+                                  const selectedPrices = form.selectedVariants.map((vid) => Number(newVP[vid] || 0)).filter((n) => n > 0)
+                                  const minP = selectedPrices.length > 0 ? String(Math.min(...selectedPrices)) : form.price
+                                  setForm((p) => ({ ...p, variantPrices: newVP, price: minP }))
+                                }}
+                                className={`w-full bg-white/5 border text-[10px] px-1.5 py-1 focus:outline-none focus:border-brand-gold/50 ${isModified ? 'border-brand-gold/60 text-brand-gold' : 'border-white/10 text-white'}`}
+                              />
+                              <span className={`text-[10px] ${marginMAD >= 0 ? 'text-white/60' : 'text-red-400'}`}>{marginMAD.toFixed(0)}</span>
+                              <span className={`text-[10px] font-bold ${pctColor}`}>{marginPct}%</span>
+                            </div>
+                          )
+                        })}
+                      </div>
                     </div>
                   </div>
                 )}
