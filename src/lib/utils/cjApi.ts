@@ -4,30 +4,18 @@ let cachedToken: string | null = null
 let tokenExpiry = 0
 
 export async function getCJToken(): Promise<string> {
-  // Direct API key (Google-login accounts) — use as token without auth call
-  const directKey = process.env.CJ_API_KEY
-  if (directKey) {
-    // Format may be "CJ1234567@api@<hextoken>" — extract the token part
-    const parts = directKey.split('@api@')
-    return parts.length > 1 ? parts[1] : directKey
-  }
-
   if (cachedToken && Date.now() < tokenExpiry) return cachedToken
 
   const res = await fetch(`${CJ_BASE}/authentication/getAccessToken`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      email: process.env.CJ_API_EMAIL,
-      password: process.env.CJ_API_KEY,
-    }),
+    body: JSON.stringify({ apiKey: process.env.CJ_API_KEY }),
   })
   const data = await res.json()
   if (!data.result || !data.data?.accessToken) {
     throw new Error(`CJ auth failed: ${JSON.stringify(data)}`)
   }
   cachedToken = data.data.accessToken
-  // Token valid for ~24h, refresh 30min early
   tokenExpiry = Date.now() + (data.data.accessTokenExpiryDate
     ? new Date(data.data.accessTokenExpiryDate).getTime() - Date.now() - 30 * 60 * 1000
     : 23 * 60 * 60 * 1000)
