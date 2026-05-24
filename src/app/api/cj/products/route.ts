@@ -26,7 +26,8 @@ export async function GET(req: NextRequest) {
     })
     return NextResponse.json(data)
   } catch (err) {
-    console.error('CJ products error:', err)
-    return NextResponse.json({ error: 'CJ API error' }, { status: 500 })
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('CJ products error:', msg)
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
