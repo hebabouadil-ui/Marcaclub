@@ -83,7 +83,16 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
         if (vid) params.set('vid', vid)
         const res = await fetch(`/api/shipping?${params}`)
         const data = await res.json()
-        const options: ShippingOption[] = data.options ?? []
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const options: ShippingOption[] = (data.options ?? []).map((opt: any) => {
+          let agingMin = opt.agingMin ?? opt.ageMin ?? 0
+          let agingMax = opt.agingMax ?? opt.ageMax ?? 0
+          if (!agingMin || !agingMax) {
+            const s = opt.logisticAge ?? opt.aging ?? opt.deliveryTime ?? ''
+            if (s) { const p = String(s).split('-'); agingMin = parseInt(p[0]) || 0; agingMax = parseInt(p[1] ?? p[0]) || 0 }
+          }
+          return { ...opt, agingMin, agingMax }
+        })
         if (options.length === 0) return
 
         // Prefer the stored logistic name, else fastest affordable option

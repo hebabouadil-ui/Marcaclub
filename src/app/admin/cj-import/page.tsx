@@ -42,27 +42,25 @@ interface ShippingOption {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function normalizeVariant(v: any): CJVariant {
   return {
-    vid: v.vid ?? v.variantId ?? '',
+    vid: v.vid ?? v.variantId ?? v.id ?? '',
     variantSku: v.variantSku ?? v.sku ?? '',
-    // name: try multiple fields
-    variantNameEn: v.variantNameEn || v.variantName || v.variantKey || v.variantProperty || '',
-    // price: CJ uses variantSellPrice (their cost to us), variantPrice may be 0
-    variantPrice: v.variantSellPrice ?? v.variantPrice ?? v.sellPrice ?? v.price ?? 0,
-    // stock: variantStock or variantInventory
-    variantStock: v.variantStock ?? v.variantInventory ?? v.stock ?? 0,
-    variantWeight: v.variantWeight ?? v.weight ?? 0,
-    variantImage: v.variantImage ?? v.variantPicture ?? v.image ?? undefined,
+    variantNameEn: v.variantNameEn || v.variantName || v.variantKey || v.variantProperty || v.propertyValueEn || v.propertyValue || '',
+    variantPrice: v.variantSellPrice ?? v.variantPrice ?? v.sellPrice ?? v.price ?? v.costPrice ?? 0,
+    variantStock: v.variantStock ?? v.variantInventory ?? v.inventory ?? v.stock ?? v.inventoryCount ?? v.availableInventory ?? 100,
+    variantWeight: v.variantWeight ?? v.weight ?? v.productWeight ?? 0,
+    variantImage: v.variantImage ?? v.variantPicture ?? v.image ?? v.imageUrl ?? undefined,
     variantKey: v.variantKey ?? undefined,
   }
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function normalizeProduct(raw: any): CJProduct {
-  const variants = Array.isArray(raw.variants)
-    ? raw.variants.map(normalizeVariant)
-    : Array.isArray(raw.variantList)
-    ? raw.variantList.map(normalizeVariant)
-    : []
+  const variantSource =
+    (Array.isArray(raw.variants) && raw.variants.length > 0) ? raw.variants :
+    (Array.isArray(raw.variantList) && raw.variantList.length > 0) ? raw.variantList :
+    (Array.isArray(raw.productVariants) && raw.productVariants.length > 0) ? raw.productVariants :
+    (Array.isArray(raw.skuList) && raw.skuList.length > 0) ? raw.skuList : []
+  const variants = variantSource.map(normalizeVariant)
   return {
     pid: raw.pid ?? raw.productId ?? '',
     productNameEn: raw.productNameEn ?? raw.productName ?? '',
@@ -85,13 +83,16 @@ function normalizeProduct(raw: any): CJProduct {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function normalizeShipping(opt: any): ShippingOption {
-  // Parse aging from various formats: number fields or "7-15" string
   let agingMin = opt.agingMin ?? opt.ageMin ?? 0
   let agingMax = opt.agingMax ?? opt.ageMax ?? 0
-  if ((!agingMin || !agingMax) && opt.aging) {
-    const parts = String(opt.aging).split('-')
-    agingMin = parseInt(parts[0]) || 0
-    agingMax = parseInt(parts[1] ?? parts[0]) || 0
+  if (!agingMin || !agingMax) {
+    // CJ v2 uses "logisticAge" like "7-20", fallback to other string fields
+    const agingStr = opt.logisticAge ?? opt.aging ?? opt.deliveryTime ?? opt.shippingTime ?? ''
+    if (agingStr) {
+      const parts = String(agingStr).split('-')
+      agingMin = parseInt(parts[0]) || 0
+      agingMax = parseInt(parts[1] ?? parts[0]) || 0
+    }
   }
   return {
     logisticName: opt.logisticName ?? '',
