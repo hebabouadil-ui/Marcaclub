@@ -55,7 +55,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
   const [added, setAdded] = useState(false)
   const addItem = useCartStore((s) => s.addItem)
   const router = useRouter()
-  const { format, formatUSD } = useCurrency()
+  const { format } = useCurrency()
   const { tr } = useLanguage()
 
   const [shipping, setShipping] = useState<ShippingOption | null>(null)
@@ -364,30 +364,33 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                 </AnimatePresence>
               )}
 
-              {/* Shipping estimate */}
+              {/* Shipping estimate — shipping cost is baked into the product price, shown as free */}
               <div className="mt-5 border border-brand-light-gray p-4">
                 {shippingLoading ? (
                   <div className="flex items-center gap-2 text-xs text-brand-gray">
                     <Truck size={14} className="animate-pulse" />
-                    <span>Estimating delivery to your location...</span>
+                    <span>Calcul de la livraison...</span>
                   </div>
                 ) : shipping ? (
                   <div className="space-y-1.5">
-                    <div className="flex items-center gap-2 text-xs text-brand-black font-medium">
-                      <Truck size={14} />
-                      <span>{shipping.logisticNameEn || shipping.logisticName}</span>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs text-brand-black font-medium">
+                        <Truck size={14} />
+                        <span>Livraison gratuite</span>
+                      </div>
+                      <span className="text-[10px] bg-green-600 text-white px-2 py-0.5 font-semibold tracking-wide">GRATUIT</span>
                     </div>
                     <div className="flex items-center gap-2 text-xs text-brand-gray">
                       <MapPin size={12} />
                       <span>
-                        Delivers to <strong>{userCountry}</strong> in {shipping.agingMin}–{shipping.agingMax} days
-                        {shipping.logisticPrice > 0 && <> · {formatUSD(shipping.logisticPrice)} shipping</>}
+                        Livraison vers <strong>{userCountry}</strong> en {shipping.agingMin > 0 ? `${shipping.agingMin}–${shipping.agingMax}` : '7–20'} jours
                       </span>
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-1">
-                    <p className="text-xs text-brand-gray flex items-center gap-2"><Truck size={14} /> Livraison 7–15 jours ouvrés</p>
+                    <p className="text-xs text-brand-black font-medium flex items-center gap-2"><Truck size={14} /> Livraison gratuite</p>
+                    <p className="text-xs text-brand-gray flex items-center gap-2">Délai estimé : 7–15 jours ouvrés</p>
                     <p className="text-xs text-brand-gray">✓ Paiement sécurisé</p>
                   </div>
                 )}
