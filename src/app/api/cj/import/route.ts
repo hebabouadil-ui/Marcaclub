@@ -50,14 +50,25 @@ export async function POST(req: NextRequest) {
     // Use CJ images — handle both productImageSet (objects) and imageList (strings)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rawProduct = cjProduct as any
-    const extraImages = rawProduct.productImageSet?.map((img: { imageUrl: string }) => img.imageUrl)
-      ?? rawProduct.imageList ?? rawProduct.productImages ?? []
+
+    // productImage can be a JSON-encoded string array — parse it
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const parseImg = (val: any): string[] => {
+      if (!val) return []
+      if (typeof val === 'string' && val.startsWith('[')) {
+        try { return JSON.parse(val).filter(Boolean) } catch { return [val] }
+      }
+      if (Array.isArray(val)) return val.map((v: unknown) => typeof v === 'string' ? v : (v as {imageUrl:string}).imageUrl).filter(Boolean)
+      return typeof val === 'string' ? [val] : []
+    }
+
+    const mainImages = parseImg(rawProduct.productImage)
+    const setImages = parseImg(rawProduct.productImageSet ?? rawProduct.imageList ?? rawProduct.productImages)
     const variantImages = variants
       .map((v: any) => v.variantImage ?? v.variantPicture ?? v.image)
       .filter(Boolean)
-    const allImgs = [cjProduct.productImage, ...extraImages, ...variantImages]
     const seen = new Set<string>()
-    const images = allImgs.filter((u: string) => {
+    const images = [...mainImages, ...setImages, ...variantImages].filter((u: string) => {
       if (!u || !u.startsWith('http') || seen.has(u)) return false
       seen.add(u)
       return true

@@ -53,6 +53,28 @@ function normalizeVariant(v: any): CJVariant {
   }
 }
 
+// Parse productImage which CJ sometimes returns as a JSON-encoded string array
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function parseImageField(val: any): string {
+  if (!val) return ''
+  if (typeof val === 'string' && val.startsWith('[')) {
+    try { const arr = JSON.parse(val); return Array.isArray(arr) ? arr[0] ?? '' : val } catch { return val }
+  }
+  return typeof val === 'string' ? val : ''
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function parseImageSetField(val: any): Array<{ imageUrl: string }> {
+  // Handle JSON-encoded string array
+  if (typeof val === 'string' && val.startsWith('[')) {
+    try { val = JSON.parse(val) } catch { return [] }
+  }
+  if (!Array.isArray(val)) return []
+  return val.map((item: unknown) =>
+    typeof item === 'string' ? { imageUrl: item } : (item as { imageUrl: string })
+  ).filter((item) => item.imageUrl)
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function normalizeProduct(raw: any): CJProduct {
   const variantSource =
@@ -64,20 +86,14 @@ function normalizeProduct(raw: any): CJProduct {
   return {
     pid: raw.pid ?? raw.productId ?? '',
     productNameEn: raw.productNameEn ?? raw.productName ?? '',
-    productImage: raw.productImage ?? raw.mainImage ?? raw.productMainImage ?? '',
+    productImage: parseImageField(raw.productImage ?? raw.mainImage ?? raw.productMainImage),
     // CJ sellingPrice is the suggested retail, productCostPrice is our actual cost
     sellingPrice: raw.productCostPrice ?? raw.sellingPrice ?? raw.costPrice ?? 0,
     categoryName: raw.categoryName ?? '',
     productWeight: raw.productWeight ?? raw.weight ?? undefined,
     description: raw.description ?? raw.productDescription ?? undefined,
     variants,
-    productImageSet: Array.isArray(raw.productImageSet)
-      ? raw.productImageSet
-      : Array.isArray(raw.imageList)
-      ? raw.imageList.map((url: string) => ({ imageUrl: url }))
-      : Array.isArray(raw.productImages)
-      ? raw.productImages.map((url: string) => ({ imageUrl: url }))
-      : [],
+    productImageSet: parseImageSetField(raw.productImageSet ?? raw.imageList ?? raw.productImages),
   }
 }
 
