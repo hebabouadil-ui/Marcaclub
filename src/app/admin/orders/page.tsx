@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
-import { ChevronDown, Search, Clock } from 'lucide-react'
+import { ChevronDown, Search, Clock, Package, Truck, RefreshCw, ExternalLink } from 'lucide-react'
 
 const STATUSES = ['all', 'pending', 'confirmed', 'shipped', 'delivered', 'cancelled']
 const STATUS_LABELS: Record<string, string> = {
@@ -19,11 +19,20 @@ const statusColors: Record<string, string> = {
 interface Order {
   _id: string
   orderNumber: string
-  customer: { name: string; phone: string; city: string; address: string; email?: string }
+  customer: { name: string; phone: string; city: string; address: string; state?: string; country: string; postalCode?: string; email?: string }
   items: Array<{ name: string; quantity: number; size: string; price: number }>
   total: number
   status: string
   createdAt: string
+  cjOrderId?: string
+  cjTrackingNumber?: string
+}
+
+interface CJTracking {
+  cjOrderId: string
+  trackingNumber: string | null
+  cjStatus: string | null
+  trackingUrl: string | null
 }
 
 export default function AdminOrdersPage() {
@@ -33,6 +42,8 @@ export default function AdminOrdersPage() {
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [fulfilling, setFulfilling] = useState<string | null>(null)
+  const [tracking, setTracking] = useState<Record<string, CJTracking>>({})
 
   useEffect(() => {
     fetch('/api/orders', { credentials: 'include' })
@@ -68,6 +79,45 @@ export default function AdminOrdersPage() {
       toast.success('Status updated')
     } else {
       toast.error('Error')
+    }
+  }
+
+  const fulfillWithCJ = async (order: Order) => {
+    setFulfilling(order._id)
+    try {
+      const res = await fetch('/api/cj/fulfill', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: order._id }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        toast.success(`CJ order created: ${data.cjOrderId}`)
+        setOrders((prev) => prev.map((o) => o._id === order._id ? { ...o, cjOrderId: data.cjOrderId } : o))
+      } else {
+        toast.error(data.error || 'CJ fulfillment failed', { duration: 8000 })
+      }
+    } catch {
+      toast.error('Network error')
+    } finally {
+      setFulfilling(null)
+    }
+  }
+
+  const syncTracking = async (orderId: string) => {
+    try {
+      const res = await fetch(`/api/cj/tracking?orderId=${orderId}`, { credentials: 'include' })
+      const data = await res.json()
+      if (res.ok) {
+        setTracking((prev) => ({ ...prev, [orderId]: data }))
+        if (data.trackingNumber) toast.success(`Tracking: ${data.trackingNumber}`)
+        else toast('No tracking number yet — check back later')
+      } else {
+        toast.error(data.error || 'Could not fetch tracking')
+      }
+    } catch {
+      toast.error('Network error')
     }
   }
 
@@ -179,6 +229,55 @@ export default function AdminOrdersPage() {
                         </button>
                       ))}
                     </div>
+                  </div>
+
+                  {/* CJ Fulfillment */}
+                  <div className="mt-4 pt-4 border-t border-white/5">
+                    <p className="text-white/40 text-xs uppercase tracking-widest mb-3">CJ Dropshipping</p>
+                    {order.cjOrderId ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-xs">
+                          <Package size={12} className="text-green-400" />
+                          <span className="text-green-400 font-semibold">Fulfilled</span>
+                          <span className="text-white/40">· CJ Order: {order.cjOrderId}</span>
+                        </div>
+                        {tracking[order._id] ? (
+                          <div className="flex items-center gap-2 text-xs">
+                            <Truck size={12} className="text-blue-400" />
+                            {tracking[order._id].trackingNumber ? (
+                              <>
+                                <span className="text-white/70">{tracking[order._id].trackingNumber}</span>
+                                {tracking[order._id].cjStatus && <span className="text-white/40">· {tracking[order._id].cjStatus}</span>}
+                                {tracking[order._id].trackingUrl && (
+                                  <a href={tracking[order._id].trackingUrl!} target="_blank" rel="noopener noreferrer"
+                                    className="text-brand-gold hover:underline flex items-center gap-0.5">
+                                    Track <ExternalLink size={10} />
+                                  </a>
+                                )}
+                              </>
+                            ) : (
+                              <span className="text-white/40">No tracking yet · Status: {tracking[order._id].cjStatus ?? '—'}</span>
+                            )}
+                          </div>
+                        ) : null}
+                        <button onClick={() => syncTracking(order._id)}
+                          className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white/60 hover:text-white text-xs px-3 py-1.5 transition-colors">
+                          <RefreshCw size={11} /> Sync Tracking
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => fulfillWithCJ(order)}
+                        disabled={fulfilling === order._id || order.status === 'cancelled'}
+                        className="flex items-center gap-2 bg-brand-gold hover:bg-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed text-brand-black text-xs font-bold px-4 py-2 transition-colors"
+                      >
+                        {fulfilling === order._id ? (
+                          <><RefreshCw size={12} className="animate-spin" /> Placing CJ Order...</>
+                        ) : (
+                          <><Package size={12} /> Fulfill with CJ</>
+                        )}
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
