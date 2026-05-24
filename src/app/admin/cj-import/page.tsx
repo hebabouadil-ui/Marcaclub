@@ -221,11 +221,13 @@ export default function CJImportPage() {
     ...(preview.productImageSet?.map((img) => img.imageUrl) ?? []),
   ].filter(Boolean) : []
 
-  const cjCost = preview
-    ? (preview.variants?.reduce((min, v) =>
-        v.variantPrice > 0 && v.variantPrice < min ? v.variantPrice : min,
-        preview.variants?.[0]?.variantPrice ?? preview.sellingPrice ?? 0) ?? preview.sellingPrice ?? 0)
-    : 0
+  const cjCost = (() => {
+    if (!preview) return 0
+    const variants = preview.variants ?? []
+    if (variants.length === 0) return preview.sellingPrice ?? 0
+    const prices = variants.map((v) => v.variantPrice ?? 0).filter((p) => p > 0)
+    return prices.length > 0 ? Math.min(...prices) : (preview.sellingPrice ?? 0)
+  })()
 
   const selectedShipping = shippingOptions.find((o) => o.logisticName === form.cjLogisticName)
   const totalCjCost = cjCost + (selectedShipping?.logisticPrice ?? 0)
@@ -403,7 +405,7 @@ export default function CJImportPage() {
                         {preview.variants!.map((v) => (
                           <div key={v.vid} className="grid grid-cols-4 text-[11px] px-3 py-1.5 border-b border-white/5 hover:bg-white/3">
                             <span className="text-white truncate">{v.variantNameEn}</span>
-                            <span className="text-brand-gold">${v.variantPrice.toFixed(2)}</span>
+                            <span className="text-brand-gold">${(v.variantPrice ?? 0).toFixed(2)}</span>
                             <span className={v.variantStock > 0 ? 'text-green-400' : 'text-red-400'}>{v.variantStock}</span>
                             <span className="text-white/40">{v.variantWeight}g</span>
                           </div>
@@ -457,7 +459,7 @@ export default function CJImportPage() {
                           }`}>
                           <div className="flex items-center justify-between">
                             <span className="font-semibold">{opt.logisticNameEn || opt.logisticName}</span>
-                            <span className="text-brand-gold font-bold">${opt.logisticPrice.toFixed(2)}</span>
+                            <span className="text-brand-gold font-bold">${(opt.logisticPrice ?? 0).toFixed(2)}</span>
                           </div>
                           <p className="text-white/40 mt-0.5">{opt.agingMin}–{opt.agingMax} days · {opt.shipmentType}</p>
                         </button>
@@ -473,7 +475,7 @@ export default function CJImportPage() {
                   </div>
                   <div className="flex justify-between text-white/50">
                     <span>Shipping</span>
-                    <span>{selectedShipping ? `$${selectedShipping.logisticPrice.toFixed(2)}` : '—'}</span>
+                    <span>{selectedShipping ? `$${(selectedShipping.logisticPrice ?? 0).toFixed(2)}` : '—'}</span>
                   </div>
                   <div className="flex justify-between border-t border-white/10 pt-1.5 text-white font-semibold">
                     <span>Total CJ cost</span><span>${totalCjCost.toFixed(2)}</span>
