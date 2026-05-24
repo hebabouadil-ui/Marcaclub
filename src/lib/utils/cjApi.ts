@@ -6,8 +6,8 @@ let tokenExpiry = 0
 export async function getCJToken(): Promise<string> {
   // Direct API key (Google-login accounts) — use as token without auth call
   const directKey = process.env.CJ_API_KEY
-  if (directKey && !process.env.CJ_API_EMAIL) {
-    // Format: "CJ1234567@api@<hextoken>" — extract the token part
+  if (directKey) {
+    // Format may be "CJ1234567@api@<hextoken>" — extract the token part
     const parts = directKey.split('@api@')
     return parts.length > 1 ? parts[1] : directKey
   }
