@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
-import { Plus, Pencil, Trash2, X, Loader2, Upload, Star } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Loader2, Upload, Star, Crown } from 'lucide-react'
 
 interface SizeStock { size: string; stock: number }
 
@@ -170,7 +170,7 @@ export default function AdminProductsPage() {
                 {p.images?.[0] ? (
                   <Image
                     src={p.images[0]} alt={p.name} fill
-                    className="object-cover"
+                    className="object-contain"
                     sizes="200px"
                     unoptimized={!p.images[0].includes('cloudinary.com')}
                   />
@@ -195,7 +195,7 @@ export default function AdminProductsPage() {
               </div>
               <div className="p-3">
                 <p className="text-white text-sm font-medium truncate">{p.name}</p>
-                <p className="text-brand-gold text-sm">${p.price.toFixed(2)}</p>
+                <p className="text-brand-gold text-sm">{p.price.toFixed(0)} MAD</p>
                 <p className="text-white/40 text-xs">Stock: {p.sizes?.reduce((s, i) => s + i.stock, 0) ?? 0}</p>
                 <div className="flex gap-2 mt-3">
                   <button
@@ -344,7 +344,8 @@ export default function AdminProductsPage() {
 
                 {/* Images */}
                 <div>
-                  <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Images</label>
+                  <label className="block text-white/40 text-xs uppercase tracking-widest mb-1">Images</label>
+                  <p className="text-white/25 text-[11px] mb-2">Click any image to set it as the main photo (shown first on the product page)</p>
                   <label className="flex items-center gap-2 cursor-pointer bg-white/5 border border-dashed border-white/20 px-4 py-3 hover:border-brand-gold transition-colors w-fit">
                     {uploading ? <Loader2 size={14} className="animate-spin text-brand-gold" /> : <Upload size={14} className="text-brand-gold" />}
                     <span className="text-white/50 text-sm">{uploading ? 'Upload...' : 'Choisir des images'}</span>
@@ -353,11 +354,27 @@ export default function AdminProductsPage() {
                   {form.images.length > 0 && (
                     <div className="flex gap-2 mt-3 flex-wrap">
                       {form.images.map((img, i) => (
-                        <div key={i} className="relative w-16 h-20">
-                          <Image src={img} alt="" fill className="object-cover" sizes="64px" />
+                        <div key={i} className={`relative w-20 h-20 cursor-pointer group border-2 transition-all ${i === 0 ? 'border-brand-gold' : 'border-transparent hover:border-white/40'}`}
+                          onClick={() => {
+                            if (i === 0) return
+                            setForm((f) => {
+                              const imgs = [...f.images]
+                              imgs.splice(i, 1)
+                              return { ...f, images: [img, ...imgs] }
+                            })
+                          }}
+                          title={i === 0 ? 'Main photo' : 'Click to set as main photo'}
+                        >
+                          <Image src={img} alt="" fill className="object-contain" sizes="80px"
+                            unoptimized={!img.includes('cloudinary.com')} />
+                          {i === 0 && (
+                            <div className="absolute top-0.5 left-0.5 bg-brand-gold text-brand-black rounded-full p-0.5">
+                              <Crown size={9} />
+                            </div>
+                          )}
                           <button
-                            onClick={() => setForm((f) => ({ ...f, images: f.images.filter((_, j) => j !== i) }))}
-                            className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px]"
+                            onClick={(e) => { e.stopPropagation(); setForm((f) => ({ ...f, images: f.images.filter((_, j) => j !== i) })) }}
+                            className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"
                           >
                             ×
                           </button>

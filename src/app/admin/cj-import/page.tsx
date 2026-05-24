@@ -255,9 +255,10 @@ export default function CJImportPage() {
       const detail: CJProduct = normalizeProduct(data.data ?? product)
       setPreview(detail)
       const markup = 3
+      const MAD_PER_USD = 10.05
       const vPrices: Record<string, string> = {}
       for (const v of detail.variants ?? []) {
-        vPrices[v.vid] = String(Math.ceil(v.variantPrice * markup))
+        vPrices[v.vid] = String(Math.ceil(v.variantPrice * markup * MAD_PER_USD))
       }
       const minPrice = Object.values(vPrices).length > 0
         ? String(Math.min(...Object.values(vPrices).map(Number)))
@@ -642,7 +643,7 @@ export default function CJImportPage() {
                         if (!isNaN(mul) && mul >= 1 && preview) {
                           const newVP: Record<string, string> = {}
                           for (const v of preview.variants ?? []) {
-                            newVP[v.vid] = String(Math.ceil(v.variantPrice * mul))
+                            newVP[v.vid] = String(Math.ceil(v.variantPrice * mul * 10.05))
                           }
                           const selectedPrices = form.selectedVariants
                             .map((vid) => Number(newVP[vid] || 0))

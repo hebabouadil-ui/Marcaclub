@@ -196,7 +196,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
         <div className="grid md:grid-cols-[1fr_420px] gap-8 lg:gap-12 items-start">
           {/* Images */}
           <div className="space-y-3">
-            <div className="relative overflow-hidden bg-brand-light-gray w-full md:max-w-[420px] group cursor-zoom-in" style={{ paddingBottom: '125%' }}>
+            <div className="relative overflow-hidden bg-brand-light-gray w-full md:max-w-[420px] group cursor-zoom-in" style={{ paddingBottom: '100%' }}>
               <AnimatePresence initial={false} custom={dir}>
                 <motion.div
                   key={imgIdx}
