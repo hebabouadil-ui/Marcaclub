@@ -581,7 +581,7 @@ export default function CJImportPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-white/40 text-[10px] tracking-widest mb-1.5">SELLING PRICE (USD) *</label>
+                    <label className="block text-white/40 text-[10px] tracking-widest mb-1.5">SELLING PRICE (MAD) *</label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm">$</span>
                       <input value={form.price} onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))}

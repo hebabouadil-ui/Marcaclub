@@ -4,11 +4,20 @@ export const dynamic = 'force-dynamic'
 // Revalidate every 6 hours so Vercel caches it at the edge
 export const revalidate = 21600
 
-// Hardcoded fallback rates (USD base, updated periodically)
-const FALLBACK: Record<string, number> = {
-  USD: 1, CAD: 1.36, EUR: 0.92, GBP: 0.79, AUD: 1.53, CHF: 0.90,
-  JPY: 149.5, AED: 3.67, SAR: 3.75, MAD: 10.05, BRL: 4.97,
-  MXN: 17.2, INR: 83.1, SGD: 1.34, NZD: 1.63,
+// Fallback rates relative to MAD (1 MAD = X units of currency)
+const FALLBACK_MAD: Record<string, number> = {
+  MAD: 1, USD: 0.0995, CAD: 0.135, EUR: 0.0916, GBP: 0.0786,
+  AUD: 0.152, CHF: 0.0895, JPY: 14.87, AED: 0.365, SAR: 0.373,
+  BRL: 0.494, MXN: 1.71, INR: 8.27, SGD: 0.133, NZD: 0.162,
+}
+
+function usdToMadRates(usdRates: Record<string, number>): Record<string, number> {
+  const madPerUsd = usdRates['MAD'] ?? 10.05
+  const result: Record<string, number> = {}
+  for (const [code, rate] of Object.entries(usdRates)) {
+    result[code] = rate / madPerUsd  // 1 MAD = rate/madPerUsd units of code
+  }
+  return result
 }
 
 export async function GET() {
@@ -19,8 +28,8 @@ export async function GET() {
     if (!res.ok) throw new Error('API error')
     const data = await res.json()
     if (data.result !== 'success' || !data.rates) throw new Error('Bad response')
-    return NextResponse.json({ rates: data.rates })
+    return NextResponse.json({ rates: usdToMadRates(data.rates) })
   } catch {
-    return NextResponse.json({ rates: FALLBACK })
+    return NextResponse.json({ rates: FALLBACK_MAD })
   }
 }

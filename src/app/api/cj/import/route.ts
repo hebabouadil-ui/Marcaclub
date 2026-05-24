@@ -51,8 +51,17 @@ export async function POST(req: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rawProduct = cjProduct as any
     const extraImages = rawProduct.productImageSet?.map((img: { imageUrl: string }) => img.imageUrl)
-      ?? rawProduct.imageList ?? []
-    const images = [cjProduct.productImage, ...extraImages].filter(Boolean).slice(0, 8)
+      ?? rawProduct.imageList ?? rawProduct.productImages ?? []
+    const variantImages = variants
+      .map((v: any) => v.variantImage ?? v.variantPicture ?? v.image)
+      .filter(Boolean)
+    const allImgs = [cjProduct.productImage, ...extraImages, ...variantImages]
+    const seen = new Set<string>()
+    const images = allImgs.filter((u: string) => {
+      if (!u || !u.startsWith('http') || seen.has(u)) return false
+      seen.add(u)
+      return true
+    })
 
     const product = await Product.create({
       name,

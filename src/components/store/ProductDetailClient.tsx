@@ -55,7 +55,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
   const [added, setAdded] = useState(false)
   const addItem = useCartStore((s) => s.addItem)
   const router = useRouter()
-  const { format } = useCurrency()
+  const { format, formatUSD } = useCurrency()
   const { tr } = useLanguage()
 
   const [shipping, setShipping] = useState<ShippingOption | null>(null)
@@ -372,7 +372,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                       <MapPin size={12} />
                       <span>
                         Delivers to <strong>{userCountry}</strong> in {shipping.agingMin}–{shipping.agingMax} days
-                        {shipping.logisticPrice > 0 && <> · ${shipping.logisticPrice.toFixed(2)} shipping</>}
+                        {shipping.logisticPrice > 0 && <> · {formatUSD(shipping.logisticPrice)} shipping</>}
                       </span>
                     </div>
                   </div>
