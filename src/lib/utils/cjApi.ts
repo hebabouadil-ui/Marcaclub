@@ -91,8 +91,7 @@ export async function getCJShippingInfo(params: {
     body: JSON.stringify({
       startCountryCode: params.startCountryCode,
       endCountryCode: params.endCountryCode,
-      productWeight: params.productWeight,
-      quantity: params.quantity,
+      products: [{ quantity: params.quantity, weight: params.productWeight }],
     }),
   })
   return data
