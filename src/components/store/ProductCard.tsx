@@ -28,8 +28,11 @@ export default function ProductCard({ product }: Props) {
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : null
 
-  const img0 = product.images[0] || null
-  const img1 = product.images[1] || null
+  const img0 = product.images?.[0] || null
+  const img1 = product.images?.[1] || null
+  const isExternal = (url: string) => !url.includes('cloudinary.com')
+  const unopt0 = img0 ? isExternal(img0) : false
+  const unopt1 = img1 ? isExternal(img1) : false
 
   return (
     <div
@@ -46,6 +49,7 @@ export default function ProductCard({ product }: Props) {
                 src={img0}
                 alt={product.name}
                 fill
+                unoptimized={unopt0}
                 className={`object-cover object-top transition-all duration-500 ${hovered && img1 ? 'opacity-0' : 'opacity-100'}`}
                 sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
               />
@@ -54,6 +58,7 @@ export default function ProductCard({ product }: Props) {
                   src={img1}
                   alt={product.name}
                   fill
+                  unoptimized={unopt1}
                   className={`object-cover object-top transition-all duration-500 ${hovered ? 'opacity-100 scale-105' : 'opacity-0 scale-100'}`}
                   sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                 />

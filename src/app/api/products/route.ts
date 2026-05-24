@@ -21,9 +21,12 @@ export async function GET(req: NextRequest) {
     const products = await Product.find(query).sort({ createdAt: -1 }).lean()
     const normalized = products.map((p) => ({
       ...p,
-      sizes: (p.sizes as unknown[]).map((s) =>
-        typeof s === 'string' ? { size: s, stock: 0 } : s
-      ),
+      images: Array.isArray(p.images) ? p.images.filter(Boolean) : [],
+      sizes: Array.isArray(p.sizes)
+        ? (p.sizes as unknown[]).map((s) =>
+            typeof s === 'string' ? { size: s, stock: 0 } : s
+          )
+        : [],
     }))
     return NextResponse.json(normalized)
   } catch (err) {

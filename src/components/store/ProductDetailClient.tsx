@@ -46,9 +46,12 @@ export default function ProductDetailClient({ product }: { product: Product }) {
     setQty(1)
   }, [product._id])
 
-  const selectedSizeEntry = product.sizes.find((s) => s.size === selectedSize)
+  const sizes = product.sizes ?? []
+  const images = product.images ?? []
+  const isExternal = (url: string) => !url.includes('cloudinary.com')
+  const selectedSizeEntry = sizes.find((s) => s.size === selectedSize)
   const selectedStock = selectedSizeEntry?.stock ?? 0
-  const totalStock = product.sizes.reduce((s, i) => s + i.stock, 0)
+  const totalStock = sizes.reduce((s, i) => s + i.stock, 0)
 
   const discount = product.originalPrice
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
@@ -58,8 +61,8 @@ export default function ProductDetailClient({ product }: { product: Product }) {
     if (idx === imgIdx) return
     setPage([idx, idx > imgIdx ? 1 : -1])
   }
-  const prev = () => setPage(([i]) => [(i - 1 + product.images.length) % product.images.length, -1])
-  const next = () => setPage(([i]) => [(i + 1) % product.images.length, 1])
+  const prev = () => setPage(([i]) => [(i - 1 + images.length) % images.length, -1])
+  const next = () => setPage(([i]) => [(i + 1) % images.length, 1])
 
   const handleAddToCart = () => {
     if (!selectedSize) { toast.error('Veuillez choisir une taille'); return }
@@ -70,7 +73,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
       price: product.price,
       quantity: qty,
       size: selectedSize,
-      image: product.images[0] || '',
+      image: images[0] || '',
       stock: selectedStock,
     })
     setAdded(true)
@@ -86,7 +89,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
         price: product.price,
         quantity: qty,
         size: selectedSize,
-        image: product.images[0] || '',
+        image: images[0] || '',
         stock: selectedStock,
       })
     }
@@ -121,11 +124,12 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                   transition={swipeTransition}
                   className="absolute inset-0 will-change-transform"
                 >
-                  {product.images[imgIdx] ? (
+                  {images[imgIdx] ? (
                     <Image
-                      src={product.images[imgIdx]}
+                      src={images[imgIdx]}
                       alt={product.name}
                       fill
+                      unoptimized={isExternal(images[imgIdx])}
                       className="object-cover object-top transition-transform duration-500 ease-out group-hover:scale-110"
                       sizes="(max-width: 768px) 100vw, 50vw"
                       quality={90}
@@ -139,7 +143,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                 </motion.div>
               </AnimatePresence>
 
-              {product.images.length > 1 && (
+              {images.length > 1 && (
                 <>
                   <button
                     onClick={prev}
@@ -155,7 +159,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                   </button>
 
                   <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 z-10">
-                    {product.images.map((_, i) => (
+                    {images.map((_, i) => (
                       <button
                         key={i}
                         onClick={() => goTo(i)}
@@ -170,9 +174,9 @@ export default function ProductDetailClient({ product }: { product: Product }) {
             </div>
 
             {/* Thumbnails */}
-            {product.images.length > 1 && (
+            {images.length > 1 && (
               <div className="flex gap-2 overflow-x-auto pb-1">
-                {product.images.map((img, i) => (
+                {images.map((img, i) => (
                   <button
                     key={i}
                     onClick={() => goTo(i)}
@@ -181,7 +185,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                     }`}
                     style={{ height: '72px' }}
                   >
-                    <Image src={img} alt="" fill className="object-cover object-top" sizes="56px" />
+                    <Image src={img} alt="" fill unoptimized={isExternal(img)} className="object-cover object-top" sizes="56px" />
                   </button>
                 ))}
               </div>
@@ -222,13 +226,13 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                 )}
               </div>
 
-              {product.sizes.length > 0 && (
+              {sizes.length > 0 && (
                 <div className="mb-6">
                   <p className="text-xs tracking-[0.2em] uppercase text-brand-gray mb-3">
                     Taille — <span className="text-brand-black">{selectedSize || 'Choisir'}</span>
                   </p>
                   <div className="flex gap-2 flex-wrap">
-                    {product.sizes.map(({ size: s, stock: sStock }) => (
+                    {sizes.map(({ size: s, stock: sStock }) => (
                       <button
                         key={s}
                         onClick={() => { setSelectedSize(s); setQty(1); setAdded(false) }}

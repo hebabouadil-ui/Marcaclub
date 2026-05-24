@@ -35,6 +35,7 @@ export default async function ProductPage({ params }: Props) {
   const raw = await Product.findOne({ slug: params.slug, active: true }).lean()
   if (!raw) notFound()
   const product = JSON.parse(JSON.stringify(raw))
-  if (Array.isArray(product.sizes)) product.sizes = normalizeSizes(product.sizes)
+  product.images = Array.isArray(product.images) ? product.images.filter(Boolean) : []
+  product.sizes = Array.isArray(product.sizes) ? normalizeSizes(product.sizes) : []
   return <ProductDetailClient product={product} />
 }
