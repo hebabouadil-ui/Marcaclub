@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
-import { Plus, Pencil, Trash2, X, Loader2, Upload } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Loader2, Upload, Star } from 'lucide-react'
 
 interface SizeStock { size: string; stock: number }
 
@@ -118,6 +118,19 @@ export default function AdminProductsPage() {
     }
   }
 
+  const toggleFeatured = async (p: Product) => {
+    const res = await fetch(`/api/products/${p._id}`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...p, featured: !p.featured }),
+    })
+    if (res.ok) {
+      toast.success(p.featured ? 'Retiré des pièces du moment' : 'Ajouté aux pièces du moment')
+      load()
+    }
+  }
+
   const handleDelete = async (id: string) => {
     if (!confirm('Supprimer ce produit ?')) return
     const res = await fetch(`/api/products/${id}`, { method: 'DELETE', credentials: 'include' })
@@ -154,29 +167,42 @@ export default function AdminProductsPage() {
           {products.map((p) => (
             <div key={p._id} className="bg-white/5 border border-white/5 group">
               <div className="relative aspect-[3/4] bg-white/5 overflow-hidden">
-                {p.images[0] ? (
-                  <Image src={p.images[0]} alt={p.name} fill className="object-cover" sizes="200px" />
+                {p.images?.[0] ? (
+                  <Image
+                    src={p.images[0]} alt={p.name} fill
+                    className="object-cover"
+                    sizes="200px"
+                    unoptimized={!p.images[0].includes('cloudinary.com')}
+                  />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-white/20 text-xs">
-                    Pas d&apos;image
+                    No image
                   </div>
                 )}
+                {/* Featured badge */}
+                <button
+                  onClick={() => toggleFeatured(p)}
+                  title={p.featured ? 'Remove from featured' : 'Add to featured'}
+                  className={`absolute top-2 right-2 p-1.5 rounded-full transition-all ${p.featured ? 'bg-brand-gold text-brand-black' : 'bg-black/50 text-white/40 hover:text-brand-gold'}`}
+                >
+                  <Star size={12} fill={p.featured ? 'currentColor' : 'none'} />
+                </button>
                 {!p.active && (
                   <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                    <span className="text-white text-xs tracking-widest uppercase">Inactif</span>
+                    <span className="text-white text-xs tracking-widest uppercase">Inactive</span>
                   </div>
                 )}
               </div>
               <div className="p-3">
                 <p className="text-white text-sm font-medium truncate">{p.name}</p>
-                <p className="text-brand-gold text-sm">{p.price.toFixed(0)} MAD</p>
-                <p className="text-white/40 text-xs">Stock total: {p.sizes.reduce((s, i) => s + i.stock, 0)}</p>
+                <p className="text-brand-gold text-sm">${p.price.toFixed(2)}</p>
+                <p className="text-white/40 text-xs">Stock: {p.sizes?.reduce((s, i) => s + i.stock, 0) ?? 0}</p>
                 <div className="flex gap-2 mt-3">
                   <button
                     onClick={() => openEdit(p)}
                     className="flex-1 flex items-center justify-center gap-1 bg-white/10 hover:bg-white/20 text-white text-xs py-1.5 transition-colors"
                   >
-                    <Pencil size={12} /> Modifier
+                    <Pencil size={12} /> Edit
                   </button>
                   <button
                     onClick={() => handleDelete(p._id)}
