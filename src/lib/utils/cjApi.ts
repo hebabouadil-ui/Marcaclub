@@ -60,6 +60,7 @@ export interface CJVariant {
 
 export async function searchCJProducts(params: {
   productName?: string
+  productSku?: string
   categoryId?: string
   pageNum?: number
   pageSize?: number
@@ -69,6 +70,7 @@ export async function searchCJProducts(params: {
     pageNum: String(params.pageNum ?? 1),
     pageSize: String(params.pageSize ?? 20),
     ...(params.productName ? { productName: params.productName } : {}),
+    ...(params.productSku ? { productSku: params.productSku } : {}),
     ...(params.categoryId ? { categoryId: params.categoryId } : {}),
   })
   const data = await cjFetch(`/product/list?${query}`)

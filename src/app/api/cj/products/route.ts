@@ -18,8 +18,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(data)
     }
 
+    const q = searchParams.get('q') ?? undefined
+    const sku = searchParams.get('sku') ?? undefined
     const data = await searchCJProducts({
-      productName: searchParams.get('q') ?? undefined,
+      productName: sku ? undefined : q,
+      productSku: sku,
       categoryId: searchParams.get('categoryId') ?? undefined,
       pageNum: Number(searchParams.get('page') ?? 1),
       pageSize: 20,

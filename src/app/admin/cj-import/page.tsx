@@ -66,6 +66,7 @@ const COUNTRIES = [
 
 export default function CJImportPage() {
   const [query, setQuery] = useState('')
+  const [searchMode, setSearchMode] = useState<'name' | 'sku'>('name')
   const [results, setResults] = useState<CJProduct[]>([])
   const [loading, setLoading] = useState(false)
   const [page, setPage] = useState(1)
@@ -91,7 +92,8 @@ export default function CJImportPage() {
     if (!query.trim()) return
     setLoading(true)
     try {
-      const res = await fetch(`/api/cj/products?q=${encodeURIComponent(query)}&page=${p}`, { credentials: 'include' })
+      const param = searchMode === 'sku' ? 'sku' : 'q'
+      const res = await fetch(`/api/cj/products?${param}=${encodeURIComponent(query)}&page=${p}`, { credentials: 'include' })
       const data = await res.json()
       if (data.result && Array.isArray(data.data?.list)) {
         setResults(data.data.list)
@@ -226,13 +228,28 @@ export default function CJImportPage() {
 
       {/* Search */}
       <div className="flex gap-3 mb-6">
+        {/* Mode toggle */}
+        <div className="flex border border-white/10 text-xs">
+          <button
+            onClick={() => setSearchMode('name')}
+            className={`px-3 py-2 transition-colors ${searchMode === 'name' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white'}`}
+          >
+            Name
+          </button>
+          <button
+            onClick={() => setSearchMode('sku')}
+            className={`px-3 py-2 transition-colors ${searchMode === 'sku' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white'}`}
+          >
+            SKU
+          </button>
+        </div>
         <div className="flex-1 relative">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && search(1)}
-            placeholder="Search CJ catalog (e.g. streetwear, hoodies, sneakers...)"
+            placeholder={searchMode === 'sku' ? 'Enter CJ SKU (e.g. CJFE123456)' : 'Search CJ catalog (e.g. streetwear, hoodies...)'}
             className="w-full bg-white/5 border border-white/10 text-white text-sm pl-9 pr-4 py-3 focus:outline-none focus:border-brand-gold/50"
           />
         </div>
