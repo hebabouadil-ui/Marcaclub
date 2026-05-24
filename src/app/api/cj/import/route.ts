@@ -37,27 +37,29 @@ export async function POST(req: NextRequest) {
       ? cjProduct.variants?.filter((v: { vid: string }) => selectedVariants.includes(v.vid))
       : cjProduct.variants ?? []
 
-    const sizes = variants.map((v: { variantNameEn: string; variantStock: number; vid: string; variantPrice?: number }) => ({
-      size: v.variantNameEn || 'One Size',
-      stock: v.variantStock ?? 100,
-      cjVid: v.vid,
-      variantPrice: v.variantPrice || undefined,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sizes = variants.map((v: any) => ({
+      size: v.variantNameEn || v.variantName || v.variantKey || v.variantProperty || 'One Size',
+      stock: v.variantStock ?? v.variantInventory ?? v.stock ?? 100,
+      cjVid: v.vid ?? v.variantId ?? '',
+      variantPrice: v.variantSellPrice ?? v.variantPrice ?? v.sellPrice ?? undefined,
     }))
 
     const totalStock = sizes.reduce((sum: number, s: { stock: number }) => sum + s.stock, 0)
 
-    // Use CJ images — first image as main, rest as gallery
-    const images = [
-      cjProduct.productImage,
-      ...(cjProduct.productImageSet?.map((img: { imageUrl: string }) => img.imageUrl) ?? []),
-    ].filter(Boolean).slice(0, 8)
+    // Use CJ images — handle both productImageSet (objects) and imageList (strings)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rawProduct = cjProduct as any
+    const extraImages = rawProduct.productImageSet?.map((img: { imageUrl: string }) => img.imageUrl)
+      ?? rawProduct.imageList ?? []
+    const images = [cjProduct.productImage, ...extraImages].filter(Boolean).slice(0, 8)
 
     const product = await Product.create({
       name,
       slug: slugify(name),
       description: description || cjProduct.productNameEn,
       price: Number(price),
-      originalPrice: cjProduct.sellingPrice ? Number(cjProduct.sellingPrice) : undefined,
+      originalPrice: undefined,
       images,
       originalImages: images,
       category,

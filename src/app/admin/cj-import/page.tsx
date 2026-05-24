@@ -38,6 +38,74 @@ interface ShippingOption {
   currency: string
 }
 
+// CJ API returns fields under different names depending on endpoint version.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function normalizeVariant(v: any): CJVariant {
+  return {
+    vid: v.vid ?? v.variantId ?? '',
+    variantSku: v.variantSku ?? v.sku ?? '',
+    // name: try multiple fields
+    variantNameEn: v.variantNameEn || v.variantName || v.variantKey || v.variantProperty || '',
+    // price: CJ uses variantSellPrice (their cost to us), variantPrice may be 0
+    variantPrice: v.variantSellPrice ?? v.variantPrice ?? v.sellPrice ?? v.price ?? 0,
+    // stock: variantStock or variantInventory
+    variantStock: v.variantStock ?? v.variantInventory ?? v.stock ?? 0,
+    variantWeight: v.variantWeight ?? v.weight ?? 0,
+    variantImage: v.variantImage ?? v.image ?? undefined,
+    variantKey: v.variantKey ?? undefined,
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function normalizeProduct(raw: any): CJProduct {
+  const variants = Array.isArray(raw.variants)
+    ? raw.variants.map(normalizeVariant)
+    : Array.isArray(raw.variantList)
+    ? raw.variantList.map(normalizeVariant)
+    : []
+  return {
+    pid: raw.pid ?? raw.productId ?? '',
+    productNameEn: raw.productNameEn ?? raw.productName ?? '',
+    productImage: raw.productImage ?? raw.mainImage ?? '',
+    // CJ sellingPrice is the suggested retail, productCostPrice is our actual cost
+    sellingPrice: raw.productCostPrice ?? raw.sellingPrice ?? raw.costPrice ?? 0,
+    categoryName: raw.categoryName ?? '',
+    productWeight: raw.productWeight ?? raw.weight ?? undefined,
+    description: raw.description ?? raw.productDescription ?? undefined,
+    variants,
+    productImageSet: Array.isArray(raw.productImageSet)
+      ? raw.productImageSet
+      : Array.isArray(raw.imageList)
+      ? raw.imageList.map((url: string) => ({ imageUrl: url }))
+      : [],
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function normalizeShipping(opt: any): ShippingOption {
+  // Parse aging from various formats: number fields or "7-15" string
+  let agingMin = opt.agingMin ?? opt.ageMin ?? 0
+  let agingMax = opt.agingMax ?? opt.ageMax ?? 0
+  if ((!agingMin || !agingMax) && opt.aging) {
+    const parts = String(opt.aging).split('-')
+    agingMin = parseInt(parts[0]) || 0
+    agingMax = parseInt(parts[1] ?? parts[0]) || 0
+  }
+  return {
+    logisticName: opt.logisticName ?? '',
+    logisticNameEn: opt.logisticNameEn ?? opt.logisticName ?? '',
+    shipmentType: opt.shipmentType ?? opt.type ?? '',
+    logisticPrice: opt.logisticPrice ?? opt.price ?? opt.freightCost ?? 0,
+    agingMin,
+    agingMax,
+    currency: opt.currency ?? 'USD',
+  }
+}
+
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim()
+}
+
 interface ImportForm {
   name: string
   description: string
@@ -100,7 +168,7 @@ export default function CJImportPage() {
       const res = await fetch(`/api/cj/products?${param}=${encodeURIComponent(query)}&page=${p}`, { credentials: 'include' })
       const data = await res.json()
       if (data.result && Array.isArray(data.data?.list)) {
-        setResults(data.data.list)
+        setResults(data.data.list.map(normalizeProduct))
         setTotal(data.data.total ?? 0)
         setPage(p)
       } else {
@@ -127,7 +195,7 @@ export default function CJImportPage() {
       )
       const data = await res.json()
       if (data.result && Array.isArray(data.data)) {
-        setShippingOptions(data.data)
+        setShippingOptions(data.data.map(normalizeShipping))
         setShippingLoaded(true)
         setShowShipping(true)
       } else {
@@ -150,12 +218,12 @@ export default function CJImportPage() {
     try {
       const res = await fetch(`/api/cj/products?pid=${product.pid}`, { credentials: 'include' })
       const data = await res.json()
-      const detail: CJProduct = data.data ?? product
+      const detail: CJProduct = normalizeProduct(data.data ?? product)
       setPreview(detail)
       const variantPrice = detail.variants?.[0]?.variantPrice ?? detail.sellingPrice ?? 0
       setForm({
         name: detail.productNameEn ?? product.productNameEn,
-        description: detail.description ?? '',
+        description: detail.description ? stripHtml(detail.description) : '',
         price: variantPrice ? String(Math.ceil(variantPrice * 3)) : '',
         category: 'clothing',
         selectedVariants: (detail.variants ?? []).map((v) => v.vid),
@@ -461,7 +529,10 @@ export default function CJImportPage() {
                             <span className="font-semibold">{opt.logisticNameEn || opt.logisticName}</span>
                             <span className="text-brand-gold font-bold">${(opt.logisticPrice ?? 0).toFixed(2)}</span>
                           </div>
-                          <p className="text-white/40 mt-0.5">{opt.agingMin}–{opt.agingMax} days · {opt.shipmentType}</p>
+                          <p className="text-white/40 mt-0.5">
+                            {opt.agingMin > 0 ? `${opt.agingMin}–${opt.agingMax} days` : 'Est. 7–20 days'}
+                            {opt.shipmentType ? ` · ${opt.shipmentType}` : ''}
+                          </p>
                         </button>
                       ))}
                     </div>
