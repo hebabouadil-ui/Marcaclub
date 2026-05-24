@@ -53,7 +53,7 @@ export default function CJImportPage() {
         setTotal(data.data.total ?? 0)
         setPage(p)
       } else {
-        toast.error('No results or CJ API error')
+        toast.error(data.message || data.error || `CJ error: ${JSON.stringify(data).slice(0, 100)}`, { duration: 8000 })
       }
     } catch {
       toast.error('Search failed')

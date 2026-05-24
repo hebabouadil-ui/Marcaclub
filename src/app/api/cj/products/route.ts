@@ -24,7 +24,8 @@ export async function GET(req: NextRequest) {
       pageNum: Number(searchParams.get('page') ?? 1),
       pageSize: 20,
     })
-    return NextResponse.json(data)
+    // Return full response including errors for debugging
+    return NextResponse.json(data, { status: data.result ? 200 : 400 })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('CJ products error:', msg)
