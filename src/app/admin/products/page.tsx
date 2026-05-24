@@ -170,7 +170,7 @@ export default function AdminProductsPage() {
                 {p.images?.[0] ? (
                   <Image
                     src={p.images[0]} alt={p.name} fill
-                    className="object-contain"
+                    className="object-cover"
                     sizes="200px"
                     unoptimized={!p.images[0].includes('cloudinary.com')}
                   />
@@ -365,7 +365,7 @@ export default function AdminProductsPage() {
                           }}
                           title={i === 0 ? 'Main photo' : 'Click to set as main photo'}
                         >
-                          <Image src={img} alt="" fill className="object-contain" sizes="80px"
+                          <Image src={img} alt="" fill className="object-cover pointer-events-none" sizes="80px"
                             unoptimized={!img.includes('cloudinary.com')} />
                           {i === 0 && (
                             <div className="absolute top-0.5 left-0.5 bg-brand-gold text-brand-black rounded-full p-0.5">

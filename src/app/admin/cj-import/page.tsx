@@ -229,9 +229,28 @@ export default function CJImportPage() {
       // Log raw to console so we can inspect actual field names
       console.log('CJ shipping raw options:', JSON.stringify(data?.data?.[0]))
       if (data.result && Array.isArray(data.data)) {
-        setShippingOptions(data.data.map(normalizeShipping))
+        const options = data.data.map(normalizeShipping)
+        setShippingOptions(options)
         setShippingLoaded(true)
         setShowShipping(true)
+
+        // Auto-select the fastest shipping option and recalculate prices
+        if (options.length > 0) {
+          const fastest = options.slice().sort((a: ShippingOption, b: ShippingOption) =>
+            (a.agingMin || 99) - (b.agingMin || 99)
+          )[0]
+          const newShipUSD = fastest.logisticPrice ?? 0
+          setForm((prev) => {
+            const mul = parseFloat(prev.markupX || '3')
+            const newVP: Record<string, string> = {}
+            for (const v of product.variants ?? []) {
+              newVP[v.vid] = String(Math.ceil((v.variantPrice + newShipUSD) * mul * 10.05))
+            }
+            const prices = prev.selectedVariants.map((vid) => Number(newVP[vid] || 0)).filter((n) => n > 0)
+            const minP = prices.length > 0 ? String(Math.min(...prices)) : prev.price
+            return { ...prev, cjLogisticName: fastest.logisticName, variantPrices: newVP, price: minP }
+          })
+        }
       } else {
         toast.error(data.message || data.error || `Shipping error: ${JSON.stringify(data).slice(0, 100)}`)
       }

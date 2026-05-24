@@ -214,7 +214,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                       alt={product.name}
                       fill
                       unoptimized={isExternal(images[imgIdx])}
-                      className="object-contain transition-transform duration-500 ease-out group-hover:scale-110"
+                      className="object-cover transition-transform duration-500 ease-out group-hover:scale-110"
                       sizes="(max-width: 768px) 100vw, 50vw"
                       priority
                     />
@@ -251,7 +251,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                   <button key={i} onClick={() => goTo(i)}
                     className={`relative flex-shrink-0 w-14 overflow-hidden border-2 transition-all duration-200 ${i === imgIdx ? 'border-brand-black opacity-100' : 'border-transparent opacity-50 hover:opacity-80'}`}
                     style={{ height: '72px' }}>
-                    <Image src={img} alt="" fill unoptimized={isExternal(img)} className="object-contain" sizes="56px" />
+                    <Image src={img} alt="" fill unoptimized={isExternal(img)} className="object-cover" sizes="56px" />
                   </button>
                 ))}
               </div>
