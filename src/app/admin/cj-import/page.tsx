@@ -51,7 +51,7 @@ function normalizeVariant(v: any): CJVariant {
     // stock: variantStock or variantInventory
     variantStock: v.variantStock ?? v.variantInventory ?? v.stock ?? 0,
     variantWeight: v.variantWeight ?? v.weight ?? 0,
-    variantImage: v.variantImage ?? v.image ?? undefined,
+    variantImage: v.variantImage ?? v.variantPicture ?? v.image ?? undefined,
     variantKey: v.variantKey ?? undefined,
   }
 }
@@ -66,7 +66,7 @@ function normalizeProduct(raw: any): CJProduct {
   return {
     pid: raw.pid ?? raw.productId ?? '',
     productNameEn: raw.productNameEn ?? raw.productName ?? '',
-    productImage: raw.productImage ?? raw.mainImage ?? '',
+    productImage: raw.productImage ?? raw.mainImage ?? raw.productMainImage ?? '',
     // CJ sellingPrice is the suggested retail, productCostPrice is our actual cost
     sellingPrice: raw.productCostPrice ?? raw.sellingPrice ?? raw.costPrice ?? 0,
     categoryName: raw.categoryName ?? '',
@@ -77,6 +77,8 @@ function normalizeProduct(raw: any): CJProduct {
       ? raw.productImageSet
       : Array.isArray(raw.imageList)
       ? raw.imageList.map((url: string) => ({ imageUrl: url }))
+      : Array.isArray(raw.productImages)
+      ? raw.productImages.map((url: string) => ({ imageUrl: url }))
       : [],
   }
 }
@@ -287,7 +289,11 @@ export default function CJImportPage() {
   const allImages = preview ? [
     preview.productImage,
     ...(preview.productImageSet?.map((img) => img.imageUrl) ?? []),
-  ].filter(Boolean) : []
+    // fallback: grab unique variant images
+    ...(preview.variants?.map((v) => v.variantImage).filter(Boolean) ?? []),
+  ].filter((url): url is string => !!url && url.startsWith('http'))
+    .filter((url, i, arr) => arr.indexOf(url) === i) // dedupe
+  : []
 
   const cjCost = (() => {
     if (!preview) return 0
