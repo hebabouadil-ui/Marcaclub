@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
       sizes,
       stock: totalStock,
       featured: false,
-      active: false, // draft until admin publishes
+      active: true,
       cjPid: pid,
       cjLogisticName: cjLogisticName || undefined,
       cjData: {

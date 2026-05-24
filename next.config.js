@@ -4,10 +4,11 @@ const nextConfig = {
     minimumCacheTTL: 60,
     domains: ['res.cloudinary.com', 'localhost'],
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'res.cloudinary.com',
-      },
+      { protocol: 'https', hostname: 'res.cloudinary.com' },
+      { protocol: 'https', hostname: '**.cjdropshipping.com' },
+      { protocol: 'https', hostname: '**.cjimg.com' },
+      { protocol: 'https', hostname: 'cbu01.alicdn.com' },
+      { protocol: 'https', hostname: '**.alicdn.com' },
     ],
   },
 }

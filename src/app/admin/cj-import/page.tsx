@@ -1,16 +1,18 @@
 'use client'
 import { useState, useCallback } from 'react'
-import { Search, Download, Eye, Check, Loader2, RefreshCw, ChevronDown, ChevronUp, Truck } from 'lucide-react'
+import { Search, Download, Check, Loader2, RefreshCw, ChevronDown, ChevronUp, Truck, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import Image from 'next/image'
 import toast from 'react-hot-toast'
 
 interface CJVariant {
   vid: string
+  variantSku?: string
   variantNameEn: string
   variantPrice: number
   variantStock: number
   variantWeight: number
   variantImage?: string
+  variantKey?: string
 }
 
 interface CJProduct {
@@ -20,6 +22,8 @@ interface CJProduct {
   sellingPrice: number
   categoryName: string
   productWeight?: number
+  productUnit?: string
+  description?: string
   variants?: CJVariant[]
   productImageSet?: Array<{ imageUrl: string }>
 }
@@ -74,6 +78,7 @@ export default function CJImportPage() {
 
   const [preview, setPreview] = useState<CJProduct | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
+  const [activeImg, setActiveImg] = useState(0)
   const [form, setForm] = useState<ImportForm>({
     name: '', description: '', price: '', category: 'clothing',
     selectedVariants: [], cjLogisticName: '',
@@ -81,7 +86,6 @@ export default function CJImportPage() {
   const [importing, setImporting] = useState(false)
   const [imported, setImported] = useState<Set<string>>(new Set())
 
-  // Shipping state
   const [shippingCountry, setShippingCountry] = useState('US')
   const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([])
   const [shippingLoading, setShippingLoading] = useState(false)
@@ -100,7 +104,7 @@ export default function CJImportPage() {
         setTotal(data.data.total ?? 0)
         setPage(p)
       } else {
-        toast.error(data.message || data.error || `CJ error: ${JSON.stringify(data).slice(0, 100)}`, { duration: 8000 })
+        toast.error(data.message || data.error || `CJ error: ${JSON.stringify(data).slice(0, 120)}`, { duration: 8000 })
       }
     } catch {
       toast.error('Search failed')
@@ -142,6 +146,7 @@ export default function CJImportPage() {
     setShippingOptions([])
     setShippingLoaded(false)
     setShowShipping(false)
+    setActiveImg(0)
     try {
       const res = await fetch(`/api/cj/products?pid=${product.pid}`, { credentials: 'include' })
       const data = await res.json()
@@ -150,13 +155,12 @@ export default function CJImportPage() {
       const variantPrice = detail.variants?.[0]?.variantPrice ?? detail.sellingPrice ?? 0
       setForm({
         name: detail.productNameEn ?? product.productNameEn,
-        description: '',
+        description: detail.description ?? '',
         price: variantPrice ? String(Math.ceil(variantPrice * 3)) : '',
         category: 'clothing',
         selectedVariants: (detail.variants ?? []).map((v) => v.vid),
         cjLogisticName: '',
       })
-      // Auto-fetch shipping for default country
       fetchShipping(detail, shippingCountry)
     } catch {
       setPreview(product)
@@ -198,7 +202,7 @@ export default function CJImportPage() {
       })
       const data = await res.json()
       if (res.ok) {
-        toast.success('Product imported as draft — edit and publish from Products page')
+        toast.success('Product published to your store!')
         setImported((prev) => { const next = new Set(prev); next.add(preview.pid); return next })
         setPreview(null)
       } else {
@@ -211,9 +215,15 @@ export default function CJImportPage() {
     }
   }
 
-  // CJ cost: lowest variant price or sellingPrice
+  // All images gallery
+  const allImages = preview ? [
+    preview.productImage,
+    ...(preview.productImageSet?.map((img) => img.imageUrl) ?? []),
+  ].filter(Boolean) : []
+
   const cjCost = preview
-    ? (preview.variants?.reduce((min, v) => v.variantPrice > 0 && v.variantPrice < min ? v.variantPrice : min,
+    ? (preview.variants?.reduce((min, v) =>
+        v.variantPrice > 0 && v.variantPrice < min ? v.variantPrice : min,
         preview.variants?.[0]?.variantPrice ?? preview.sellingPrice ?? 0) ?? preview.sellingPrice ?? 0)
     : 0
 
@@ -221,27 +231,25 @@ export default function CJImportPage() {
   const totalCjCost = cjCost + (selectedShipping?.logisticPrice ?? 0)
   const margin = form.price ? Number(form.price) - totalCjCost : null
 
+  const selectedVariantObjs = (preview?.variants ?? []).filter((v) => form.selectedVariants.includes(v.vid))
+  const totalStock = selectedVariantObjs.reduce((s, v) => s + (v.variantStock ?? 0), 0)
+
   return (
     <div className="p-6 max-w-6xl">
       <div className="mb-8">
         <h1 className="text-white font-display font-bold text-xl tracking-widest uppercase mb-1">CJ Dropshipping</h1>
-        <p className="text-white/30 text-sm">Search, preview shipping costs, and import products to your store.</p>
+        <p className="text-white/30 text-sm">Search products, review all details, and publish directly to your store.</p>
       </div>
 
       {/* Search */}
       <div className="flex gap-3 mb-6">
-        {/* Mode toggle */}
         <div className="flex border border-white/10 text-xs">
-          <button
-            onClick={() => setSearchMode('name')}
-            className={`px-3 py-2 transition-colors ${searchMode === 'name' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white'}`}
-          >
+          <button onClick={() => setSearchMode('name')}
+            className={`px-3 py-2 transition-colors ${searchMode === 'name' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white'}`}>
             Name
           </button>
-          <button
-            onClick={() => setSearchMode('sku')}
-            className={`px-3 py-2 transition-colors ${searchMode === 'sku' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white'}`}
-          >
+          <button onClick={() => setSearchMode('sku')}
+            className={`px-3 py-2 transition-colors ${searchMode === 'sku' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white'}`}>
             SKU
           </button>
         </div>
@@ -255,184 +263,220 @@ export default function CJImportPage() {
             className="w-full bg-white/5 border border-white/10 text-white text-sm pl-9 pr-4 py-3 focus:outline-none focus:border-brand-gold/50"
           />
         </div>
-        <button
-          onClick={() => search(1)}
-          disabled={loading}
-          className="bg-brand-gold text-brand-black px-6 py-3 text-sm font-bold tracking-widest uppercase flex items-center gap-2 hover:bg-yellow-400 transition-colors disabled:opacity-50"
-        >
+        <button onClick={() => search(1)} disabled={loading}
+          className="bg-brand-gold text-brand-black px-6 py-3 text-sm font-bold tracking-widest uppercase flex items-center gap-2 hover:bg-yellow-400 transition-colors disabled:opacity-50">
           {loading ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
           Search
         </button>
       </div>
 
-      {total > 0 && (
-        <p className="text-white/30 text-xs mb-4 tracking-wider">{total.toLocaleString()} products found · page {page}</p>
-      )}
+      {total > 0 && <p className="text-white/30 text-xs mb-4 tracking-wider">{total.toLocaleString()} products · page {page}</p>}
 
-      {/* Results */}
+      {/* Results grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
         {results.map((product) => (
-          <div key={product.pid} className="bg-white/3 border border-white/8 group relative overflow-hidden">
-            <div className="aspect-square relative bg-white/5">
+          <div key={product.pid}
+            className="bg-white/3 border border-white/8 cursor-pointer hover:border-white/20 transition-colors group"
+            onClick={() => openPreview(product)}>
+            <div className="aspect-square relative bg-white/5 overflow-hidden">
               {product.productImage && (
-                <Image src={product.productImage} alt={product.productNameEn} fill className="object-cover" unoptimized />
+                <Image src={product.productImage} alt={product.productNameEn} fill className="object-cover group-hover:scale-105 transition-transform duration-300" unoptimized />
               )}
               {imported.has(product.pid) && (
                 <div className="absolute inset-0 bg-green-500/20 flex items-center justify-center">
                   <Check size={24} className="text-green-400" />
                 </div>
               )}
+              {previewLoading && (
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                  <Loader2 size={18} className="animate-spin text-white" />
+                </div>
+              )}
             </div>
             <div className="p-3">
               <p className="text-white text-xs font-medium line-clamp-2 mb-1">{product.productNameEn}</p>
               <p className="text-white/40 text-[10px] mb-2">{product.categoryName}</p>
-              <div className="flex items-center justify-between">
-                <span className="text-brand-gold text-xs font-bold">${product.sellingPrice?.toFixed(2)}</span>
-                <button
-                  onClick={() => openPreview(product)}
-                  className="text-white/40 hover:text-white transition-colors"
-                  title="Preview & Import"
-                >
-                  {previewLoading ? <Loader2 size={14} className="animate-spin" /> : <Eye size={14} />}
-                </button>
-              </div>
+              <span className="text-brand-gold text-xs font-bold">${product.sellingPrice?.toFixed(2)}</span>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Pagination */}
       {results.length === 20 && (
         <div className="flex gap-3 justify-center mb-8">
           {page > 1 && (
-            <button onClick={() => search(page - 1)} className="text-white/40 hover:text-white text-sm px-4 py-2 bg-white/5 border border-white/10">
-              Previous
-            </button>
+            <button onClick={() => search(page - 1)} className="text-white/40 hover:text-white text-sm px-4 py-2 bg-white/5 border border-white/10">Previous</button>
           )}
-          <button onClick={() => search(page + 1)} className="text-white/40 hover:text-white text-sm px-4 py-2 bg-white/5 border border-white/10">
-            Next
-          </button>
+          <button onClick={() => search(page + 1)} className="text-white/40 hover:text-white text-sm px-4 py-2 bg-white/5 border border-white/10">Next</button>
         </div>
       )}
 
-      {/* Preview / Import panel */}
+      {/* Full preview modal */}
       {preview && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={() => setPreview(null)}>
-          <div className="bg-[#141414] border border-white/10 w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 space-y-5">
-
-              {/* Product header */}
-              <div className="flex items-start gap-4">
-                {preview.productImage && (
-                  <div className="w-20 h-20 relative flex-shrink-0 bg-white/5">
-                    <Image src={preview.productImage} alt={preview.productNameEn} fill className="object-cover" unoptimized />
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-white/30 text-[10px] tracking-widest mb-0.5">CJ · {preview.pid}</p>
-                  <p className="text-white text-sm font-medium leading-tight mb-2">{preview.productNameEn}</p>
-                  <div className="flex flex-wrap gap-3 text-[11px]">
-                    <span className="text-white/50">CJ price: <span className="text-brand-gold font-bold">${cjCost.toFixed(2)}</span></span>
-                    {preview.productWeight && (
-                      <span className="text-white/40">Weight: {preview.productWeight}g</span>
-                    )}
-                    {preview.variants && (
-                      <span className="text-white/40">{preview.variants.length} variants</span>
-                    )}
-                  </div>
-                </div>
+        <div className="fixed inset-0 bg-black/90 z-50 flex items-start justify-center p-4 overflow-y-auto" onClick={() => setPreview(null)}>
+          <div className="bg-[#0f0f0f] border border-white/10 w-full max-w-4xl my-4" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
+              <div>
+                <p className="text-white/30 text-[10px] tracking-widest">CJ DROPSHIPPING · {preview.pid}</p>
+                <p className="text-white text-sm font-semibold mt-0.5">{preview.productNameEn}</p>
               </div>
+              <button onClick={() => setPreview(null)} className="text-white/40 hover:text-white transition-colors p-1">
+                <X size={18} />
+              </button>
+            </div>
 
-              {/* Shipping section */}
-              <div className="border border-white/10 rounded-sm overflow-hidden">
-                <button
-                  onClick={() => setShowShipping(!showShipping)}
-                  className="w-full flex items-center justify-between px-4 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors"
-                >
-                  <span className="flex items-center gap-2">
-                    <Truck size={14} />
-                    Shipping Options
-                    {form.cjLogisticName && (
-                      <span className="text-brand-gold text-[10px] ml-1">· {form.cjLogisticName}</span>
-                    )}
-                  </span>
-                  {showShipping ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                </button>
-
-                {showShipping && (
-                  <div className="px-4 pb-4 space-y-3">
-                    {/* Country selector */}
-                    <div className="flex items-center gap-3">
-                      <select
-                        value={shippingCountry}
-                        onChange={(e) => setShippingCountry(e.target.value)}
-                        className="flex-1 bg-white/5 border border-white/10 text-white text-xs px-3 py-2 focus:outline-none focus:border-brand-gold/50"
-                      >
-                        {COUNTRIES.map((c) => (
-                          <option key={c.code} value={c.code} className="bg-[#141414]">{c.name}</option>
-                        ))}
-                      </select>
-                      <button
-                        onClick={() => preview && fetchShipping(preview, shippingCountry)}
-                        disabled={shippingLoading}
-                        className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-xs px-3 py-2 transition-colors disabled:opacity-50"
-                      >
-                        {shippingLoading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-                        {shippingLoading ? 'Loading...' : 'Fetch'}
+            <div className="grid md:grid-cols-2 gap-0">
+              {/* Left: Images + Info */}
+              <div className="p-6 border-r border-white/10">
+                {/* Main image */}
+                <div className="aspect-square relative bg-white/5 mb-3 overflow-hidden">
+                  {allImages[activeImg] && (
+                    <Image src={allImages[activeImg]} alt={preview.productNameEn} fill className="object-contain" unoptimized />
+                  )}
+                  {allImages.length > 1 && (
+                    <>
+                      <button onClick={() => setActiveImg((i) => (i - 1 + allImages.length) % allImages.length)}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1 transition-colors">
+                        <ChevronLeft size={16} />
                       </button>
-                    </div>
+                      <button onClick={() => setActiveImg((i) => (i + 1) % allImages.length)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1 transition-colors">
+                        <ChevronRight size={16} />
+                      </button>
+                      <p className="absolute bottom-2 right-2 bg-black/60 text-white text-[10px] px-2 py-0.5">{activeImg + 1}/{allImages.length}</p>
+                    </>
+                  )}
+                </div>
 
-                    {/* Shipping options list */}
-                    {shippingLoaded && shippingOptions.length === 0 && (
-                      <p className="text-white/30 text-xs">No shipping options available for this country.</p>
-                    )}
-                    {shippingOptions.map((opt) => (
-                      <button
-                        key={opt.logisticName}
-                        onClick={() => setForm((p) => ({ ...p, cjLogisticName: p.cjLogisticName === opt.logisticName ? '' : opt.logisticName }))}
-                        className={`w-full text-left px-3 py-2.5 border text-xs transition-colors ${
-                          form.cjLogisticName === opt.logisticName
-                            ? 'border-brand-gold bg-brand-gold/10 text-white'
-                            : 'border-white/10 text-white/60 hover:border-white/30 hover:text-white'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <span className="font-semibold">{opt.logisticNameEn || opt.logisticName}</span>
-                            <span className="text-white/40 ml-2">{opt.shipmentType}</span>
-                          </div>
-                          <div className="text-right">
-                            <span className="font-bold text-brand-gold">${opt.logisticPrice.toFixed(2)}</span>
-                            <span className="text-white/40 ml-1">{opt.currency}</span>
-                          </div>
-                        </div>
-                        <p className="text-white/40 mt-0.5">
-                          Delivery: {opt.agingMin}–{opt.agingMax} days
-                        </p>
+                {/* Thumbnail strip */}
+                {allImages.length > 1 && (
+                  <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
+                    {allImages.map((img, i) => (
+                      <button key={i} onClick={() => setActiveImg(i)}
+                        className={`flex-shrink-0 w-14 h-14 relative border transition-colors ${i === activeImg ? 'border-brand-gold' : 'border-white/10 hover:border-white/30'}`}>
+                        <Image src={img} alt="" fill className="object-cover" unoptimized />
                       </button>
                     ))}
+                  </div>
+                )}
 
-                    {!shippingLoaded && !shippingLoading && (
-                      <p className="text-white/30 text-xs">Select a country and click Fetch to see shipping options.</p>
-                    )}
+                {/* Product specs */}
+                <div className="space-y-2 text-xs">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-white/5 px-3 py-2">
+                      <p className="text-white/40 text-[10px] mb-0.5">CJ COST (FROM)</p>
+                      <p className="text-brand-gold font-bold text-sm">${cjCost.toFixed(2)}</p>
+                    </div>
+                    <div className="bg-white/5 px-3 py-2">
+                      <p className="text-white/40 text-[10px] mb-0.5">WEIGHT</p>
+                      <p className="text-white font-semibold">{preview.productWeight ?? '—'}g</p>
+                    </div>
+                    <div className="bg-white/5 px-3 py-2">
+                      <p className="text-white/40 text-[10px] mb-0.5">CATEGORY</p>
+                      <p className="text-white">{preview.categoryName}</p>
+                    </div>
+                    <div className="bg-white/5 px-3 py-2">
+                      <p className="text-white/40 text-[10px] mb-0.5">VARIANTS</p>
+                      <p className="text-white">{preview.variants?.length ?? 0}</p>
+                    </div>
+                  </div>
+
+                  {preview.description && (
+                    <div className="bg-white/5 px-3 py-2">
+                      <p className="text-white/40 text-[10px] mb-1">DESCRIPTION</p>
+                      <div className="text-white/60 text-[11px] leading-relaxed max-h-24 overflow-y-auto"
+                        dangerouslySetInnerHTML={{ __html: preview.description }} />
+                    </div>
+                  )}
+                </div>
+
+                {/* All variants table */}
+                {(preview.variants?.length ?? 0) > 0 && (
+                  <div className="mt-4">
+                    <p className="text-white/40 text-[10px] tracking-widest mb-2">ALL VARIANTS</p>
+                    <div className="border border-white/10 overflow-hidden">
+                      <div className="grid grid-cols-4 text-[10px] text-white/30 px-3 py-1.5 border-b border-white/10 bg-white/3">
+                        <span>Name</span><span>Price</span><span>Stock</span><span>Weight</span>
+                      </div>
+                      <div className="max-h-48 overflow-y-auto">
+                        {preview.variants!.map((v) => (
+                          <div key={v.vid} className="grid grid-cols-4 text-[11px] px-3 py-1.5 border-b border-white/5 hover:bg-white/3">
+                            <span className="text-white truncate">{v.variantNameEn}</span>
+                            <span className="text-brand-gold">${v.variantPrice.toFixed(2)}</span>
+                            <span className={v.variantStock > 0 ? 'text-green-400' : 'text-red-400'}>{v.variantStock}</span>
+                            <span className="text-white/40">{v.variantWeight}g</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* Cost summary */}
-              {(cjCost > 0 || selectedShipping) && (
+              {/* Right: Import settings */}
+              <div className="p-6 space-y-4">
+                <p className="text-white/50 text-xs tracking-widest uppercase font-semibold">Import Settings</p>
+
+                {/* Shipping */}
+                <div className="border border-white/10 overflow-hidden">
+                  <button onClick={() => setShowShipping(!showShipping)}
+                    className="w-full flex items-center justify-between px-4 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors">
+                    <span className="flex items-center gap-2">
+                      <Truck size={14} />
+                      Shipping Options
+                      {form.cjLogisticName && <span className="text-brand-gold text-[10px]">· {form.cjLogisticName}</span>}
+                    </span>
+                    {showShipping ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                  </button>
+                  {showShipping && (
+                    <div className="px-4 pb-4 space-y-2">
+                      <div className="flex gap-2">
+                        <select value={shippingCountry} onChange={(e) => setShippingCountry(e.target.value)}
+                          className="flex-1 bg-white/5 border border-white/10 text-white text-xs px-3 py-2 focus:outline-none">
+                          {COUNTRIES.map((c) => (
+                            <option key={c.code} value={c.code} className="bg-[#0f0f0f]">{c.name}</option>
+                          ))}
+                        </select>
+                        <button onClick={() => preview && fetchShipping(preview, shippingCountry)} disabled={shippingLoading}
+                          className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-xs px-3 py-2 transition-colors disabled:opacity-50">
+                          {shippingLoading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                          {shippingLoading ? 'Loading...' : 'Fetch'}
+                        </button>
+                      </div>
+                      {shippingLoaded && shippingOptions.length === 0 && (
+                        <p className="text-white/30 text-xs">No shipping options for this country.</p>
+                      )}
+                      {shippingOptions.map((opt) => (
+                        <button key={opt.logisticName}
+                          onClick={() => setForm((p) => ({ ...p, cjLogisticName: p.cjLogisticName === opt.logisticName ? '' : opt.logisticName }))}
+                          className={`w-full text-left px-3 py-2.5 border text-xs transition-colors ${
+                            form.cjLogisticName === opt.logisticName
+                              ? 'border-brand-gold bg-brand-gold/10 text-white'
+                              : 'border-white/10 text-white/60 hover:border-white/30 hover:text-white'
+                          }`}>
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold">{opt.logisticNameEn || opt.logisticName}</span>
+                            <span className="text-brand-gold font-bold">${opt.logisticPrice.toFixed(2)}</span>
+                          </div>
+                          <p className="text-white/40 mt-0.5">{opt.agingMin}–{opt.agingMax} days · {opt.shipmentType}</p>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Cost breakdown */}
                 <div className="bg-white/3 border border-white/8 px-4 py-3 text-xs space-y-1.5">
                   <div className="flex justify-between text-white/50">
-                    <span>CJ product cost</span>
-                    <span>${cjCost.toFixed(2)}</span>
+                    <span>CJ product cost</span><span>${cjCost.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-white/50">
-                    <span>Shipping ({selectedShipping ? (selectedShipping.logisticNameEn || selectedShipping.logisticName) : 'not selected'})</span>
+                    <span>Shipping</span>
                     <span>{selectedShipping ? `$${selectedShipping.logisticPrice.toFixed(2)}` : '—'}</span>
                   </div>
                   <div className="flex justify-between border-t border-white/10 pt-1.5 text-white font-semibold">
-                    <span>Total CJ cost</span>
-                    <span>${totalCjCost.toFixed(2)}</span>
+                    <span>Total CJ cost</span><span>${totalCjCost.toFixed(2)}</span>
                   </div>
                   {margin !== null && (
                     <div className={`flex justify-between font-bold ${margin > 0 ? 'text-green-400' : 'text-red-400'}`}>
@@ -441,97 +485,90 @@ export default function CJImportPage() {
                     </div>
                   )}
                 </div>
-              )}
 
-              {/* Form fields */}
-              <div>
-                <label className="block text-white/40 text-[10px] tracking-widest mb-1.5">YOUR PRODUCT NAME *</label>
-                <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                  className="w-full bg-white/5 border border-white/10 text-white text-sm px-4 py-2.5 focus:outline-none focus:border-brand-gold/50" />
-              </div>
-
-              <div>
-                <label className="block text-white/40 text-[10px] tracking-widest mb-1.5">DESCRIPTION (optional)</label>
-                <textarea value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-                  rows={2}
-                  className="w-full bg-white/5 border border-white/10 text-white text-sm px-4 py-2.5 focus:outline-none focus:border-brand-gold/50 resize-none" />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+                {/* Form */}
                 <div>
-                  <label className="block text-white/40 text-[10px] tracking-widest mb-1.5">SELLING PRICE (USD) *</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm">$</span>
-                    <input value={form.price} onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))}
-                      type="number" step="0.01" min="0"
-                      className="w-full bg-white/5 border border-white/10 text-white text-sm pl-7 pr-4 py-2.5 focus:outline-none focus:border-brand-gold/50" />
-                  </div>
+                  <label className="block text-white/40 text-[10px] tracking-widest mb-1.5">PRODUCT NAME *</label>
+                  <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                    className="w-full bg-white/5 border border-white/10 text-white text-sm px-4 py-2.5 focus:outline-none focus:border-brand-gold/50" />
                 </div>
-                <div>
-                  <label className="block text-white/40 text-[10px] tracking-widest mb-1.5">CATEGORY *</label>
-                  <select value={form.category} onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
-                    className="w-full bg-white/5 border border-white/10 text-white text-sm px-4 py-2.5 focus:outline-none focus:border-brand-gold/50">
-                    <option value="clothing" className="bg-[#141414]">Clothing</option>
-                    <option value="accessories" className="bg-[#141414]">Accessories</option>
-                    <option value="shoes" className="bg-[#141414]">Shoes</option>
-                    <option value="bags" className="bg-[#141414]">Bags</option>
-                    <option value="jewelry" className="bg-[#141414]">Jewelry</option>
-                    <option value="other" className="bg-[#141414]">Other</option>
-                  </select>
-                </div>
-              </div>
 
-              {/* Variants */}
-              {(preview.variants?.length ?? 0) > 0 && (
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-white/40 text-[10px] tracking-widest">VARIANTS TO IMPORT</label>
-                    <div className="flex gap-2">
-                      <button onClick={() => setForm((p) => ({ ...p, selectedVariants: (preview.variants ?? []).map((v) => v.vid) }))}
-                        className="text-[10px] text-white/30 hover:text-white transition-colors">All</button>
-                      <button onClick={() => setForm((p) => ({ ...p, selectedVariants: [] }))}
-                        className="text-[10px] text-white/30 hover:text-white transition-colors">None</button>
+                  <label className="block text-white/40 text-[10px] tracking-widest mb-1.5">DESCRIPTION (optional)</label>
+                  <textarea value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+                    rows={2} placeholder="Leave empty to use CJ description"
+                    className="w-full bg-white/5 border border-white/10 text-white text-sm px-4 py-2.5 focus:outline-none focus:border-brand-gold/50 resize-none" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-white/40 text-[10px] tracking-widest mb-1.5">SELLING PRICE (USD) *</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm">$</span>
+                      <input value={form.price} onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))}
+                        type="number" step="0.01" min="0"
+                        className="w-full bg-white/5 border border-white/10 text-white text-sm pl-7 pr-4 py-2.5 focus:outline-none focus:border-brand-gold/50" />
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {(preview.variants ?? []).map((v) => (
-                      <button
-                        key={v.vid}
-                        onClick={() => toggleVariant(v.vid)}
-                        className={`text-xs px-3 py-1.5 border transition-colors ${
-                          form.selectedVariants.includes(v.vid)
-                            ? 'border-brand-gold text-brand-gold bg-brand-gold/10'
-                            : 'border-white/10 text-white/40 hover:border-white/30'
-                        }`}
-                      >
-                        {v.variantNameEn}
-                        {v.variantPrice > 0 && <span className="text-white/30 ml-1">${v.variantPrice.toFixed(2)}</span>}
-                        {v.variantStock === 0 && <span className="text-red-400/60 ml-1">OOS</span>}
-                      </button>
-                    ))}
+                  <div>
+                    <label className="block text-white/40 text-[10px] tracking-widest mb-1.5">CATEGORY *</label>
+                    <select value={form.category} onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
+                      className="w-full bg-white/5 border border-white/10 text-white text-sm px-4 py-2.5 focus:outline-none focus:border-brand-gold/50">
+                      <option value="clothing" className="bg-[#0f0f0f]">Clothing</option>
+                      <option value="accessories" className="bg-[#0f0f0f]">Accessories</option>
+                      <option value="shoes" className="bg-[#0f0f0f]">Shoes</option>
+                      <option value="bags" className="bg-[#0f0f0f]">Bags</option>
+                      <option value="jewelry" className="bg-[#0f0f0f]">Jewelry</option>
+                      <option value="other" className="bg-[#0f0f0f]">Other</option>
+                    </select>
                   </div>
                 </div>
-              )}
 
-              {/* Actions */}
-              <div className="flex gap-3 pt-1">
-                <button onClick={() => setPreview(null)}
-                  className="flex-1 border border-white/10 text-white/40 py-3 text-sm hover:border-white/30 transition-colors">
-                  Cancel
-                </button>
-                <button
-                  onClick={handleImport}
-                  disabled={importing}
-                  className="flex-1 bg-brand-gold text-brand-black py-3 text-sm font-bold tracking-widest uppercase flex items-center justify-center gap-2 hover:bg-yellow-400 transition-colors disabled:opacity-50"
-                >
+                {/* Variant selection */}
+                {(preview.variants?.length ?? 0) > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-white/40 text-[10px] tracking-widest">
+                        VARIANTS ({form.selectedVariants.length}/{preview.variants!.length} · {totalStock} units)
+                      </label>
+                      <div className="flex gap-2">
+                        <button onClick={() => setForm((p) => ({ ...p, selectedVariants: (preview.variants ?? []).map((v) => v.vid) }))}
+                          className="text-[10px] text-white/30 hover:text-white transition-colors">All</button>
+                        <button onClick={() => setForm((p) => ({ ...p, selectedVariants: [] }))}
+                          className="text-[10px] text-white/30 hover:text-white transition-colors">None</button>
+                        <button onClick={() => setForm((p) => ({ ...p, selectedVariants: (preview.variants ?? []).filter((v) => v.variantStock > 0).map((v) => v.vid) }))}
+                          className="text-[10px] text-white/30 hover:text-white transition-colors">In stock</button>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {(preview.variants ?? []).map((v) => (
+                        <button key={v.vid} onClick={() => toggleVariant(v.vid)}
+                          className={`text-xs px-3 py-1.5 border transition-colors ${
+                            form.selectedVariants.includes(v.vid)
+                              ? 'border-brand-gold text-brand-gold bg-brand-gold/10'
+                              : v.variantStock === 0
+                              ? 'border-white/5 text-white/20'
+                              : 'border-white/10 text-white/40 hover:border-white/30'
+                          }`}>
+                          {v.variantNameEn}
+                          {v.variantStock === 0 && <span className="ml-1 text-red-400/50">OOS</span>}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Import button */}
+                <button onClick={handleImport} disabled={importing}
+                  className="w-full bg-brand-gold text-brand-black py-3.5 text-sm font-bold tracking-widest uppercase flex items-center justify-center gap-2 hover:bg-yellow-400 transition-colors disabled:opacity-50 mt-2">
                   {importing ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-                  {importing ? 'Importing...' : 'Import as Draft'}
+                  {importing ? 'Publishing...' : 'Publish to Store'}
                 </button>
-              </div>
 
-              <p className="text-white/20 text-[10px] text-center">
-                Imported as draft · go to Products to add images, publish and set as featured
-              </p>
+                <p className="text-white/20 text-[10px] text-center">
+                  Product goes live immediately · edit images & details from the Products page
+                </p>
+              </div>
             </div>
           </div>
         </div>
