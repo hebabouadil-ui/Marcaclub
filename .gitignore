@@ -16,3 +16,4 @@ public/uploads/
 # Misc
 .DS_Store
 *.log
+.claude/settings.local.json
