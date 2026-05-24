@@ -196,7 +196,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
         <div className="grid md:grid-cols-[1fr_420px] gap-8 lg:gap-12 items-start">
           {/* Images */}
           <div className="space-y-3">
-            <div className="relative overflow-hidden bg-white w-full md:max-w-[420px] group cursor-zoom-in" style={{ paddingBottom: '100%' }}>
+            <div className="relative overflow-hidden bg-white w-full md:max-w-[420px] group cursor-zoom-in aspect-square max-h-[320px] md:max-h-none">
               <AnimatePresence initial={false} custom={dir}>
                 <motion.div
                   key={imgIdx}
@@ -302,25 +302,31 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                     Taille — <span className="text-brand-black">{selectedSize || 'Choisir'}</span>
                   </p>
                   <div className="flex gap-2 flex-wrap">
-                    {sizes.map(({ size: s, stock: sStock, variantPrice: vp }) => (
-                      <button
-                        key={s}
-                        onClick={() => { setSelectedSize(s); setQty(1); setAdded(false) }}
-                        disabled={sStock === 0}
-                        className={`px-3 py-2 text-xs border-2 transition-all duration-200 max-w-[180px] text-center leading-tight ${
-                          sStock === 0
-                            ? 'border-brand-light-gray text-brand-gray/40 cursor-not-allowed line-through'
-                            : selectedSize === s
-                            ? 'border-brand-black bg-brand-black text-brand-white'
-                            : 'border-brand-light-gray text-brand-black hover:border-brand-black'
-                        }`}
-                      >
-                        <span>{s}</span>
-                        {vp && vp !== product.price && (
-                          <span className="block text-[9px] leading-none opacity-60 mt-0.5">{format(vp)}</span>
-                        )}
-                      </button>
-                    ))}
+                    {sizes.map(({ size: s, stock: sStock, variantPrice: vp }) => {
+                      // If name is long (full product title), extract just the short part after the last comma
+                      const label = s.length > 30
+                        ? (s.split(',').pop()?.trim() ?? s).replace(/^\s*\d+\s*/,'').trim() || s.split(' ').slice(-2).join(' ')
+                        : s
+                      return (
+                        <button
+                          key={s}
+                          onClick={() => { setSelectedSize(s); setQty(1); setAdded(false) }}
+                          disabled={sStock === 0}
+                          className={`px-3 py-2 text-xs border-2 transition-all duration-200 text-center leading-tight ${
+                            sStock === 0
+                              ? 'border-brand-light-gray text-brand-gray/40 cursor-not-allowed line-through'
+                              : selectedSize === s
+                              ? 'border-brand-black bg-brand-black text-brand-white'
+                              : 'border-brand-light-gray text-brand-black hover:border-brand-black'
+                          }`}
+                        >
+                          <span>{label}</span>
+                          {vp && vp !== product.price && (
+                            <span className="block text-[9px] leading-none opacity-60 mt-0.5">{format(vp)}</span>
+                          )}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
               )}
