@@ -7,8 +7,8 @@ import { ChevronDown, Search, AlertTriangle, ShieldCheck, Flag, Ban, Trash2, Shi
 
 const STATUSES = ['all', 'flagged', 'pending', 'confirmed', 'shipped', 'delivered', 'cancelled']
 const STATUS_LABELS: Record<string, string> = {
-  pending: 'En attente', confirmed: 'Confirmé', shipped: 'Expédié',
-  delivered: 'Livré', cancelled: 'Annulé',
+  pending: 'Pending', confirmed: 'Confirmed', shipped: 'Shipped',
+  delivered: 'Delivered', cancelled: 'Cancelled',
 }
 const statusColors: Record<string, string> = {
   pending: 'text-amber-400 bg-amber-400/10',
@@ -108,9 +108,9 @@ export default function AdminOrdersPage() {
     })
     if (res.ok) {
       setOrders((prev) => prev.map((o) => (o._id === id ? { ...o, status } : o)))
-      toast.success('Statut mis à jour')
+      toast.success('Status updated')
     } else {
-      toast.error('Erreur')
+      toast.error('Error')
     }
   }
 
@@ -126,9 +126,9 @@ export default function AdminOrdersPage() {
         ? { ...o, flagged: false, trusted: true, flagReason: undefined, flagSeverity: undefined, flaggedOrderNumbers: [], aiVerdict: undefined, aiConfidence: undefined, aiReasoning: undefined }
         : o
       ))
-      toast.success('Commande marquée comme fiable ✓')
+      toast.success('Order marked as trusted ✓')
     } else {
-      toast.error('Erreur')
+      toast.error('Error')
     }
   }
 
@@ -142,14 +142,14 @@ export default function AdminOrdersPage() {
         name: order.customer.name,
         address: order.customer.address || undefined,
         city: order.customer.city,
-        reason: `Blacklisté depuis commande ${order.orderNumber}`,
+        reason: `Blacklisted from order ${order.orderNumber}`,
       }),
     })
     if (res.ok) {
-      toast.success('Client blacklisté — redirection vers Risques élevés')
+      toast.success('Customer blacklisted — redirecting to High Risk')
       setTimeout(() => router.push('/admin/high-risk'), 800)
     } else {
-      toast.error('Erreur')
+      toast.error('Error')
     }
   }
 
@@ -162,7 +162,7 @@ export default function AdminOrdersPage() {
     })
     if (res.ok) {
       setBlocklist((prev) => prev.filter((e) => e._id !== id))
-      toast.success('Entrée supprimée')
+      toast.success('Entry removed')
     }
   }
 
@@ -179,7 +179,7 @@ export default function AdminOrdersPage() {
       })
       const data = await res.json()
       if (!res.ok) {
-        toast.error(data.message || 'Erreur analyse IA', { duration: 6000 })
+        toast.error(data.message || 'AI analysis error', { duration: 6000 })
         setAiLoading(null)
         return
       }
@@ -190,9 +190,9 @@ export default function AdminOrdersPage() {
         ? { ...o, aiVerdict: result.verdict, aiConfidence: result.confidence, aiReasoning: result.reasoning }
         : o
       ))
-      toast.success(`Analyse IA: ${result.verdict}`)
+      toast.success(`AI Analysis: ${result.verdict}`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur lors de l\'analyse IA')
+      toast.error(err instanceof Error ? err.message : 'AI analysis failed')
     } finally {
       setAiLoading(null)
     }
@@ -206,14 +206,14 @@ export default function AdminOrdersPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         ip: order.ip,
-        reason: `Bloqué depuis commande ${order.orderNumber}`,
+        reason: `Blocked from order ${order.orderNumber}`,
         orderNumbers: [order.orderNumber],
       }),
     })
     if (res.ok) {
-      toast.success(`IP ${order.ip} bloquée — redirection vers Risques élevés`)
+      toast.success(`IP ${order.ip} blocked — redirecting to High Risk`)
       setTimeout(() => router.push('/admin/high-risk'), 800)
-    } else toast.error('Erreur')
+    } else toast.error('Error')
   }
 
   const flaggedCount = orders.filter((o) => o.flagged && !o.trusted).length
@@ -228,13 +228,13 @@ export default function AdminOrdersPage() {
           {untouchedCount > 0 && (
             <div className="flex-1 flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 px-4 py-2.5">
               <Clock size={13} className="text-amber-400 shrink-0" />
-              <span className="text-amber-400 text-sm font-semibold">{untouchedCount} en attente non traitée{untouchedCount > 1 ? 's' : ''}</span>
+              <span className="text-amber-400 text-sm font-semibold">{untouchedCount} pending order{untouchedCount > 1 ? 's' : ''} untouched</span>
             </div>
           )}
           {highRiskCount > 0 && (
             <Link href="/admin/high-risk" className="flex-1 flex items-center gap-2 bg-red-500/10 border border-red-500/30 px-4 py-2.5 hover:bg-red-500/15 transition-colors">
               <AlertTriangle size={13} className="text-red-400 shrink-0" />
-              <span className="text-red-400 text-sm font-semibold">{highRiskCount} risque{highRiskCount > 1 ? 's' : ''} élevé{highRiskCount > 1 ? 's' : ''} en attente</span>
+              <span className="text-red-400 text-sm font-semibold">{highRiskCount} high-risk order{highRiskCount > 1 ? 's' : ''} waiting</span>
               <span className="text-red-400/50 text-xs ml-auto">→</span>
             </Link>
           )}
@@ -242,12 +242,12 @@ export default function AdminOrdersPage() {
       )}
 
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-white text-2xl font-semibold">Commandes</h1>
+        <h1 className="text-white text-2xl font-semibold">Orders</h1>
         <div className="flex items-center gap-3">
           {flaggedCount > 0 && (
             <div className="flex items-center gap-2 bg-red-500/20 border border-red-500/30 px-4 py-2">
               <AlertTriangle size={14} className="text-red-400" />
-              <span className="text-red-400 text-sm font-semibold">{flaggedCount} doublon{flaggedCount > 1 ? 's' : ''} à vérifier</span>
+              <span className="text-red-400 text-sm font-semibold">{flaggedCount} duplicate{flaggedCount > 1 ? 's' : ''} to review</span>
             </div>
           )}
           <button
@@ -268,7 +268,7 @@ export default function AdminOrdersPage() {
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
           <input
             type="text"
-            placeholder="Nom, téléphone, N° commande..."
+            placeholder="Name, phone, order #..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full bg-white/5 border border-white/10 text-white placeholder-white/30 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:border-brand-gold"
@@ -286,7 +286,7 @@ export default function AdminOrdersPage() {
               }`}
             >
               {s === 'flagged' && <Flag size={10} />}
-              {s === 'all' ? 'Tous' : s === 'flagged' ? `Doublons${flaggedCount > 0 ? ` (${flaggedCount})` : ''}` : STATUS_LABELS[s]}
+              {s === 'all' ? 'All' : s === 'flagged' ? `Duplicates${flaggedCount > 0 ? ` (${flaggedCount})` : ''}` : STATUS_LABELS[s]}
             </button>
           ))}
         </div>
@@ -297,7 +297,7 @@ export default function AdminOrdersPage() {
           {[1, 2, 3, 4].map((i) => <div key={i} className="skeleton h-16 rounded" />)}
         </div>
       ) : filtered.length === 0 ? (
-        <p className="text-white/30 text-center py-12">Aucune commande</p>
+        <p className="text-white/30 text-center py-12">No orders</p>
       ) : (
         <div className="space-y-3">
           {filtered.map((order) => (
@@ -315,15 +315,15 @@ export default function AdminOrdersPage() {
               {order.flagged && (() => {
                 const sev = order.flagSeverity || 'medium'
                 const colors = {
-                  high:   { bg: 'bg-red-500/10',    border: 'border-red-500/20',    text: 'text-red-400',    sub: 'text-red-300/70',    label: 'RISQUE ÉLEVÉ' },
-                  medium: { bg: 'bg-orange-500/10', border: 'border-orange-500/20', text: 'text-orange-400', sub: 'text-orange-300/70', label: 'RISQUE MOYEN' },
-                  low:    { bg: 'bg-yellow-500/10', border: 'border-yellow-500/20', text: 'text-yellow-400', sub: 'text-yellow-300/70', label: 'RISQUE FAIBLE' },
+                  high:   { bg: 'bg-red-500/10',    border: 'border-red-500/20',    text: 'text-red-400',    sub: 'text-red-300/70',    label: 'HIGH RISK' },
+                  medium: { bg: 'bg-orange-500/10', border: 'border-orange-500/20', text: 'text-orange-400', sub: 'text-orange-300/70', label: 'MEDIUM RISK' },
+                  low:    { bg: 'bg-yellow-500/10', border: 'border-yellow-500/20', text: 'text-yellow-400', sub: 'text-yellow-300/70', label: 'LOW RISK' },
                 }[sev]
                 return (
                   <div className={`flex items-start gap-3 px-5 py-3 ${colors.bg} border-b ${colors.border}`}>
                     <AlertTriangle size={14} className={`${colors.text} mt-0.5 flex-shrink-0`} />
                     <div className="flex-1 min-w-0">
-                      <p className={`${colors.text} text-xs font-semibold uppercase tracking-widest mb-0.5`}>{colors.label} — confirmation requise</p>
+                      <p className={`${colors.text} text-xs font-semibold uppercase tracking-widest mb-0.5`}>{colors.label} — confirmation required</p>
                       <p className={`${colors.sub} text-xs`}>{order.flagReason}</p>
                     </div>
                     <div className="flex flex-col gap-1.5 flex-shrink-0">
@@ -332,14 +332,14 @@ export default function AdminOrdersPage() {
                         className="flex items-center gap-1.5 bg-green-500/20 hover:bg-green-500/30 text-green-400 px-3 py-1.5 text-xs font-semibold tracking-widest uppercase transition-colors"
                       >
                         <ShieldCheck size={12} />
-                        Fiable
+                        Trust
                       </button>
                       <button
                         onClick={() => blacklistOrder(order)}
                         className="flex items-center gap-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 px-3 py-1.5 text-xs font-semibold tracking-widest uppercase transition-colors"
                       >
                         <Ban size={12} />
-                        Blacklister
+                        Blacklist
                       </button>
                       {order.ip && (
                         <button
@@ -347,7 +347,7 @@ export default function AdminOrdersPage() {
                           className="flex items-center gap-1.5 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 px-3 py-1.5 text-xs font-semibold tracking-widest uppercase transition-colors"
                         >
                           <Shield size={12} />
-                          Bloquer IP
+                          Block IP
                         </button>
                       )}
                     </div>
@@ -384,7 +384,7 @@ export default function AdminOrdersPage() {
                       {order.flagged && <Flag size={10} className="text-red-400 flex-shrink-0" />}
                       {order.trusted && !order.flagged && (
                         <span className="flex items-center gap-0.5 text-green-400/70 text-[10px]">
-                          <ShieldCheck size={10} />fiable
+                          <ShieldCheck size={10} />trusted
                         </span>
                       )}
                     </div>
@@ -401,7 +401,7 @@ export default function AdminOrdersPage() {
                   <button
                     onClick={(e) => { e.stopPropagation(); analyzeWithAI(order) }}
                     disabled={aiLoading === order._id}
-                    title="Analyser avec l'IA"
+                    title="Analyze with AI"
                     className={`flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold tracking-widest uppercase transition-colors border ${
                       order.aiVerdict === 'SAFE' ? 'border-green-500/30 text-green-400 bg-green-500/10' :
                       order.aiVerdict === 'HIGH_RISK' ? 'border-red-500/30 text-red-400 bg-red-500/10' :
@@ -423,7 +423,7 @@ export default function AdminOrdersPage() {
                 <div className="px-5 pb-5 border-t border-white/5 pt-4">
                   <div className="grid sm:grid-cols-2 gap-4 mb-4">
                     <div>
-                      <p className="text-white/40 text-xs uppercase tracking-widest mb-2">Client</p>
+                      <p className="text-white/40 text-xs uppercase tracking-widest mb-2">Customer</p>
                       <p className="text-white text-sm">{order.customer.name}</p>
                       <p className="text-white/50 text-sm">{order.customer.phone}</p>
                       <p className="text-white/50 text-sm">{order.customer.city}</p>
@@ -437,7 +437,7 @@ export default function AdminOrdersPage() {
                       )}
                     </div>
                     <div>
-                      <p className="text-white/40 text-xs uppercase tracking-widest mb-2">Articles</p>
+                      <p className="text-white/40 text-xs uppercase tracking-widest mb-2">Items</p>
                       {order.items.map((item, i) => (
                         <p key={i} className="text-white/70 text-sm">
                           {item.name} — {item.size} × {item.quantity}
@@ -449,7 +449,7 @@ export default function AdminOrdersPage() {
 
                   {order.flagged && order.flaggedOrderNumbers && order.flaggedOrderNumbers.length > 0 && (
                     <div className="mb-4 bg-red-500/10 border border-red-500/20 p-3">
-                      <p className="text-red-400 text-xs font-semibold uppercase tracking-widest mb-1">Commandes similaires</p>
+                      <p className="text-red-400 text-xs font-semibold uppercase tracking-widest mb-1">Similar Orders</p>
                       <p className="text-red-300/60 text-xs">{order.flaggedOrderNumbers.join(', ')}</p>
                     </div>
                   )}
@@ -461,8 +461,8 @@ export default function AdminOrdersPage() {
                       <div className="mb-4 bg-brand-gold/5 border border-brand-gold/20 p-4 flex items-center gap-3">
                         <Loader2 size={16} className="text-brand-gold animate-spin" />
                         <div>
-                          <p className="text-brand-gold text-xs font-semibold uppercase tracking-widest">Analyse IA en cours...</p>
-                          <p className="text-white/30 text-xs mt-0.5">L'agent interroge l'historique client, l'IP, et les listes noires</p>
+                          <p className="text-brand-gold text-xs font-semibold uppercase tracking-widest">AI Analysis running...</p>
+                          <p className="text-white/30 text-xs mt-0.5">Agent is checking order history, IP, and blocklists</p>
                         </div>
                       </div>
                     )
@@ -473,14 +473,14 @@ export default function AdminOrdersPage() {
                           className="flex items-center gap-2 bg-brand-gold/10 hover:bg-brand-gold/20 border border-brand-gold/20 text-brand-gold px-4 py-2.5 text-xs font-semibold tracking-widest uppercase transition-colors w-full justify-center"
                         >
                           <Bot size={14} />
-                          Analyser avec l'agent IA
+                          Analyze with AI Agent
                         </button>
                       </div>
                     )
                     const cfg = {
-                      SAFE:      { bg: 'bg-green-500/10',  border: 'border-green-500/20',  text: 'text-green-400',  Icon: CheckCircle2,  label: 'SAFE — Livraison recommandée' },
-                      SUSPICIOUS:{ bg: 'bg-orange-500/10', border: 'border-orange-500/20', text: 'text-orange-400', Icon: AlertCircle,   label: 'SUSPICIEUX — Vérification requise' },
-                      HIGH_RISK: { bg: 'bg-red-500/10',    border: 'border-red-500/20',    text: 'text-red-400',    Icon: XCircle,       label: 'RISQUE ÉLEVÉ — Ne pas livrer' },
+                      SAFE:      { bg: 'bg-green-500/10',  border: 'border-green-500/20',  text: 'text-green-400',  Icon: CheckCircle2,  label: 'SAFE — Shipping recommended' },
+                      SUSPICIOUS:{ bg: 'bg-orange-500/10', border: 'border-orange-500/20', text: 'text-orange-400', Icon: AlertCircle,   label: 'SUSPICIOUS — Verification required' },
+                      HIGH_RISK: { bg: 'bg-red-500/10',    border: 'border-red-500/20',    text: 'text-red-400',    Icon: XCircle,       label: 'HIGH RISK — Do not ship' },
                     }[ai.verdict]
                     return (
                       <div className={`mb-4 ${cfg.bg} border ${cfg.border} p-4`}>
@@ -492,9 +492,9 @@ export default function AdminOrdersPage() {
                           <div className="flex items-center gap-2 flex-shrink-0">
                             <div className="text-right">
                               <span className={`text-lg font-bold ${cfg.text}`}>{ai.confidence}%</span>
-                              <p className="text-white/30 text-[10px]">confiance</p>
+                              <p className="text-white/30 text-[10px]">confidence</p>
                             </div>
-                            <button onClick={() => analyzeWithAI(order)} className={`${cfg.text} hover:opacity-70 transition-opacity`} title="Relancer l'analyse">
+                            <button onClick={() => analyzeWithAI(order)} className={`${cfg.text} hover:opacity-70 transition-opacity`} title="Re-run analysis">
                               <Bot size={14} />
                             </button>
                           </div>
@@ -511,13 +511,13 @@ export default function AdminOrdersPage() {
                         )}
                         <details className="group">
                           <summary className="text-white/30 text-[10px] uppercase tracking-widest cursor-pointer hover:text-white/50 transition-colors select-none">
-                            Voir le raisonnement complet ▾
+                            View full reasoning ▾
                           </summary>
                           <p className="text-white/40 text-xs mt-2 whitespace-pre-wrap leading-relaxed">{ai.reasoning}</p>
                         </details>
                         {order.aiAnalyzedAt && (
                           <p className="text-white/20 text-[10px] mt-2">
-                            Analysé le {new Date(order.aiAnalyzedAt).toLocaleString('fr-MA')}
+                            Analyzed on {new Date(order.aiAnalyzedAt).toLocaleString('en-US')}
                           </p>
                         )}
                       </div>
@@ -525,7 +525,7 @@ export default function AdminOrdersPage() {
                   })()}
 
                   <div>
-                    <p className="text-white/40 text-xs uppercase tracking-widest mb-2">Changer statut</p>
+                    <p className="text-white/40 text-xs uppercase tracking-widest mb-2">Change Status</p>
                     <div className="flex flex-wrap gap-2">
                       {(['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'] as const).map((s) => (
                         <button
@@ -554,10 +554,10 @@ export default function AdminOrdersPage() {
         <div className="mt-8 border border-red-500/20 bg-red-500/5">
           <div className="flex items-center gap-2 px-5 py-3 border-b border-red-500/20">
             <Ban size={14} className="text-red-400" />
-            <h2 className="text-red-400 text-sm font-semibold uppercase tracking-widest">Clients blacklistés</h2>
+            <h2 className="text-red-400 text-sm font-semibold uppercase tracking-widest">Blacklisted Customers</h2>
           </div>
           {blocklist.length === 0 ? (
-            <p className="text-white/30 text-sm px-5 py-6 text-center">Aucun client blacklisté</p>
+            <p className="text-white/30 text-sm px-5 py-6 text-center">No blacklisted customers</p>
           ) : (
             <div className="divide-y divide-red-500/10">
               {blocklist.map((entry) => (

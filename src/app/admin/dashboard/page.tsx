@@ -31,8 +31,8 @@ interface Product {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  pending: 'En attente', confirmed: 'Confirmé', shipped: 'Expédié',
-  delivered: 'Livré', cancelled: 'Annulé',
+  pending: 'Pending', confirmed: 'Confirmed', shipped: 'Shipped',
+  delivered: 'Delivered', cancelled: 'Cancelled',
 }
 const STATUS_COLORS: Record<string, string> = {
   pending: 'text-amber-400 bg-amber-400/10',
@@ -50,7 +50,7 @@ const STATUS_BAR: Record<string, string> = {
 }
 
 function fmt(n: number) {
-  return n.toLocaleString('fr-MA', { maximumFractionDigits: 0 })
+  return n.toLocaleString('en-US', { maximumFractionDigits: 0 })
 }
 
 export default function DashboardPage() {
@@ -139,8 +139,8 @@ export default function DashboardPage() {
         })
         .reduce((s, o) => s + o.total, 0)
       days.push({
-        label: d.toLocaleDateString('fr-MA', { weekday: 'short' }),
-        date: d.toLocaleDateString('fr-MA', { day: 'numeric', month: 'short' }),
+        label: d.toLocaleDateString('en-US', { weekday: 'short' }),
+        date: d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' }),
         value: dayRevenue,
       })
     }
@@ -175,7 +175,7 @@ export default function DashboardPage() {
     // Top cities
     const cities: Record<string, number> = {}
     for (const o of orders) {
-      const c = o.customer.city?.trim() || 'Inconnue'
+      const c = o.customer.city?.trim() || 'Unknown'
       cities[c] = (cities[c] || 0) + 1
     }
     const topCities = Object.entries(cities).sort((a, b) => b[1] - a[1]).slice(0, 5)
@@ -210,8 +210,8 @@ export default function DashboardPage() {
           <h1 className="text-white text-2xl font-semibold">Dashboard</h1>
           <p className="text-white/40 text-sm mt-0.5">
             {lastUpdated
-              ? <>Mis à jour à {lastUpdated.toLocaleTimeString('fr-MA', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse align-middle ml-1" /></>
-              : 'Vue d\'ensemble de votre boutique'
+              ? <>Updated at {lastUpdated.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse align-middle ml-1" /></>
+              : 'Store overview'
             }
           </p>
         </div>
@@ -237,11 +237,11 @@ export default function DashboardPage() {
               <Clock size={15} className="text-amber-400 flex-shrink-0" />
               <div className="flex-1">
                 <span className="text-amber-400 text-sm font-semibold">
-                  {stats.untouched} commande{stats.untouched > 1 ? 's' : ''} en attente non traitée{stats.untouched > 1 ? 's' : ''}
+                  {stats.untouched} untouched pending order{stats.untouched > 1 ? 's' : ''}
                 </span>
-                <p className="text-amber-400/50 text-[11px]">Nouvelles commandes à confirmer</p>
+                <p className="text-amber-400/50 text-[11px]">New orders awaiting confirmation</p>
               </div>
-              <span className="text-amber-400/50 text-xs shrink-0">Voir →</span>
+              <span className="text-amber-400/50 text-xs shrink-0">View →</span>
             </Link>
           )}
           {stats.highRiskWaiting > 0 && (
@@ -252,11 +252,11 @@ export default function DashboardPage() {
               <AlertTriangle size={15} className="text-red-400 flex-shrink-0" />
               <div className="flex-1">
                 <span className="text-red-400 text-sm font-semibold">
-                  {stats.highRiskWaiting} commande{stats.highRiskWaiting > 1 ? 's' : ''} à risque élevé en attente
+                  {stats.highRiskWaiting} high-risk order{stats.highRiskWaiting > 1 ? 's' : ''} waiting
                 </span>
-                <p className="text-red-400/50 text-[11px]">Décision requise avant livraison</p>
+                <p className="text-red-400/50 text-[11px]">Decision required before shipping</p>
               </div>
-              <span className="text-red-400/50 text-xs shrink-0">Voir →</span>
+              <span className="text-red-400/50 text-xs shrink-0">View →</span>
             </Link>
           )}
         </div>
@@ -265,15 +265,15 @@ export default function DashboardPage() {
       {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Chiffre d'affaires", value: loading ? '—' : `${fmt(stats.revenue)} MAD`, icon: TrendingUp, color: 'text-green-400', sub: 'commandes actives' },
-          { label: 'Commandes', value: loading ? '—' : fmt(stats.total), icon: ShoppingBag, color: 'text-brand-gold', sub: `${loading ? '—' : stats.pending} en attente` },
-          { label: 'Clients uniques', value: loading ? '—' : fmt(stats.uniqueCustomers), icon: Users, color: 'text-blue-400', sub: 'par téléphone' },
-          { label: 'Taux livraison', value: loading ? '—' : `${stats.deliveryRate.toFixed(0)}%`, icon: CheckCircle, color: 'text-purple-400', sub: `${loading ? '—' : stats.delivered} livrées` },
-          { label: 'Panier moyen', value: loading ? '—' : `${fmt(stats.avgOrder)} MAD`, icon: BarChart2, color: 'text-cyan-400', sub: 'commandes confirmées' },
-          { label: 'Annulées', value: loading ? '—' : fmt(stats.cancelled), icon: Ban, color: 'text-red-400', sub: `${loading ? '—' : stats.total > 0 ? ((stats.cancelled / stats.total) * 100).toFixed(0) : 0}% du total` },
-          { label: 'Produits', value: loading ? '—' : fmt(products.length), icon: Package, color: 'text-amber-400', sub: `${loading ? '—' : products.filter((p) => p.stock === 0).length} rupture` },
-          { label: 'Suspectes', value: loading ? '—' : fmt(stats.flagged), icon: AlertTriangle, color: 'text-orange-400', sub: 'à vérifier' },
-          { label: 'Sur le site maintenant', value: visitors === null ? '—' : fmt(visitors), icon: Eye, color: 'text-green-300', sub: 'visiteurs actifs (2 min)', live: true },
+          { label: 'Revenue', value: loading ? '—' : `${fmt(stats.revenue)} MAD`, icon: TrendingUp, color: 'text-green-400', sub: 'active orders' },
+          { label: 'Orders', value: loading ? '—' : fmt(stats.total), icon: ShoppingBag, color: 'text-brand-gold', sub: `${loading ? '—' : stats.pending} pending` },
+          { label: 'Unique Customers', value: loading ? '—' : fmt(stats.uniqueCustomers), icon: Users, color: 'text-blue-400', sub: 'by phone' },
+          { label: 'Delivery Rate', value: loading ? '—' : `${stats.deliveryRate.toFixed(0)}%`, icon: CheckCircle, color: 'text-purple-400', sub: `${loading ? '—' : stats.delivered} delivered` },
+          { label: 'Avg. Order Value', value: loading ? '—' : `${fmt(stats.avgOrder)} MAD`, icon: BarChart2, color: 'text-cyan-400', sub: 'confirmed orders' },
+          { label: 'Cancelled', value: loading ? '—' : fmt(stats.cancelled), icon: Ban, color: 'text-red-400', sub: `${loading ? '—' : stats.total > 0 ? ((stats.cancelled / stats.total) * 100).toFixed(0) : 0}% of total` },
+          { label: 'Products', value: loading ? '—' : fmt(products.length), icon: Package, color: 'text-amber-400', sub: `${loading ? '—' : products.filter((p) => p.stock === 0).length} out of stock` },
+          { label: 'Flagged', value: loading ? '—' : fmt(stats.flagged), icon: AlertTriangle, color: 'text-orange-400', sub: 'to review' },
+          { label: 'On site now', value: visitors === null ? '—' : fmt(visitors), icon: Eye, color: 'text-green-300', sub: 'active visitors (2 min)', live: true },
         ].map((card, i) => {
           const Icon = card.icon
           return (
@@ -311,8 +311,8 @@ export default function DashboardPage() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-green-400" />
             </span>
-            <h3 className="text-white/60 text-xs uppercase tracking-widest">Visiteurs actifs — adresses IP</h3>
-            <span className="ml-auto text-green-400 text-xs font-bold">{visitorList.length} en ligne</span>
+            <h3 className="text-white/60 text-xs uppercase tracking-widest">Active Visitors — IP Addresses</h3>
+            <span className="ml-auto text-green-400 text-xs font-bold">{visitorList.length} online</span>
           </div>
           <div className="divide-y divide-white/5">
             {visitorList.map((v, i) => (
@@ -323,7 +323,7 @@ export default function DashboardPage() {
                 </div>
                 <span className="text-white/40 text-xs truncate max-w-[200px]">{v.page}</span>
                 <span className="text-white/25 text-[10px] shrink-0">
-                  {new Date(v.lastSeen).toLocaleTimeString('fr-MA', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  {new Date(v.lastSeen).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                 </span>
               </div>
             ))}
@@ -335,7 +335,7 @@ export default function DashboardPage() {
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Revenue last 7 days */}
         <div className="bg-white/5 border border-white/5 p-5">
-          <h3 className="text-white/60 text-xs uppercase tracking-widest mb-4">Revenus — 7 derniers jours</h3>
+          <h3 className="text-white/60 text-xs uppercase tracking-widest mb-4">Revenue — Last 7 Days</h3>
           {loading ? (
             <div className="skeleton h-40 rounded" />
           ) : (
@@ -358,7 +358,7 @@ export default function DashboardPage() {
 
         {/* Orders count last 7 days */}
         <div className="bg-white/5 border border-white/5 p-5">
-          <h3 className="text-white/60 text-xs uppercase tracking-widest mb-4">Commandes — 7 derniers jours</h3>
+          <h3 className="text-white/60 text-xs uppercase tracking-widest mb-4">Orders — Last 7 Days</h3>
           {loading ? (
             <div className="skeleton h-40 rounded" />
           ) : (
@@ -366,7 +366,7 @@ export default function DashboardPage() {
               {stats.revenueByDay.map((d, i) => (
                 <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full justify-end group relative">
                   <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-brand-black border border-white/10 px-2 py-1 text-[10px] text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                    {stats.ordersByDay[i]} commande{stats.ordersByDay[i] !== 1 ? 's' : ''}
+                    {stats.ordersByDay[i]} order{stats.ordersByDay[i] !== 1 ? 's' : ''}
                   </div>
                   <div
                     className="w-full bg-blue-400/60 hover:bg-blue-400 transition-colors rounded-sm"
@@ -384,7 +384,7 @@ export default function DashboardPage() {
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Status breakdown */}
         <div className="bg-white/5 border border-white/5 p-5">
-          <h3 className="text-white/60 text-xs uppercase tracking-widest mb-4">Statuts</h3>
+          <h3 className="text-white/60 text-xs uppercase tracking-widest mb-4">Status Breakdown</h3>
           {loading ? <div className="skeleton h-32 rounded" /> : (
             <div className="space-y-2.5">
               {stats.statusBreakdown.map(({ status, count }) => (
@@ -408,11 +408,11 @@ export default function DashboardPage() {
         {/* Top products */}
         <div className="bg-white/5 border border-white/5 p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-white/60 text-xs uppercase tracking-widest">Top produits</h3>
+            <h3 className="text-white/60 text-xs uppercase tracking-widest">Top Products</h3>
             <Star size={12} className="text-brand-gold" />
           </div>
           {loading ? <div className="skeleton h-32 rounded" /> : stats.topProducts.length === 0 ? (
-            <p className="text-white/20 text-xs">Aucune vente</p>
+            <p className="text-white/20 text-xs">No sales yet</p>
           ) : (
             <div className="space-y-3">
               {stats.topProducts.map((p, i) => (
@@ -431,9 +431,9 @@ export default function DashboardPage() {
 
         {/* Top cities */}
         <div className="bg-white/5 border border-white/5 p-5">
-          <h3 className="text-white/60 text-xs uppercase tracking-widest mb-4">Top villes</h3>
+          <h3 className="text-white/60 text-xs uppercase tracking-widest mb-4">Top Cities</h3>
           {loading ? <div className="skeleton h-32 rounded" /> : stats.topCities.length === 0 ? (
-            <p className="text-white/20 text-xs">Aucune donnée</p>
+            <p className="text-white/20 text-xs">No data</p>
           ) : (
             <div className="space-y-2.5">
               {stats.topCities.map(([city, count]) => (
@@ -458,15 +458,15 @@ export default function DashboardPage() {
       {/* Recent orders */}
       <div className="bg-white/5 border border-white/5">
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
-          <h2 className="text-white font-medium text-sm">Dernières commandes</h2>
+          <h2 className="text-white font-medium text-sm">Recent Orders</h2>
           <Link href="/admin/orders" className="text-brand-gold text-xs tracking-widest uppercase hover:underline">
-            Voir tout
+            View all
           </Link>
         </div>
         {loading ? (
           <div className="p-6 space-y-3">{[1, 2, 3].map((i) => <div key={i} className="skeleton h-12 rounded" />)}</div>
         ) : stats.recentOrders.length === 0 ? (
-          <p className="text-white/30 text-sm p-6">Aucune commande pour l&apos;instant</p>
+          <p className="text-white/30 text-sm p-6">No orders yet</p>
         ) : (
           <div className="divide-y divide-white/5">
             {stats.recentOrders.map((order) => (

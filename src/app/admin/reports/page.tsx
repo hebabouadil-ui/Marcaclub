@@ -14,11 +14,11 @@ interface OrderRow {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  pending: 'En attente',
-  confirmed: 'Confirmé',
-  shipped: 'Expédié',
-  delivered: 'Livré',
-  cancelled: 'Annulé',
+  pending: 'Pending',
+  confirmed: 'Confirmed',
+  shipped: 'Shipped',
+  delivered: 'Delivered',
+  cancelled: 'Cancelled',
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -59,21 +59,21 @@ export default function ReportsPage() {
   const handleExport = async () => {
     setDownloading(true)
     const res = await fetch(`/api/reports?month=${month}&year=${year}`, { credentials: 'include' })
-    if (!res.ok) { toast.error('Erreur lors de l\'export'); setDownloading(false); return }
+    if (!res.ok) { toast.error('Export failed'); setDownloading(false); return }
     const blob = await res.blob()
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
     const d = new Date(year, month - 1, 1)
-    a.download = `marcaclub-${d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}.xlsx`
+    a.download = `marcaclub-${d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}.xlsx`
     a.click()
     URL.revokeObjectURL(url)
     setDownloading(false)
   }
 
   const months = [
-    'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-    'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
   ]
   const years = [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1]
 
@@ -81,8 +81,8 @@ export default function ReportsPage() {
     <div className="p-6 md:p-8 max-w-6xl">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-white text-2xl font-semibold">Rapports</h1>
-          <p className="text-white/40 text-sm mt-0.5">Export mensuel des commandes et du chiffre d&apos;affaires</p>
+          <h1 className="text-white text-2xl font-semibold">Reports</h1>
+          <p className="text-white/40 text-sm mt-0.5">Monthly export of orders and revenue</p>
         </div>
         <button
           onClick={handleExport}
@@ -90,7 +90,7 @@ export default function ReportsPage() {
           className="flex items-center gap-2 bg-brand-gold text-brand-black px-6 py-2.5 text-sm font-semibold tracking-widest uppercase hover:bg-white transition-colors disabled:opacity-50"
         >
           <Download size={14} />
-          {downloading ? 'Export...' : 'Exporter Excel'}
+          {downloading ? 'Exporting...' : 'Export Excel'}
         </button>
       </div>
 
@@ -119,10 +119,10 @@ export default function ReportsPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {[
-          { label: 'Total commandes', value: orders.length, icon: ShoppingBag, color: 'text-brand-gold' },
-          { label: 'Confirmées / Livrées', value: confirmed.length, icon: TrendingUp, color: 'text-green-400' },
-          { label: 'Annulées', value: cancelled.length, icon: XCircle, color: 'text-red-400' },
-          { label: 'Chiffre d\'affaires', value: `${revenue.toFixed(0)} MAD`, icon: TrendingUp, color: 'text-green-400' },
+          { label: 'Total Orders', value: orders.length, icon: ShoppingBag, color: 'text-brand-gold' },
+          { label: 'Confirmed / Delivered', value: confirmed.length, icon: TrendingUp, color: 'text-green-400' },
+          { label: 'Cancelled', value: cancelled.length, icon: XCircle, color: 'text-red-400' },
+          { label: 'Revenue', value: `${revenue.toFixed(0)} MAD`, icon: TrendingUp, color: 'text-green-400' },
         ].map((card) => {
           const Icon = card.icon
           return (
@@ -142,21 +142,21 @@ export default function ReportsPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-white/5">
-              {['N° Cmd', 'Date', 'Client', 'Ville', 'Articles', 'Total', 'Statut'].map((h) => (
+              {['Order #', 'Date', 'Customer', 'City', 'Items', 'Total', 'Status'].map((h) => (
                 <th key={h} className="px-4 py-3 text-left text-white/40 text-xs uppercase tracking-widest font-normal">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
             {loading ? (
-              <tr><td colSpan={7} className="px-4 py-8 text-white/30 text-center">Chargement...</td></tr>
+              <tr><td colSpan={7} className="px-4 py-8 text-white/30 text-center">Loading...</td></tr>
             ) : orders.length === 0 ? (
-              <tr><td colSpan={7} className="px-4 py-8 text-white/30 text-center">Aucune commande ce mois</td></tr>
+              <tr><td colSpan={7} className="px-4 py-8 text-white/30 text-center">No orders this month</td></tr>
             ) : (
               orders.map((o) => (
                 <tr key={o._id} className="hover:bg-white/5 transition-colors">
                   <td className="px-4 py-3 text-white font-mono text-xs">{o.orderNumber}</td>
-                  <td className="px-4 py-3 text-white/60 text-xs">{new Date(o.createdAt).toLocaleDateString('fr-FR')}</td>
+                  <td className="px-4 py-3 text-white/60 text-xs">{new Date(o.createdAt).toLocaleDateString('en-US')}</td>
                   <td className="px-4 py-3 text-white">{o.customer.name}</td>
                   <td className="px-4 py-3 text-white/60">{o.customer.city}</td>
                   <td className="px-4 py-3 text-white/60 text-xs max-w-[200px] truncate">

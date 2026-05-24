@@ -22,8 +22,8 @@ interface Order {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  pending: 'En attente', confirmed: 'Confirmé', shipped: 'Expédié',
-  delivered: 'Livré', cancelled: 'Annulé',
+  pending: 'Pending', confirmed: 'Confirmed', shipped: 'Shipped',
+  delivered: 'Delivered', cancelled: 'Cancelled',
 }
 
 export default function HighRiskPage() {
@@ -63,13 +63,13 @@ export default function HighRiskPage() {
         body: JSON.stringify({ orderId: order._id }),
       })
       const result = await res.json()
-      if (!res.ok) { toast.error(result.message || 'Erreur'); return }
+      if (!res.ok) { toast.error(result.message || 'Error'); return }
       setOrders((prev) => prev.map((o) => o._id === order._id
         ? { ...o, aiVerdict: result.verdict, aiConfidence: result.confidence, aiReasoning: result.reasoning, aiAnalyzedAt: new Date().toISOString() }
         : o
       ))
       toast.success(`IA: ${result.verdict}`)
-    } catch { toast.error('Erreur') }
+    } catch { toast.error('Error') }
     finally { setAnalyzing(null) }
   }
 
@@ -82,22 +82,22 @@ export default function HighRiskPage() {
         name: order.customer.name,
         city: order.customer.city,
         address: order.customer.address || undefined,
-        reason: `Blacklisté — commande ${order.orderNumber} (HIGH RISK)`,
+        reason: `Blacklisted — order ${order.orderNumber} (HIGH RISK)`,
       }),
     })
     if (res.ok) {
-      toast.success('Client blacklisté')
+      toast.success('Customer blacklisted')
       if (order.ip) await blockIP(order.ip, order.orderNumber)
-    } else toast.error('Erreur')
+    } else toast.error('Error')
   }
 
   const blockIP = async (ip: string, orderNumber: string) => {
     await fetch('/api/blocked-ips', {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ip, reason: `Bloqué — commande ${orderNumber} (HIGH RISK)`, orderNumbers: [orderNumber] }),
+      body: JSON.stringify({ ip, reason: `Blocked — order ${orderNumber} (HIGH RISK)`, orderNumbers: [orderNumber] }),
     })
-    toast.success(`IP ${ip} bloquée`)
+    toast.success(`IP ${ip} blocked`)
   }
 
   const clearFlag = async (id: string) => {
@@ -108,7 +108,7 @@ export default function HighRiskPage() {
     })
     if (res.ok) {
       setOrders((prev) => prev.filter((o) => o._id !== id))
-      toast.success('Commande retirée des risques élevés')
+      toast.success('Order removed from high risk')
     }
   }
 
@@ -117,10 +117,10 @@ export default function HighRiskPage() {
       {/* Header */}
       <div className="flex items-center gap-3 mb-2">
         <XCircle size={22} className="text-red-400" />
-        <h1 className="text-white text-2xl font-semibold">Commandes à risque élevé</h1>
+        <h1 className="text-white text-2xl font-semibold">High Risk Orders</h1>
       </div>
       <p className="text-white/40 text-sm mb-8">
-        Toutes les commandes flagguées HIGH ou analysées HIGH_RISK par l&apos;agent IA
+        All orders flagged HIGH or analyzed as HIGH_RISK by the AI agent
       </p>
 
       {loading ? (
@@ -128,8 +128,8 @@ export default function HighRiskPage() {
       ) : orders.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <ShieldCheck size={48} className="text-green-400/40 mb-4" />
-          <p className="text-white/40 text-lg">Aucun risque élevé détecté</p>
-          <p className="text-white/20 text-sm mt-1">Toutes les commandes sont dans la norme</p>
+          <p className="text-white/40 text-lg">No high risk orders detected</p>
+          <p className="text-white/20 text-sm mt-1">All orders are within normal parameters</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -143,10 +143,10 @@ export default function HighRiskPage() {
                   <AlertTriangle size={14} className="text-red-400 mt-0.5 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                      <span className="text-red-400 text-xs font-semibold uppercase tracking-widest">RISQUE ÉLEVÉ</span>
+                      <span className="text-red-400 text-xs font-semibold uppercase tracking-widest">HIGH RISK</span>
                       {isAiHigh && conf !== undefined && (
                         <span className="bg-red-500/20 text-red-300 text-[10px] px-2 py-0.5 font-bold">
-                          IA {conf}% confiance
+                          AI {conf}% confidence
                         </span>
                       )}
                       {order.ip && (
@@ -172,14 +172,14 @@ export default function HighRiskPage() {
                       className="flex items-center gap-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 px-2.5 py-1.5 text-[10px] font-semibold tracking-widest uppercase transition-colors"
                     >
                       <Ban size={10} />
-                      Bloquer
+                      Block
                     </button>
                     <button
                       onClick={() => clearFlag(order._id)}
                       className="flex items-center gap-1 bg-green-500/20 hover:bg-green-500/30 text-green-400 px-2.5 py-1.5 text-[10px] font-semibold tracking-widest uppercase transition-colors"
                     >
                       <ShieldCheck size={10} />
-                      Fiable
+                      Trust
                     </button>
                   </div>
                 </div>
@@ -209,7 +209,7 @@ export default function HighRiskPage() {
                   <div className="px-5 pb-5 border-t border-red-500/10 pt-4 space-y-4">
                     <div className="grid sm:grid-cols-2 gap-4">
                       <div>
-                        <p className="text-white/40 text-xs uppercase tracking-widest mb-2">Client</p>
+                        <p className="text-white/40 text-xs uppercase tracking-widest mb-2">Customer</p>
                         <p className="text-white text-sm">{order.customer.name}</p>
                         <p className="text-white/50 text-sm">{order.customer.phone}</p>
                         <p className="text-white/50 text-sm">{order.customer.city}</p>
@@ -217,7 +217,7 @@ export default function HighRiskPage() {
                         {order.ip && <p className="text-purple-400/60 font-mono text-xs mt-1 flex items-center gap-1"><Shield size={10} />{order.ip}</p>}
                       </div>
                       <div>
-                        <p className="text-white/40 text-xs uppercase tracking-widest mb-2">Articles</p>
+                        <p className="text-white/40 text-xs uppercase tracking-widest mb-2">Items</p>
                         {order.items.map((item, i) => (
                           <p key={i} className="text-white/70 text-sm">{item.name} — {item.size} ×{item.quantity}</p>
                         ))}
@@ -231,13 +231,13 @@ export default function HighRiskPage() {
                         <div className="flex items-center gap-2 mb-2">
                           <Bot size={12} className="text-red-400" />
                           <p className="text-red-400 text-xs font-semibold uppercase tracking-widest">
-                            Analyse IA — {order.aiVerdict} ({order.aiConfidence}% confiance)
+                            AI Analysis — {order.aiVerdict} ({order.aiConfidence}% confidence)
                           </p>
                         </div>
                         <p className="text-white/50 text-xs whitespace-pre-wrap leading-relaxed">{order.aiReasoning}</p>
                         {order.aiAnalyzedAt && (
                           <p className="text-white/20 text-[10px] mt-2">
-                            Analysé le {new Date(order.aiAnalyzedAt).toLocaleString('fr-MA')}
+                            Analyzed on {new Date(order.aiAnalyzedAt).toLocaleString('en-US')}
                           </p>
                         )}
                       </div>
@@ -246,18 +246,18 @@ export default function HighRiskPage() {
                     {/* Quick actions */}
                     <div className="flex flex-wrap gap-2 pt-1">
                       <button onClick={() => blacklist(order)} className="flex items-center gap-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 px-4 py-2 text-xs font-semibold tracking-widest uppercase transition-colors">
-                        <Ban size={11} /> Blacklister client + IP
+                        <Ban size={11} /> Blacklist customer + IP
                       </button>
                       {order.ip && (
                         <button onClick={() => blockIP(order.ip!, order.orderNumber)} className="flex items-center gap-1.5 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 px-4 py-2 text-xs font-semibold tracking-widest uppercase transition-colors">
-                          <Shield size={11} /> Bloquer IP uniquement
+                          <Shield size={11} /> Block IP only
                         </button>
                       )}
                       <button onClick={() => clearFlag(order._id)} className="flex items-center gap-1.5 bg-green-500/20 hover:bg-green-500/30 text-green-400 px-4 py-2 text-xs font-semibold tracking-widest uppercase transition-colors">
-                        <ShieldCheck size={11} /> Marquer fiable — retirer des risques
+                        <ShieldCheck size={11} /> Mark trusted — remove from risks
                       </button>
                       <button onClick={async () => { await clearFlag(order._id); window.location.href = '/admin/orders' }} className="flex items-center gap-1.5 bg-white/5 hover:bg-white/10 text-white/40 px-4 py-2 text-xs font-semibold tracking-widest uppercase transition-colors">
-                        <Trash2 size={11} /> Ignorer
+                        <Trash2 size={11} /> Dismiss
                       </button>
                     </div>
                   </div>

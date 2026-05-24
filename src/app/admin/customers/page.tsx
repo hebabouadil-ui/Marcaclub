@@ -30,8 +30,8 @@ interface Customer {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  pending: 'En attente', confirmed: 'Confirmé', shipped: 'Expédié',
-  delivered: 'Livré', cancelled: 'Annulé',
+  pending: 'Pending', confirmed: 'Confirmed', shipped: 'Shipped',
+  delivered: 'Delivered', cancelled: 'Cancelled',
 }
 const STATUS_COLORS: Record<string, string> = {
   pending: 'text-amber-400 bg-amber-400/10',
@@ -42,7 +42,7 @@ const STATUS_COLORS: Record<string, string> = {
 }
 
 function fmt(n: number) {
-  return n.toLocaleString('fr-MA', { maximumFractionDigits: 0 })
+  return n.toLocaleString('en-US', { maximumFractionDigits: 0 })
 }
 
 export default function CustomersPage() {
@@ -134,17 +134,17 @@ export default function CustomersPage() {
     <div className="p-6 md:p-8 max-w-6xl">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-white text-2xl font-semibold">Clients</h1>
-        <p className="text-white/40 text-sm mt-0.5">Historique et comportement de chaque client</p>
+        <h1 className="text-white text-2xl font-semibold">Customers</h1>
+        <p className="text-white/40 text-sm mt-0.5">Order history and behavior per customer</p>
       </div>
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         {[
-          { label: 'Total clients', value: loading ? '—' : fmt(totalCustomers), color: 'text-brand-gold' },
-          { label: 'Clients récurrents', value: loading ? '—' : fmt(repeatCustomers), color: 'text-green-400' },
-          { label: 'Blacklistés', value: loading ? '—' : fmt(blacklistedCount), color: 'text-red-400' },
-          { label: 'Signalés', value: loading ? '—' : fmt(customers.filter((c) => c.flagged).length), color: 'text-orange-400' },
+          { label: 'Total Customers', value: loading ? '—' : fmt(totalCustomers), color: 'text-brand-gold' },
+          { label: 'Repeat Customers', value: loading ? '—' : fmt(repeatCustomers), color: 'text-green-400' },
+          { label: 'Blacklisted', value: loading ? '—' : fmt(blacklistedCount), color: 'text-red-400' },
+          { label: 'Flagged', value: loading ? '—' : fmt(customers.filter((c) => c.flagged).length), color: 'text-orange-400' },
         ].map((card) => (
           <div key={card.label} className="bg-white/5 border border-white/5 p-4">
             <p className="text-white/40 text-[10px] uppercase tracking-widest mb-1">{card.label}</p>
@@ -159,7 +159,7 @@ export default function CustomersPage() {
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
           <input
             type="text"
-            placeholder="Nom, téléphone, ville..."
+            placeholder="Name, phone, city..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full bg-white/5 border border-white/10 text-white placeholder-white/30 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:border-brand-gold"
@@ -174,7 +174,7 @@ export default function CustomersPage() {
                 sort === s ? 'bg-brand-gold text-brand-black' : 'bg-white/5 text-white/50 hover:bg-white/10'
               }`}
             >
-              {s === 'lastOrder' ? 'Récent' : s === 'totalSpent' ? 'Dépense' : 'Commandes'}
+              {s === 'lastOrder' ? 'Recent' : s === 'totalSpent' ? 'Spent' : 'Orders'}
             </button>
           ))}
         </div>
@@ -183,7 +183,7 @@ export default function CustomersPage() {
       {loading ? (
         <div className="space-y-3">{[1, 2, 3, 4, 5].map((i) => <div key={i} className="skeleton h-16 rounded" />)}</div>
       ) : filtered.length === 0 ? (
-        <p className="text-white/30 text-center py-12">Aucun client trouvé</p>
+        <p className="text-white/30 text-center py-12">No customers found</p>
       ) : (
         <div className="space-y-2">
           {filtered.map((customer) => {
@@ -220,27 +220,27 @@ export default function CustomersPage() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-white font-medium text-sm">{customer.name}</p>
                         {customer.blacklisted && (
-                          <span className="text-[9px] bg-red-500/20 text-red-400 px-1.5 py-0.5 uppercase tracking-widest">Blacklisté</span>
+                          <span className="text-[9px] bg-red-500/20 text-red-400 px-1.5 py-0.5 uppercase tracking-widest">Blacklisted</span>
                         )}
                         {customer.flagged && !customer.blacklisted && (
-                          <span className="text-[9px] bg-orange-500/20 text-orange-400 px-1.5 py-0.5 uppercase tracking-widest">Signalé</span>
+                          <span className="text-[9px] bg-orange-500/20 text-orange-400 px-1.5 py-0.5 uppercase tracking-widest">Flagged</span>
                         )}
                         {customer.orderCount > 1 && (
-                          <span className="text-[9px] bg-green-500/20 text-green-400 px-1.5 py-0.5 uppercase tracking-widest">Récurrent</span>
+                          <span className="text-[9px] bg-green-500/20 text-green-400 px-1.5 py-0.5 uppercase tracking-widest">Repeat</span>
                         )}
                       </div>
                       <p className="text-white/40 text-xs mt-0.5 truncate">
                         {customer.phone} — {customer.city}
                       </p>
                       <p className="text-white/25 text-[10px] mt-0.5">
-                        Dernière commande : {new Date(customer.lastOrder).toLocaleDateString('fr-MA', { day: 'numeric', month: 'short', year: 'numeric' })} à {new Date(customer.lastOrder).toLocaleTimeString('fr-MA', { hour: '2-digit', minute: '2-digit' })}
+                        Last order: {new Date(customer.lastOrder).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })} at {new Date(customer.lastOrder).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-6 flex-shrink-0 ml-4">
                     <div className="text-right hidden sm:block">
                       <p className="text-brand-gold text-sm font-semibold">{fmt(customer.totalSpent)} MAD</p>
-                      <p className="text-white/30 text-[10px]">{customer.orderCount} commande{customer.orderCount > 1 ? 's' : ''}</p>
+                      <p className="text-white/30 text-[10px]">{customer.orderCount} order{customer.orderCount > 1 ? 's' : ''}</p>
                     </div>
                     <ChevronDown size={14} className={`text-white/40 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                   </div>
@@ -256,19 +256,19 @@ export default function CustomersPage() {
                         {customer.email && <p className="text-white/50 text-xs">{customer.email}</p>}
                       </div>
                       <div>
-                        <p className="text-white/30 text-[10px] uppercase tracking-widest mb-1">Adresse</p>
+                        <p className="text-white/30 text-[10px] uppercase tracking-widest mb-1">Address</p>
                         <p className="text-white text-sm">{customer.city}</p>
                         {customer.address && <p className="text-white/40 text-xs">{customer.address}</p>}
                       </div>
                       <div>
                         <p className="text-white/30 text-[10px] uppercase tracking-widest mb-1">Stats</p>
-                        <p className="text-white text-sm">{fmt(customer.totalSpent)} MAD dépensés</p>
-                        <p className="text-white/40 text-xs">{deliveredCount} livrées · {cancelledCount} annulées</p>
+                        <p className="text-white text-sm">{fmt(customer.totalSpent)} MAD spent</p>
+                        <p className="text-white/40 text-xs">{deliveredCount} delivered · {cancelledCount} cancelled</p>
                       </div>
                     </div>
 
                     {/* Order history */}
-                    <p className="text-white/30 text-[10px] uppercase tracking-widest mb-3">Historique des commandes</p>
+                    <p className="text-white/30 text-[10px] uppercase tracking-widest mb-3">Order History</p>
                     <div className="space-y-2">
                       {customer.orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((order) => (
                         <div key={order._id} className={`border p-3 ${order.flagged ? 'border-orange-500/20 bg-orange-500/5' : 'border-white/5 bg-white/3'}`}>
@@ -279,9 +279,9 @@ export default function CustomersPage() {
                                 {order.flagged && <AlertTriangle size={10} className="text-orange-400" />}
                               </div>
                               <p className="text-white/40 text-[10px] mt-0.5">
-                                {new Date(order.createdAt).toLocaleDateString('fr-MA', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                {new Date(order.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
                                 {' · '}
-                                {new Date(order.createdAt).toLocaleTimeString('fr-MA', { hour: '2-digit', minute: '2-digit' })}
+                                {new Date(order.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                               </p>
                             </div>
                             <div className="text-right">

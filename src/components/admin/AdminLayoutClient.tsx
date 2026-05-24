@@ -10,14 +10,14 @@ import { useState, useEffect } from 'react'
 
 const navItems = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/admin/products', label: 'Produits', icon: Package },
+  { href: '/admin/products', label: 'Products', icon: Package },
   { href: '/admin/cj-import', label: 'CJ Import', icon: Download },
-  { href: '/admin/orders', label: 'Commandes', icon: ShoppingBag, badgeKey: 'orders' },
-  { href: '/admin/high-risk', label: 'Risques élevés', icon: XCircle, badgeKey: 'highRisk' },
-  { href: '/admin/customers', label: 'Clients', icon: Users },
-  { href: '/admin/blocked-ips', label: 'IPs bloquées', icon: Shield },
-  { href: '/admin/reports', label: 'Rapports', icon: BarChart2 },
-  { href: '/admin/settings', label: 'Paramètres', icon: Settings },
+  { href: '/admin/orders', label: 'Orders', icon: ShoppingBag, badgeKey: 'orders' },
+  { href: '/admin/high-risk', label: 'High Risk', icon: XCircle, badgeKey: 'highRisk' },
+  { href: '/admin/customers', label: 'Customers', icon: Users },
+  { href: '/admin/blocked-ips', label: 'Blocked IPs', icon: Shield },
+  { href: '/admin/reports', label: 'Reports', icon: BarChart2 },
+  { href: '/admin/settings', label: 'Settings', icon: Settings },
   { href: '/admin/live', label: 'Live', icon: Radio },
 ]
 
@@ -115,7 +115,7 @@ function AdminNav() {
             className="flex items-center gap-2 text-white/40 hover:text-red-400 text-sm transition-colors"
           >
             <LogOut size={14} />
-            Déconnexion
+            Sign out
           </button>
         </div>
       </aside>
@@ -176,7 +176,7 @@ function AdminNav() {
               className="flex items-center gap-2 text-red-400 text-sm"
             >
               <LogOut size={16} />
-              Déconnexion
+              Sign out
             </button>
           </div>
         </div>

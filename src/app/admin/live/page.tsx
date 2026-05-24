@@ -31,25 +31,25 @@ export default function AdminLivePage() {
     setSaving(false)
     if (res.ok) {
       setLiveStatus(status)
-      toast.success(status ? '🔴 Live activé !' : '⚫ Live désactivé')
+      toast.success(status ? '🔴 Live enabled!' : '⚫ Live disabled')
     } else {
-      toast.error('Erreur')
+      toast.error('Error')
     }
   }
 
-  if (loading) return <div className="p-8 text-white/40">Chargement...</div>
+  if (loading) return <div className="p-8 text-white/40">Loading...</div>
 
   return (
     <div className="p-6 md:p-8 max-w-xl">
-      <h1 className="text-white text-2xl font-semibold mb-8">Gestion du Live</h1>
+      <h1 className="text-white text-2xl font-semibold mb-8">Live Session</h1>
 
       {/* Status card */}
       <div className="bg-white/5 border border-white/5 p-6 mb-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <p className="text-white font-medium">Statut du Live</p>
+            <p className="text-white font-medium">Live Status</p>
             <p className="text-white/40 text-sm mt-0.5">
-              Contrôle la bannière &quot;LIVE&quot; sur le site
+              Controls the LIVE banner on the storefront
             </p>
           </div>
           <div
@@ -75,12 +75,12 @@ export default function AdminLivePage() {
           <div className={`w-3 h-3 rounded-full ${liveStatus ? 'bg-red-500 live-dot' : 'bg-white/20'}`} />
           <div>
             <p className={`text-sm font-semibold ${liveStatus ? 'text-red-400' : 'text-white/40'}`}>
-              {liveStatus ? 'LIVE EN COURS' : 'LIVE HORS LIGNE'}
+              {liveStatus ? 'LIVE ACTIVE' : 'LIVE OFFLINE'}
             </p>
             <p className="text-xs text-white/30 mt-0.5">
               {liveStatus
-                ? 'La bannière rouge s\'affiche sur le site'
-                : 'Aucune bannière sur le site'}
+                ? 'Red banner is showing on the storefront'
+                : 'No banner on the storefront'}
             </p>
           </div>
         </div>
@@ -89,7 +89,7 @@ export default function AdminLivePage() {
       {/* Live URL */}
       <div className="bg-white/5 border border-white/5 p-6 mb-6">
         <label className="block text-white/40 text-xs uppercase tracking-widest mb-3">
-          URL du Live (optionnel)
+          Live URL (optional)
         </label>
         <input
           type="url"
@@ -99,7 +99,7 @@ export default function AdminLivePage() {
           className="w-full bg-white/5 border border-white/10 text-white placeholder-white/20 px-4 py-2.5 text-sm focus:outline-none focus:border-brand-gold"
         />
         <p className="text-white/30 text-xs mt-2">
-          Lien direct vers votre live Instagram ou TikTok.
+          Direct link to your Instagram or TikTok live.
         </p>
         <button
           onClick={() => handleSave(liveStatus)}
@@ -107,7 +107,7 @@ export default function AdminLivePage() {
           className="mt-4 flex items-center gap-2 bg-white/10 text-white/70 hover:bg-white/20 px-4 py-2 text-sm transition-colors disabled:opacity-50"
         >
           {saving && <Loader2 size={14} className="animate-spin" />}
-          Sauvegarder l&apos;URL
+          Save URL
         </button>
       </div>
 
@@ -119,14 +119,14 @@ export default function AdminLivePage() {
           className="flex-1 flex items-center justify-center gap-2 bg-red-600 text-white py-3 text-sm font-semibold tracking-widest uppercase hover:bg-red-700 transition-colors disabled:opacity-40"
         >
           <Radio size={14} />
-          Activer le Live
+          Enable Live
         </button>
         <button
           onClick={() => handleSave(false)}
           disabled={saving || !liveStatus}
           className="flex-1 bg-white/10 text-white/60 py-3 text-sm font-semibold tracking-widest uppercase hover:bg-white/20 transition-colors disabled:opacity-40"
         >
-          Désactiver
+          Disable
         </button>
       </div>
     </div>
