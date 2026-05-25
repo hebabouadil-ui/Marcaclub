@@ -756,7 +756,7 @@ export default function CJImportPage() {
                     </div>
                     <div className="border border-white/10 overflow-hidden">
                       <div className="grid grid-cols-[20px_1fr_56px_80px_52px_44px] text-[9px] text-white/30 px-2 py-1.5 border-b border-white/10 bg-white/3 gap-1.5">
-                        <span></span><span>Name</span><span>CJ $</span><span>Sell CAD</span><span>Margin</span><span>%</span>
+                        <span></span><span>Name</span><span>CJ $</span><span>Sell (MAD)</span><span>Margin CAD</span><span>%</span>
                       </div>
                       <div className="max-h-56 overflow-y-auto">
                         {(preview.variants ?? []).map((v) => {

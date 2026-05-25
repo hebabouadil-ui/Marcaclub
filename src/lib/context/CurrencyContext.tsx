@@ -61,9 +61,9 @@ const FALLBACK_RATES: Record<string, number> = {
 }
 
 const DEFAULT: CurrencyCtx = {
-  currency: 'MAD', symbol: 'MAD ', rate: 1,
-  format: (n) => `MAD ${n.toFixed(2)}`,
-  formatUSD: (n) => `MAD ${(n / 0.0995).toFixed(2)}`,
+  currency: 'CAD', symbol: 'CA$', rate: 0.135,
+  format: (n) => `CA$${(n * 0.135).toFixed(2)}`,
+  formatUSD: (n) => `CA$${(n / 0.0995 * 0.135).toFixed(2)}`,
   setCurrency: () => {},
   geo: null,
   available: CURRENCIES,
@@ -121,14 +121,14 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
       } catch {}
 
       // Geo-detect via Vercel headers (server-side, no external API)
-      let detectedCode = 'MAD'
+      let detectedCode = 'CAD'
       try {
         const g = await fetch('/api/geo')
         if (g.ok) {
           const gd: GeoInfo = await g.json()
           if (gd.countryCode) {
             setGeo(gd)
-            detectedCode = COUNTRY_CURRENCY[gd.countryCode] ?? 'USD'
+            detectedCode = COUNTRY_CURRENCY[gd.countryCode] ?? 'CAD'
           }
         }
       } catch {}
