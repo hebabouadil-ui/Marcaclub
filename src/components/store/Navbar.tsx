@@ -186,9 +186,16 @@ export default function Navbar() {
       {/* Mobile menu */}
       <AnimatePresence>
         {menuOpen && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[60] bg-brand-black flex flex-col pt-24 px-8 md:hidden overflow-y-auto">
-            <div className="flex flex-col gap-6">
+          <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ duration: 0.25, ease: 'easeInOut' }}
+            className="fixed inset-0 z-[60] bg-brand-black flex flex-col md:hidden overflow-y-auto">
+            {/* Menu header with close button */}
+            <div className="flex items-center justify-between px-6 h-16 border-b border-white/10 flex-shrink-0">
+              <span className="text-brand-gold font-display font-bold text-lg tracking-widest">MENU</span>
+              <button onClick={() => setMenuOpen(false)} className="p-2 text-white/60 hover:text-brand-gold transition-colors">
+                <X size={24} />
+              </button>
+            </div>
+            <div className="flex flex-col gap-6 px-8 pt-8 pb-12">
               {links.map((l) => (
                 <Link key={l.href} href={l.href} onClick={() => setMenuOpen(false)}
                   className="text-brand-white/80 hover:text-brand-gold text-lg tracking-widest uppercase transition-colors border-b border-white/10 pb-4">

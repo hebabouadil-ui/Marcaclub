@@ -51,7 +51,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
       <div className="h-16 md:h-20 bg-brand-black" />
 
       <VisitorTracker />
-      <main className="flex-1">{children}</main>
+      <main className="flex-1 overflow-x-hidden">{children}</main>
       <Footer
         instagramUrl={s.instagramUrl ?? 'https://instagram.com/marcaclub'}
         tiktokUrl={s.tiktokUrl ?? 'https://tiktok.com/@marcaclub'}
