@@ -19,14 +19,14 @@ export interface ISettings extends Document {
 const SettingsSchema = new Schema<ISettings>({
   liveStatus: { type: Boolean, default: false },
   liveUrl: { type: String, default: '' },
-  heroTitle: { type: String, default: 'La Mode Exclusive' },
+  heroTitle: { type: String, default: 'Upgrade Your Ride' },
   heroSubtitle: {
     type: String,
-    default: 'Collections importées directement de Primark Espagne',
+    default: 'Accessoires auto premium sélectionnés — livrés partout dans le monde',
   },
   announcementBar: {
     type: String,
-    default: 'Livraison 24-48h • Paiement à la livraison • Nouveautés chaque semaine',
+    default: 'Livraison mondiale · Paiement sécurisé · Nouveaux produits chaque semaine',
   },
   announcementActive: { type: Boolean, default: true },
   instagramUrl: { type: String, default: 'https://instagram.com/marcaclub' },
