@@ -196,7 +196,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
         <div className="grid md:grid-cols-[1fr_420px] gap-8 lg:gap-12 items-start">
           {/* Images */}
           <div className="space-y-3">
-            <div className="relative overflow-hidden bg-white w-full group cursor-zoom-in aspect-square">
+            <div className="relative bg-white w-full group aspect-square" style={{ overflow: 'clip' }}>
               <AnimatePresence initial={false} custom={dir}>
                 <motion.div
                   key={imgIdx}
@@ -206,7 +206,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                   animate="center"
                   exit="exit"
                   transition={swipeTransition}
-                  className="absolute inset-0 will-change-transform"
+                  className="absolute inset-0 overflow-hidden"
                 >
                   {images[imgIdx] ? (
                     <Image
@@ -214,7 +214,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                       alt={product.name}
                       fill
                       unoptimized={isExternal(images[imgIdx])}
-                      className="object-contain transition-transform duration-500 ease-out group-hover:scale-105"
+                      className="object-contain"
                       sizes="(max-width: 768px) 100vw, 50vw"
                       priority
                     />
