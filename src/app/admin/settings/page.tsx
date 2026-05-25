@@ -156,7 +156,45 @@ export default function AdminSettingsPage() {
           {saving && <Loader2 size={14} className="animate-spin" />}
           {saving ? 'Saving...' : 'Save'}
         </button>
+
+        {/* Danger zone */}
+        <div className="border border-red-500/20 bg-red-500/5 p-5 space-y-3 mt-4">
+          <h2 className="text-red-400 text-xs uppercase tracking-widest">Danger Zone</h2>
+          <p className="text-white/30 text-xs">Permanently delete all orders from the database. Use this to clean up test data before going live.</p>
+          <WipeOrdersButton />
+        </div>
       </div>
     </div>
+  )
+}
+
+function WipeOrdersButton() {
+  const [wiping, setWiping] = useState(false)
+  const handleWipe = async () => {
+    if (!window.confirm('Delete ALL orders permanently? This cannot be undone.')) return
+    if (!window.confirm('Are you sure? Every order will be gone forever.')) return
+    setWiping(true)
+    try {
+      const res = await fetch('/api/admin/wipe-orders', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ confirm: 'DELETE_ALL_ORDERS' }),
+      })
+      const data = await res.json()
+      if (res.ok) toast.success(`Deleted ${data.deleted} orders. Dashboard is clean.`)
+      else toast.error(data.error ?? 'Failed')
+    } catch { toast.error('Request failed') }
+    finally { setWiping(false) }
+  }
+  return (
+    <button
+      onClick={handleWipe}
+      disabled={wiping}
+      className="flex items-center gap-2 border border-red-500/40 text-red-400 px-6 py-2.5 text-xs font-semibold tracking-widest uppercase hover:bg-red-500/10 transition-colors disabled:opacity-50"
+    >
+      {wiping && <Loader2 size={12} className="animate-spin" />}
+      {wiping ? 'Deleting...' : 'Delete All Orders'}
+    </button>
   )
 }
