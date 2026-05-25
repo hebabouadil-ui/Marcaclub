@@ -85,8 +85,10 @@ export default function MyOrdersPage() {
                       </span>
                     </div>
                     <p className="text-gray-400 text-xs">{new Date(order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                    {order.cjTrackingNumber && (
-                      <p className="text-xs text-purple-600 mt-1 font-mono">📦 Tracking: {order.cjTrackingNumber}</p>
+                    {(order.cjTrackingNumber || order.status === 'shipped' || order.status === 'confirmed') && (
+                      <Link href={`/track/${order.orderNumber}`} className="text-xs text-purple-600 font-medium underline underline-offset-2 hover:text-purple-800 mt-1 inline-block">
+                        Track Order →
+                      </Link>
                     )}
                   </div>
                   <div className="text-right flex-shrink-0">

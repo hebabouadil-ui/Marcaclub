@@ -146,7 +146,7 @@ export async function sendOrderStatusEmail(order: IOrder, status: string) {
       badgeText: 'Shipped',
       badgeColor: '#8b5cf6',
       emoji: '🚚',
-      body: `Your order is on its way!${order.cjTrackingNumber ? ` Your tracking number is <strong style="font-family:monospace;">${order.cjTrackingNumber}</strong>. Use this to track your package online.` : ' Estimated delivery: 7–12 business days from your order date.'}`,
+      body: `Your order is on its way! Estimated delivery: 7–15 business days from your order date.${order.cjTrackingNumber ? `<br/><br/>Your tracking number: <strong style="font-family:monospace;font-size:16px;">${order.cjTrackingNumber}</strong>` : ''}<br/><br/><div style="text-align:center;margin:20px 0;"><a href="https://marca-club.com/track/${order.orderNumber}" style="display:inline-block;background:#f59e0b;color:#111827;padding:14px 32px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:700;letter-spacing:1px;">Track Your Order</a></div><p style="color:#9ca3af;font-size:12px;text-align:center;">Live tracking updates are available on your order page</p>`,
     },
     delivered: {
       subject: `Your order has been delivered #${order.orderNumber}`,

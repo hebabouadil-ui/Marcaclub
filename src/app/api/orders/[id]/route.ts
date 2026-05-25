@@ -6,6 +6,7 @@ import Product from '@/lib/models/Product'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/authOptions'
 import { sendOrderStatusEmail } from '@/lib/utils/email'
+import { createCJOrder } from '@/lib/utils/cjApi'
 
 export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
@@ -80,6 +81,60 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
           },
           { arrayFilters: [{ 'el.size': item.size }] }
         )
+      }
+    }
+
+    // Auto-fulfill on CJ when confirming for the first time
+    if (status === 'confirmed' && previousStatus !== 'confirmed' && !order.cjOrderId) {
+      try {
+        const productIds = order.items.map((i: { productId: string }) => i.productId)
+        const products = await Product.find({ _id: { $in: productIds } }).lean() as Array<{
+          _id: mongoose.Types.ObjectId; cjPid?: string; cjLogisticName?: string
+          sizes: Array<{ size: string; cjVid?: string }>
+        }>
+        const productMap = new Map(products.map((p) => [String(p._id), p]))
+
+        const cjItems: { vid: string; quantity: number }[] = []
+        for (const item of order.items as unknown as { productId: string; size: string; quantity: number }[]) {
+          const prod = productMap.get(String(item.productId))
+          if (!prod?.cjPid) continue
+          const sizeEntry = prod.sizes.find((s) => s.size === item.size)
+          if (!sizeEntry?.cjVid) continue
+          cjItems.push({ vid: sizeEntry.cjVid, quantity: item.quantity })
+        }
+
+        if (cjItems.length > 0) {
+          const c = order.customer as { name: string; phone: string; address: string; city: string; state?: string; country: string; postalCode?: string; email?: string }
+          const nameParts = c.name.trim().split(' ')
+          const firstName = nameParts[0]
+          const lastName = nameParts.slice(1).join(' ') || '.'
+          const firstProduct = products.find((p) => p.cjPid)
+          const result = await createCJOrder({
+            orderNumber: order.orderNumber,
+            shippingAddress: {
+              firstName,
+              lastName,
+              phone: c.phone,
+              email: c.email || '',
+              country: c.country || 'MA',
+              province: c.state || c.city,
+              city: c.city,
+              address: c.address,
+              zip: c.postalCode || '00000',
+            },
+            products: cjItems,
+            logisticName: firstProduct?.cjLogisticName,
+          })
+          if (result?.data?.orderId) {
+            console.log('Auto-fulfill CJ:', result)
+            order.cjOrderId = result.data.orderId
+            await order.save()
+          } else {
+            console.error('Auto-fulfill CJ error:', result)
+          }
+        }
+      } catch (fulfillErr) {
+        console.error('Auto-fulfill CJ exception:', fulfillErr)
       }
     }
 
