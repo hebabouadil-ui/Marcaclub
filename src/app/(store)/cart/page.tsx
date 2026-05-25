@@ -7,6 +7,12 @@ import { useCurrency } from '@/lib/context/CurrencyContext'
 import { useLanguage } from '@/lib/i18n'
 import { Trash2, ShoppingBag, ArrowRight } from 'lucide-react'
 
+function shortSize(s: string) {
+  if (s.length <= 30) return s
+  const last = s.split(',').pop()?.trim() ?? s
+  return last.replace(/^\s*\d+\s*/, '').trim() || s.split(' ').slice(-2).join(' ')
+}
+
 export default function CartPage() {
   const { items, removeItem, updateQuantity } = useCartStore()
   const { format } = useCurrency()
@@ -44,11 +50,11 @@ export default function CartPage() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
-                  className="flex gap-4 bg-brand-white border border-brand-light-gray p-4"
+                  className="flex gap-4 bg-brand-white border border-brand-light-gray p-3 sm:p-4"
                 >
-                  <div className="relative w-20 h-28 flex-shrink-0 bg-brand-light-gray overflow-hidden">
+                  <div className="relative w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0 bg-white border border-brand-light-gray overflow-hidden">
                     {item.image ? (
-                      <Image src={item.image} alt={item.name} fill className="object-cover" sizes="80px" />
+                      <Image src={item.image} alt={item.name} fill className="object-contain" sizes="112px" unoptimized={!item.image.includes('cloudinary.com')} />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <span className="text-[8px] text-brand-gray uppercase">MC</span>
@@ -57,9 +63,9 @@ export default function CartPage() {
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-sm text-brand-black truncate">{item.name}</h3>
-                    <p className="text-xs text-brand-gray mt-0.5 tracking-widest uppercase">
-                      {tr.cart.size}: {item.size}
+                    <h3 className="font-medium text-sm text-brand-black leading-tight line-clamp-2">{item.name}</h3>
+                    <p className="text-xs text-brand-gray mt-1 tracking-widest uppercase truncate">
+                      {tr.cart.size}: {shortSize(item.size)}
                     </p>
                     <p className="text-sm font-semibold text-brand-black mt-2">
                       {format(item.price)}

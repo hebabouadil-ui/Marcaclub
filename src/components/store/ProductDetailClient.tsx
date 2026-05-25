@@ -185,7 +185,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
     <div className="min-h-screen">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10">
         {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-xs tracking-widest uppercase text-brand-gray mb-8">
+        <div className="flex items-center gap-2 text-xs tracking-widest uppercase text-brand-gray mb-4 md:mb-8">
           <Link href="/" className="hover:text-brand-black transition-colors">Accueil</Link>
           <span>/</span>
           <Link href="/products" className="hover:text-brand-black transition-colors">Collection</Link>
@@ -196,7 +196,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
         <div className="grid md:grid-cols-[1fr_420px] gap-8 lg:gap-12 items-start">
           {/* Images */}
           <div className="space-y-3">
-            <div className="relative overflow-hidden bg-white w-full md:max-w-[420px] group cursor-zoom-in aspect-square max-h-[320px] md:max-h-none">
+            <div className="relative overflow-hidden bg-white w-full group cursor-zoom-in aspect-square">
               <AnimatePresence initial={false} custom={dir}>
                 <motion.div
                   key={imgIdx}
