@@ -66,6 +66,9 @@ export async function POST(req: NextRequest) {
     type OrderItem = { productId: string; size: string; quantity: number; name?: string }
     const items = body.items as OrderItem[]
 
+    // Accept tax amount passed from the client (validated against payment intent metadata)
+    const clientTaxAmount = typeof body.taxAmount === 'number' && body.taxAmount >= 0 ? body.taxAmount : 0
+
     // Atomically decrement stock — validate + deduct in one operation per item
     // Build server-trusted item lines from DB (don't trust client price/name/image)
     let serverTotal = 0
@@ -288,7 +291,8 @@ export async function POST(req: NextRequest) {
       items: trustedItems,
       notes: body.notes || undefined,
       orderNumber,
-      total: serverTotal,
+      total: serverTotal + clientTaxAmount,
+      taxAmount: clientTaxAmount > 0 ? clientTaxAmount : undefined,
       currency: 'usd',
       stripePaymentIntentId: stripePaymentIntentId || undefined,
       stripePaymentStatus: stripePaymentIntentId ? 'pending' : undefined,

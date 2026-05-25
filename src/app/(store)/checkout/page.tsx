@@ -16,6 +16,36 @@ import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
+// VAT / GST / Sales tax rates by country (as decimals)
+const TAX_RATES: Record<string, { rate: number; label: string }> = {
+  US: { rate: 0,    label: 'Sales Tax' },   // varies by state — excluded at order level
+  CA: { rate: 0.05, label: 'GST 5%' },
+  GB: { rate: 0.20, label: 'VAT 20%' },
+  AU: { rate: 0.10, label: 'GST 10%' },
+  FR: { rate: 0.20, label: 'TVA 20%' },
+  DE: { rate: 0.19, label: 'MwSt 19%' },
+  ES: { rate: 0.21, label: 'IVA 21%' },
+  IT: { rate: 0.22, label: 'IVA 22%' },
+  NL: { rate: 0.21, label: 'BTW 21%' },
+  BE: { rate: 0.21, label: 'TVA 21%' },
+  CH: { rate: 0.077,label: 'MWST 7.7%' },
+  AT: { rate: 0.20, label: 'MwSt 20%' },
+  SE: { rate: 0.25, label: 'Moms 25%' },
+  NO: { rate: 0.25, label: 'MVA 25%' },
+  DK: { rate: 0.25, label: 'Moms 25%' },
+  PT: { rate: 0.23, label: 'IVA 23%' },
+  IE: { rate: 0.23, label: 'VAT 23%' },
+  NZ: { rate: 0.15, label: 'GST 15%' },
+  JP: { rate: 0.10, label: 'Consumption Tax 10%' },
+  SG: { rate: 0.09, label: 'GST 9%' },
+  AE: { rate: 0.05, label: 'VAT 5%' },
+  SA: { rate: 0.15, label: 'VAT 15%' },
+  MA: { rate: 0.20, label: 'TVA 20%' },
+  BR: { rate: 0.17, label: 'ICMS 17%' },
+  MX: { rate: 0.16, label: 'IVA 16%' },
+  IN: { rate: 0.18, label: 'GST 18%' },
+}
+
 const COUNTRIES = [
   { code: 'US', name: 'United States' }, { code: 'CA', name: 'Canada' },
   { code: 'GB', name: 'United Kingdom' }, { code: 'AU', name: 'Australia' },
@@ -211,11 +241,12 @@ function AuthStep({
   )
 }
 
-function PaymentStep({ clientSecret, customer, items, total, onSuccess }: {
+function PaymentStep({ clientSecret, customer, items, total, taxAmount, onSuccess }: {
   clientSecret: string
   customer: CustomerForm
   items: { productId: string; size: string; quantity: number }[]
   total: number
+  taxAmount: number
   onSuccess: (orderNumber: string) => void
 }) {
   const stripe = useStripe()
@@ -234,7 +265,7 @@ function PaymentStep({ clientSecret, customer, items, total, onSuccess }: {
     const orderRes = await fetch('/api/orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ customer, items, stripeClientSecret: clientSecret }),
+      body: JSON.stringify({ customer, items, stripeClientSecret: clientSecret, taxAmount }),
     })
     const orderData = await orderRes.json()
     if (!orderRes.ok) { toast.error(orderData.message ?? 'Failed to create order'); setPaying(false); return }
@@ -278,7 +309,7 @@ function PaymentStep({ clientSecret, customer, items, total, onSuccess }: {
 export default function CheckoutPage() {
   const router = useRouter()
   const { items, removeItem, updateQuantity, clearCart } = useCartStore()
-  const total = cartTotal(items)
+  const subtotal = cartTotal(items)
   const { format, currency, geo } = useCurrency()
   const { customer, loading: authLoading } = useCustomer()
   const [shippingForm, setShippingForm] = useState<CustomerForm>(emptyForm)
@@ -286,6 +317,10 @@ export default function CheckoutPage() {
   const [step, setStep] = useState<'cart' | 'auth' | 'info' | 'payment'>('cart')
   const [loadingIntent, setLoadingIntent] = useState(false)
   const [authReturnFromOAuth, setAuthReturnFromOAuth] = useState(false)
+  const [taxAmount, setTaxAmount] = useState(0)
+
+  const taxInfo = TAX_RATES[shippingForm.country] ?? { rate: 0, label: 'Tax' }
+  const total = subtotal + taxAmount
 
   // Detect return from OAuth redirect (?auth=done)
   useEffect(() => {
@@ -311,16 +346,19 @@ export default function CheckoutPage() {
     }
   }, [authReturnFromOAuth, authLoading, customer])
 
-  // Prefill from geo location
+  // Prefill from geo location and set initial tax
   useEffect(() => {
     if (geo) {
+      const countryCode = COUNTRIES.find(c => c.code === geo.countryCode) ? geo.countryCode : 'US'
       setShippingForm(prev => ({
         ...prev,
-        country: COUNTRIES.find(c => c.code === geo.countryCode) ? geo.countryCode : prev.country,
+        country: countryCode,
         state: prev.state || geo.region || '',
       }))
+      const rate = TAX_RATES[countryCode]?.rate ?? 0
+      setTaxAmount(Math.round(subtotal * rate * 100) / 100)
     }
-  }, [geo])
+  }, [geo, subtotal])
 
   // When customer logs in during auth step, advance to info
   const handleAuthSuccess = useCallback(() => {
@@ -335,8 +373,16 @@ export default function CheckoutPage() {
   }, [customer])
 
   const set = useCallback((key: keyof CustomerForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setShippingForm((prev) => ({ ...prev, [key]: e.target.value }))
-  }, [])
+    const value = e.target.value
+    setShippingForm((prev) => {
+      const next = { ...prev, [key]: value }
+      if (key === 'country') {
+        const rate = TAX_RATES[value]?.rate ?? 0
+        setTaxAmount(Math.round(subtotal * rate * 100) / 100)
+      }
+      return next
+    })
+  }, [subtotal])
 
   const handleProceedFromCart = () => {
     // If already logged in, skip auth step
@@ -366,6 +412,7 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           items: items.map((i) => ({ productId: i.productId, size: i.size, quantity: i.quantity })),
           currency: 'usd',
+          taxRate: taxInfo.rate,
         }),
       })
       const data = await res.json()
@@ -527,10 +574,18 @@ export default function CheckoutPage() {
                       {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
                     </select>
                   </div>
+                  {/* Live tax preview */}
+                  {taxInfo.rate > 0 && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm flex justify-between items-center">
+                      <span className="text-amber-800 font-medium">{taxInfo.label} applied</span>
+                      <span className="font-bold text-amber-900">{format(taxAmount)}</span>
+                    </div>
+                  )}
+
                   <button type="submit" disabled={loadingIntent}
                     className="w-full bg-gray-900 text-white py-4 font-semibold rounded-lg hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 mt-2">
                     {loadingIntent ? <Loader2 size={16} className="animate-spin" /> : null}
-                    {loadingIntent ? 'Preparing...' : 'Continue to payment'}
+                    {loadingIntent ? 'Preparing...' : `Continue to payment · ${format(total)}`}
                     {!loadingIntent && <ChevronRight size={16} />}
                   </button>
                 </form>
@@ -561,6 +616,7 @@ export default function CheckoutPage() {
                     customer={shippingForm}
                     items={items.map((i) => ({ productId: i.productId, size: i.size, quantity: i.quantity }))}
                     total={total}
+                    taxAmount={taxAmount}
                     onSuccess={handleSuccess}
                   />
                 </Elements>
@@ -606,11 +662,21 @@ export default function CheckoutPage() {
               </div>
               <div className="border-t border-gray-100 pt-4 space-y-2.5">
                 <div className="flex justify-between text-sm text-gray-600">
-                  <span>Subtotal</span><span>{format(total)}</span>
+                  <span>Subtotal</span><span>{format(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>Shipping</span><span className="text-green-600 font-medium">Free</span>
                 </div>
+                {taxInfo.rate > 0 ? (
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>{taxInfo.label}</span>
+                    <span>{format(taxAmount)}</span>
+                  </div>
+                ) : shippingForm.country === 'US' ? (
+                  <div className="flex justify-between text-sm text-gray-400">
+                    <span>Sales Tax</span><span className="text-xs">Varies by state</span>
+                  </div>
+                ) : null}
                 {currency !== 'USD' && (
                   <p className="text-[10px] text-gray-400">* Displayed in {currency}. Charged in USD at checkout.</p>
                 )}

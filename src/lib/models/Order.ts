@@ -23,6 +23,7 @@ export interface IOrder extends Document {
   }
   items: IOrderItem[]
   total: number
+  taxAmount?: number
   currency: string
   stripePaymentIntentId?: string
   stripePaymentStatus?: string
@@ -68,6 +69,7 @@ const OrderSchema = new Schema<IOrder>(
       },
     ],
     total: { type: Number, required: true },
+    taxAmount: { type: Number },
     currency: { type: String, default: 'usd' },
     stripePaymentIntentId: { type: String },
     stripePaymentStatus: { type: String },
