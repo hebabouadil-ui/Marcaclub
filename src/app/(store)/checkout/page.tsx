@@ -16,34 +16,117 @@ import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
-// VAT / GST / Sales tax rates by country (as decimals)
-const TAX_RATES: Record<string, { rate: number; label: string }> = {
-  US: { rate: 0,    label: 'Sales Tax' },   // varies by state — excluded at order level
-  CA: { rate: 0.05, label: 'GST 5%' },
-  GB: { rate: 0.20, label: 'VAT 20%' },
-  AU: { rate: 0.10, label: 'GST 10%' },
-  FR: { rate: 0.20, label: 'TVA 20%' },
-  DE: { rate: 0.19, label: 'MwSt 19%' },
-  ES: { rate: 0.21, label: 'IVA 21%' },
-  IT: { rate: 0.22, label: 'IVA 22%' },
-  NL: { rate: 0.21, label: 'BTW 21%' },
-  BE: { rate: 0.21, label: 'TVA 21%' },
-  CH: { rate: 0.077,label: 'MWST 7.7%' },
-  AT: { rate: 0.20, label: 'MwSt 20%' },
-  SE: { rate: 0.25, label: 'Moms 25%' },
-  NO: { rate: 0.25, label: 'MVA 25%' },
-  DK: { rate: 0.25, label: 'Moms 25%' },
-  PT: { rate: 0.23, label: 'IVA 23%' },
-  IE: { rate: 0.23, label: 'VAT 23%' },
-  NZ: { rate: 0.15, label: 'GST 15%' },
-  JP: { rate: 0.10, label: 'Consumption Tax 10%' },
-  SG: { rate: 0.09, label: 'GST 9%' },
-  AE: { rate: 0.05, label: 'VAT 5%' },
-  SA: { rate: 0.15, label: 'VAT 15%' },
-  MA: { rate: 0.20, label: 'TVA 20%' },
-  BR: { rate: 0.17, label: 'ICMS 17%' },
-  MX: { rate: 0.16, label: 'IVA 16%' },
-  IN: { rate: 0.18, label: 'GST 18%' },
+// Tax component: a named tax line with its own rate
+interface TaxComponent { label: string; rate: number }
+
+// Canada: province-level breakdown (GST/HST/PST/TVQ)
+const CANADA_PROVINCE_TAX: Record<string, TaxComponent[]> = {
+  AB: [{ label: 'GST 5%',  rate: 0.05 }],
+  BC: [{ label: 'GST 5%',  rate: 0.05 }, { label: 'PST 7%',  rate: 0.07 }],
+  MB: [{ label: 'GST 5%',  rate: 0.05 }, { label: 'PST 7%',  rate: 0.07 }],
+  NB: [{ label: 'HST 15%', rate: 0.15 }],
+  NL: [{ label: 'HST 15%', rate: 0.15 }],
+  NS: [{ label: 'HST 15%', rate: 0.15 }],
+  NT: [{ label: 'GST 5%',  rate: 0.05 }],
+  NU: [{ label: 'GST 5%',  rate: 0.05 }],
+  ON: [{ label: 'HST 13%', rate: 0.13 }],
+  PE: [{ label: 'HST 15%', rate: 0.15 }],
+  QC: [{ label: 'TPS 5%',  rate: 0.05 }, { label: 'TVQ 9.975%', rate: 0.09975 }],
+  SK: [{ label: 'GST 5%',  rate: 0.05 }, { label: 'PST 6%',  rate: 0.06 }],
+  YT: [{ label: 'GST 5%',  rate: 0.05 }],
+}
+
+// US: state-level sales tax (state base rate)
+const US_STATE_TAX: Record<string, TaxComponent[]> = {
+  AL: [{ label: 'Sales Tax 4%',     rate: 0.04 }],
+  AK: [{ label: 'No Sales Tax',     rate: 0 }],
+  AZ: [{ label: 'Sales Tax 5.6%',   rate: 0.056 }],
+  AR: [{ label: 'Sales Tax 6.5%',   rate: 0.065 }],
+  CA: [{ label: 'Sales Tax 7.25%',  rate: 0.0725 }],
+  CO: [{ label: 'Sales Tax 2.9%',   rate: 0.029 }],
+  CT: [{ label: 'Sales Tax 6.35%',  rate: 0.0635 }],
+  DE: [{ label: 'No Sales Tax',     rate: 0 }],
+  FL: [{ label: 'Sales Tax 6%',     rate: 0.06 }],
+  GA: [{ label: 'Sales Tax 4%',     rate: 0.04 }],
+  HI: [{ label: 'GET 4%',           rate: 0.04 }],
+  ID: [{ label: 'Sales Tax 6%',     rate: 0.06 }],
+  IL: [{ label: 'Sales Tax 6.25%',  rate: 0.0625 }],
+  IN: [{ label: 'Sales Tax 7%',     rate: 0.07 }],
+  IA: [{ label: 'Sales Tax 6%',     rate: 0.06 }],
+  KS: [{ label: 'Sales Tax 6.5%',   rate: 0.065 }],
+  KY: [{ label: 'Sales Tax 6%',     rate: 0.06 }],
+  LA: [{ label: 'Sales Tax 4.45%',  rate: 0.0445 }],
+  ME: [{ label: 'Sales Tax 5.5%',   rate: 0.055 }],
+  MD: [{ label: 'Sales Tax 6%',     rate: 0.06 }],
+  MA: [{ label: 'Sales Tax 6.25%',  rate: 0.0625 }],
+  MI: [{ label: 'Sales Tax 6%',     rate: 0.06 }],
+  MN: [{ label: 'Sales Tax 6.875%', rate: 0.06875 }],
+  MS: [{ label: 'Sales Tax 7%',     rate: 0.07 }],
+  MO: [{ label: 'Sales Tax 4.225%', rate: 0.04225 }],
+  MT: [{ label: 'No Sales Tax',     rate: 0 }],
+  NE: [{ label: 'Sales Tax 5.5%',   rate: 0.055 }],
+  NV: [{ label: 'Sales Tax 6.85%',  rate: 0.0685 }],
+  NH: [{ label: 'No Sales Tax',     rate: 0 }],
+  NJ: [{ label: 'Sales Tax 6.625%', rate: 0.06625 }],
+  NM: [{ label: 'Sales Tax 5%',     rate: 0.05 }],
+  NY: [{ label: 'Sales Tax 4%',     rate: 0.04 }],
+  NC: [{ label: 'Sales Tax 4.75%',  rate: 0.0475 }],
+  ND: [{ label: 'Sales Tax 5%',     rate: 0.05 }],
+  OH: [{ label: 'Sales Tax 5.75%',  rate: 0.0575 }],
+  OK: [{ label: 'Sales Tax 4.5%',   rate: 0.045 }],
+  OR: [{ label: 'No Sales Tax',     rate: 0 }],
+  PA: [{ label: 'Sales Tax 6%',     rate: 0.06 }],
+  RI: [{ label: 'Sales Tax 7%',     rate: 0.07 }],
+  SC: [{ label: 'Sales Tax 6%',     rate: 0.06 }],
+  SD: [{ label: 'Sales Tax 4.5%',   rate: 0.045 }],
+  TN: [{ label: 'Sales Tax 7%',     rate: 0.07 }],
+  TX: [{ label: 'Sales Tax 6.25%',  rate: 0.0625 }],
+  UT: [{ label: 'Sales Tax 4.85%',  rate: 0.0485 }],
+  VT: [{ label: 'Sales Tax 6%',     rate: 0.06 }],
+  VA: [{ label: 'Sales Tax 4.3%',   rate: 0.043 }],
+  WA: [{ label: 'Sales Tax 6.5%',   rate: 0.065 }],
+  WV: [{ label: 'Sales Tax 6%',     rate: 0.06 }],
+  WI: [{ label: 'Sales Tax 5%',     rate: 0.05 }],
+  WY: [{ label: 'Sales Tax 4%',     rate: 0.04 }],
+  DC: [{ label: 'Sales Tax 6%',     rate: 0.06 }],
+}
+
+// Rest of world: single VAT/GST rate (non-North America)
+const WORLD_TAX: Record<string, { rate: number; label: string }> = {
+  GB: { rate: 0.20,  label: 'VAT 20%' },
+  AU: { rate: 0.10,  label: 'GST 10%' },
+  FR: { rate: 0.20,  label: 'TVA 20%' },
+  DE: { rate: 0.19,  label: 'MwSt 19%' },
+  ES: { rate: 0.21,  label: 'IVA 21%' },
+  IT: { rate: 0.22,  label: 'IVA 22%' },
+  NL: { rate: 0.21,  label: 'BTW 21%' },
+  BE: { rate: 0.21,  label: 'TVA 21%' },
+  CH: { rate: 0.077, label: 'MWST 7.7%' },
+  AT: { rate: 0.20,  label: 'MwSt 20%' },
+  SE: { rate: 0.25,  label: 'Moms 25%' },
+  NO: { rate: 0.25,  label: 'MVA 25%' },
+  DK: { rate: 0.25,  label: 'Moms 25%' },
+  PT: { rate: 0.23,  label: 'IVA 23%' },
+  IE: { rate: 0.23,  label: 'VAT 23%' },
+  NZ: { rate: 0.15,  label: 'GST 15%' },
+  JP: { rate: 0.10,  label: 'Consumption Tax 10%' },
+  SG: { rate: 0.09,  label: 'GST 9%' },
+  AE: { rate: 0.05,  label: 'VAT 5%' },
+  SA: { rate: 0.15,  label: 'VAT 15%' },
+  MA: { rate: 0.20,  label: 'TVA 20%' },
+  BR: { rate: 0.17,  label: 'ICMS 17%' },
+  MX: { rate: 0.16,  label: 'IVA 16%' },
+  IN: { rate: 0.18,  label: 'GST 18%' },
+}
+
+// Resolve tax components from country + state/province
+function resolveTaxComponents(country: string, stateCode: string): TaxComponent[] {
+  const code = stateCode.trim().toUpperCase()
+  if (country === 'CA') return CANADA_PROVINCE_TAX[code] ?? [{ label: 'GST 5%', rate: 0.05 }]
+  if (country === 'US') return US_STATE_TAX[code] ?? []
+  const world = WORLD_TAX[country]
+  if (world) return [{ label: world.label, rate: world.rate }]
+  return []
 }
 
 const COUNTRIES = [
@@ -317,9 +400,11 @@ export default function CheckoutPage() {
   const [step, setStep] = useState<'cart' | 'auth' | 'info' | 'payment'>('cart')
   const [loadingIntent, setLoadingIntent] = useState(false)
   const [authReturnFromOAuth, setAuthReturnFromOAuth] = useState(false)
-  const [taxAmount, setTaxAmount] = useState(0)
+  const [taxComponents, setTaxComponents] = useState<TaxComponent[]>([])
 
-  const taxInfo = TAX_RATES[shippingForm.country] ?? { rate: 0, label: 'Tax' }
+  const taxAmount = Math.round(
+    taxComponents.reduce((sum, c) => sum + subtotal * c.rate, 0) * 100
+  ) / 100
   const total = subtotal + taxAmount
 
   // Detect return from OAuth redirect (?auth=done)
@@ -350,15 +435,11 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (geo) {
       const countryCode = COUNTRIES.find(c => c.code === geo.countryCode) ? geo.countryCode : 'US'
-      setShippingForm(prev => ({
-        ...prev,
-        country: countryCode,
-        state: prev.state || geo.region || '',
-      }))
-      const rate = TAX_RATES[countryCode]?.rate ?? 0
-      setTaxAmount(Math.round(subtotal * rate * 100) / 100)
+      const stateCode = geo.region || ''
+      setShippingForm(prev => ({ ...prev, country: countryCode, state: prev.state || stateCode }))
+      setTaxComponents(resolveTaxComponents(countryCode, stateCode))
     }
-  }, [geo, subtotal])
+  }, [geo])
 
   // When customer logs in during auth step, advance to info
   const handleAuthSuccess = useCallback(() => {
@@ -376,13 +457,12 @@ export default function CheckoutPage() {
     const value = e.target.value
     setShippingForm((prev) => {
       const next = { ...prev, [key]: value }
-      if (key === 'country') {
-        const rate = TAX_RATES[value]?.rate ?? 0
-        setTaxAmount(Math.round(subtotal * rate * 100) / 100)
-      }
+      const country = key === 'country' ? value : prev.country
+      const state  = key === 'state'   ? value : prev.state
+      setTaxComponents(resolveTaxComponents(country, state))
       return next
     })
-  }, [subtotal])
+  }, [])
 
   const handleProceedFromCart = () => {
     // If already logged in, skip auth step
@@ -412,7 +492,7 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           items: items.map((i) => ({ productId: i.productId, size: i.size, quantity: i.quantity })),
           currency: 'usd',
-          taxRate: taxInfo.rate,
+          taxRate: taxComponents.reduce((s, c) => s + c.rate, 0),
         }),
       })
       const data = await res.json()
@@ -574,11 +654,21 @@ export default function CheckoutPage() {
                       {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
                     </select>
                   </div>
-                  {/* Live tax preview */}
-                  {taxInfo.rate > 0 && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm flex justify-between items-center">
-                      <span className="text-amber-800 font-medium">{taxInfo.label} applied</span>
-                      <span className="font-bold text-amber-900">{format(taxAmount)}</span>
+                  {/* Live tax preview — shows per-component breakdown */}
+                  {taxComponents.length > 0 && taxAmount > 0 && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 space-y-1.5">
+                      {taxComponents.filter(c => c.rate > 0).map((c) => (
+                        <div key={c.label} className="flex justify-between text-sm">
+                          <span className="text-amber-800 font-medium">{c.label}</span>
+                          <span className="font-bold text-amber-900">{format(Math.round(subtotal * c.rate * 100) / 100)}</span>
+                        </div>
+                      ))}
+                      {taxComponents.filter(c => c.rate > 0).length > 1 && (
+                        <div className="flex justify-between text-xs text-amber-700 border-t border-amber-200 pt-1.5 mt-1">
+                          <span>Total tax</span>
+                          <span className="font-bold">{format(taxAmount)}</span>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -667,16 +757,19 @@ export default function CheckoutPage() {
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>Shipping</span><span className="text-green-600 font-medium">Free</span>
                 </div>
-                {taxInfo.rate > 0 ? (
-                  <div className="flex justify-between text-sm text-gray-600">
-                    <span>{taxInfo.label}</span>
-                    <span>{format(taxAmount)}</span>
-                  </div>
-                ) : shippingForm.country === 'US' ? (
-                  <div className="flex justify-between text-sm text-gray-400">
-                    <span>Sales Tax</span><span className="text-xs">Varies by state</span>
-                  </div>
-                ) : null}
+                {taxComponents.length > 0 && taxAmount > 0
+                  ? taxComponents.filter(c => c.rate > 0).map((c) => (
+                      <div key={c.label} className="flex justify-between text-sm text-gray-600">
+                        <span>{c.label}</span>
+                        <span>{format(Math.round(subtotal * c.rate * 100) / 100)}</span>
+                      </div>
+                    ))
+                  : (shippingForm.country === 'US' || shippingForm.country === 'CA') && !shippingForm.state
+                  ? <div className="flex justify-between text-sm text-gray-400">
+                      <span>Tax</span><span className="text-xs">Enter state/province</span>
+                    </div>
+                  : null
+                }
                 {currency !== 'USD' && (
                   <p className="text-[10px] text-gray-400">* Displayed in {currency}. Charged in USD at checkout.</p>
                 )}
