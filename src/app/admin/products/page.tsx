@@ -24,10 +24,10 @@ interface Product {
 type ProductForm = Omit<Product, '_id' | 'stock'>
 
 const EMPTY: ProductForm = {
-  name: '', price: 0, originalPrice: undefined, category: 'femme',
+  name: '', price: 0, originalPrice: undefined, category: 'eclairage-led',
   images: [], sizes: [], featured: false, active: true, description: '',
 }
-const CATEGORIES = ['femme', 'homme', 'accessoires', 'enfant']
+const CATEGORIES = ['eclairage-led', 'tech-sans-fil', 'aspirateurs', 'chargeurs', 'carplay', 'autres']
 const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '36', '37', '38', '39', '40', '41', '42', '43', 'Unique']
 
 export default function AdminProductsPage() {

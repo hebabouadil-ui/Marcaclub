@@ -175,7 +175,7 @@ export default function CJImportPage() {
   const [previewLoading, setPreviewLoading] = useState(false)
   const [activeImg, setActiveImg] = useState(0)
   const [form, setForm] = useState<ImportForm>({
-    name: '', description: '', price: '', category: 'clothing',
+    name: '', description: '', price: '', category: 'eclairage-led',
     selectedVariants: [], cjLogisticName: '', markupX: '3', variantPrices: {},
   })
   const [importing, setImporting] = useState(false)
@@ -292,7 +292,7 @@ export default function CJImportPage() {
         name: detail.productNameEn ?? product.productNameEn,
         description: detail.description ? stripHtml(detail.description) : '',
         price: minPrice,
-        category: 'clothing',
+        category: 'eclairage-led',
         selectedVariants: (detail.variants ?? []).map((v) => v.vid),
         cjLogisticName: '',
         markupX: String(markup),
@@ -702,12 +702,12 @@ export default function CJImportPage() {
                     <label className="block text-white/40 text-[10px] tracking-widest mb-1.5">CATEGORY *</label>
                     <select value={form.category} onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
                       className="w-full bg-white/5 border border-white/10 text-white text-sm px-4 py-2.5 focus:outline-none focus:border-brand-gold/50">
-                      <option value="clothing" className="bg-[#0f0f0f]">Clothing</option>
-                      <option value="accessories" className="bg-[#0f0f0f]">Accessories</option>
-                      <option value="shoes" className="bg-[#0f0f0f]">Shoes</option>
-                      <option value="bags" className="bg-[#0f0f0f]">Bags</option>
-                      <option value="jewelry" className="bg-[#0f0f0f]">Jewelry</option>
-                      <option value="other" className="bg-[#0f0f0f]">Other</option>
+                      <option value="eclairage-led" className="bg-[#0f0f0f]">Éclairage LED</option>
+                      <option value="tech-sans-fil" className="bg-[#0f0f0f]">Tech Sans Fil</option>
+                      <option value="aspirateurs" className="bg-[#0f0f0f]">Aspirateurs</option>
+                      <option value="chargeurs" className="bg-[#0f0f0f]">Chargeurs</option>
+                      <option value="carplay" className="bg-[#0f0f0f]">CarPlay / Écrans</option>
+                      <option value="autres" className="bg-[#0f0f0f]">Autres</option>
                     </select>
                   </div>
                 </div>
