@@ -193,9 +193,9 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
           <span className="text-brand-black truncate max-w-[160px]">{product.name}</span>
         </div>
 
-        <div className="grid md:grid-cols-[1fr_420px] gap-5 md:gap-8 lg:gap-12 items-start">
+        <div className="grid md:grid-cols-[1fr_420px] gap-5 md:gap-8 lg:gap-12 items-start" style={{ overflow: 'hidden' }}>
           {/* Images */}
-          <div className="space-y-3">
+          <div className="space-y-3" style={{ minWidth: 0, overflow: 'hidden' }}>
             <div style={{ position: 'relative', width: '100%', height: '300px', overflow: 'hidden', background: 'white' }}>
               <AnimatePresence initial={false} custom={dir}>
                 <motion.div
@@ -256,10 +256,10 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
           </div>
 
           {/* Info panel */}
-          <div className="flex flex-col">
-            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }}>
+          <div className="flex flex-col" style={{ minWidth: 0, overflow: 'hidden' }}>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
               <p className="text-[10px] tracking-[0.3em] text-brand-gold uppercase mb-2">{product.category}</p>
-              <h1 className="font-display text-2xl md:text-3xl text-brand-black leading-tight mb-4">{product.name}</h1>
+              <h1 className="font-display text-2xl md:text-3xl text-brand-black leading-tight mb-4" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{product.name}</h1>
 
               {/* Price */}
               <div className="flex items-center gap-3 mb-2">
