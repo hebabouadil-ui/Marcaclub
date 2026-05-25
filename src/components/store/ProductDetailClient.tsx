@@ -31,6 +31,7 @@ interface Product {
   cjPid?: string
   cjLogisticName?: string
   productWeight?: number
+  shippingBakedMad?: number
 }
 
 interface ShippingOption {
@@ -132,10 +133,16 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
   const selectedStock = selectedSizeEntry?.stock ?? 0
   const totalStock = sizes.reduce((s, i) => s + i.stock, 0)
 
-  // Price: use variant-specific price if available, else product price
-  const displayPrice = selectedSizeEntry?.variantPrice
-    ? selectedSizeEntry.variantPrice
-    : product.price
+  // Price: base price + dynamic shipping adjustment for user's country
+  // If shippingBakedMad is stored, we can adjust: remove baked shipping, add actual shipping
+  const MAD_PER_USD = 10.05
+  const baseDisplayPrice = selectedSizeEntry?.variantPrice ?? product.price
+  const displayPrice = (() => {
+    if (!product.shippingBakedMad || !shipping) return baseDisplayPrice
+    const newShippingMad = shipping.logisticPrice * MAD_PER_USD
+    const adjusted = baseDisplayPrice - product.shippingBakedMad + newShippingMad
+    return Math.max(adjusted, baseDisplayPrice * 0.7) // never show less than 70% of listed price
+  })()
 
   const originalPrice = product.originalPrice
   const discount = originalPrice && displayPrice < originalPrice

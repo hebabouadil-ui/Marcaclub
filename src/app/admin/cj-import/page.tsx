@@ -336,6 +336,8 @@ export default function CJImportPage() {
           selectedVariants: form.selectedVariants,
           cjLogisticName: form.cjLogisticName || undefined,
           variantPrices: form.variantPrices,
+          shippingBakedUSD: shippingUSD,
+          productWeight: preview.productWeight ?? 200,
         }),
       })
       const data = await res.json()
