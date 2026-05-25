@@ -417,14 +417,14 @@ export default function CheckoutPage() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+      <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-8">
           <div className="lg:col-span-3">
 
             {/* STEP: Cart */}
             {step === 'cart' && (
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-6">
+              <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
+                <div className="flex items-center justify-between mb-4 sm:mb-6">
                   <h2 className="font-semibold text-gray-900">Your Cart ({items.length} {items.length === 1 ? 'item' : 'items'})</h2>
                   <Link href="/products" className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1"><ArrowLeft size={12} /> Continue shopping</Link>
                 </div>
@@ -471,8 +471,8 @@ export default function CheckoutPage() {
 
             {/* STEP: Information */}
             {step === 'info' && (
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-6">
+              <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
+                <div className="flex items-center justify-between mb-4 sm:mb-6">
                   <h2 className="font-semibold text-gray-900">Shipping Information</h2>
                   {customer && (
                     <span className="text-xs text-green-600 bg-green-50 border border-green-200 px-2 py-1 rounded-full">
@@ -481,7 +481,7 @@ export default function CheckoutPage() {
                   )}
                 </div>
                 <form onSubmit={handleInfoSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1.5">Full name *</label>
                       <input value={shippingForm.name} onChange={set('name')} required placeholder="John Doe"
@@ -503,7 +503,7 @@ export default function CheckoutPage() {
                     <input value={shippingForm.address} onChange={set('address')} required placeholder="123 Main St, Apt 4B"
                       className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" />
                   </div>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1.5">City *</label>
                       <input value={shippingForm.city} onChange={set('city')} required placeholder="Montreal"
@@ -584,7 +584,7 @@ export default function CheckoutPage() {
           </div>
 
           {/* Order summary sidebar */}
-          <div className="lg:col-span-2">
+          <div className="hidden lg:block lg:col-span-2">
             <div className="bg-white rounded-xl border border-gray-200 p-6 sticky top-6">
               <h2 className="font-semibold text-gray-900 mb-5">Order Summary</h2>
               <div className="space-y-3 max-h-72 overflow-y-auto mb-5">

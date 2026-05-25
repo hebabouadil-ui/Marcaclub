@@ -122,7 +122,7 @@ export default function HomeLiveSection({ instagramUrl, tiktokUrl }: Props) {
                 </div>
                 <div className="mt-8 pt-6 border-t border-white/8">
                   <p className="text-white/20 text-[10px] tracking-widest uppercase">
-                    {lang === 'fr' ? 'Mode exclusive · Depuis 2024' : 'Exclusive fashion · Since 2024'}
+                    {lang === 'fr' ? 'Auto premium · Depuis 2024' : 'Premium car accessories · Since 2024'}
                   </p>
                 </div>
               </div>

@@ -61,8 +61,8 @@ const t = {
       join: 'Rejoindre',
     },
     footer: {
-      tagline: 'Mode Exclusive',
-      description: 'Vêtements et accessoires exclusifs livrés dans le monde entier. Qualité premium, livraison rapide.',
+      tagline: 'Auto Premium',
+      description: 'Accessoires auto premium sélectionnés et livrés dans le monde entier. Qualité garantie, livraison rapide.',
       shop: 'Boutique',
       collection: 'Collection',
       newArrivals: 'Nouveautés',
@@ -75,7 +75,7 @@ const t = {
       delivery: 'Livraison 7–12 jours',
       contact: 'Nous contacter',
       rights: 'Tous droits réservés.',
-      worldwide: 'Livraison mondiale — Mode exclusive',
+      worldwide: 'Livraison mondiale — Accessoires auto premium',
     },
     products: {
       title: 'Notre Collection',
@@ -180,8 +180,8 @@ const t = {
       join: 'Join us',
     },
     footer: {
-      tagline: 'Exclusive Fashion',
-      description: 'Exclusive clothing and accessories delivered worldwide. Premium quality, fast delivery.',
+      tagline: 'Auto Premium',
+      description: 'Premium car accessories curated and delivered worldwide. Quality guaranteed, fast shipping.',
       shop: 'Shop',
       collection: 'Collection',
       newArrivals: 'New Arrivals',
@@ -194,7 +194,7 @@ const t = {
       delivery: 'Delivery 7–12 days',
       contact: 'Contact us',
       rights: 'All rights reserved.',
-      worldwide: 'Worldwide delivery — Exclusive fashion',
+      worldwide: 'Worldwide delivery — Premium car accessories',
     },
     products: {
       title: 'Our Collection',

@@ -24,10 +24,18 @@ interface Props {
 
 export default function ProductsClient({ products, filters }: Props) {
   const router = useRouter()
-  const { tr } = useLanguage()
+  const { tr, lang } = useLanguage()
   const [search, setSearch] = useState(filters.q || '')
   const [loading] = useState(false)
-  const CATEGORIES = [tr.products.all, 'femme', 'homme', 'accessoires', 'enfant']
+  const CATEGORIES = [tr.products.all, 'eclairage-led', 'tech-sans-fil', 'aspirateurs', 'chargeurs', 'carplay', 'autres']
+  const CATEGORY_LABELS: Record<string, string> = {
+    'eclairage-led': 'LED',
+    'tech-sans-fil': 'Wireless',
+    'aspirateurs': lang === 'fr' ? 'Aspirateurs' : 'Vacuums',
+    'chargeurs': lang === 'fr' ? 'Chargeurs' : 'Chargers',
+    'carplay': 'CarPlay',
+    'autres': lang === 'fr' ? 'Autres' : 'Other',
+  }
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -84,7 +92,7 @@ export default function ProductsClient({ products, filters }: Props) {
                       : 'border border-brand-light-gray text-brand-gray hover:border-brand-black hover:text-brand-black'
                   }`}
                 >
-                  {cat}
+                  {cat === tr.products.all ? cat : (CATEGORY_LABELS[cat] ?? cat)}
                 </button>
               )
             })}

@@ -29,7 +29,7 @@ interface FooterProps {
 }
 
 export default function Footer({ instagramUrl, tiktokUrl, facebookUrl, contactEmail, contactPhone, whatsappNumber }: FooterProps) {
-  const { tr } = useLanguage()
+  const { tr, lang } = useLanguage()
   const ig = instagramUrl || 'https://instagram.com/marcaclub'
   const tt = tiktokUrl || 'https://tiktok.com/@marcaclub'
   const fb = facebookUrl || ''
@@ -65,8 +65,8 @@ export default function Footer({ instagramUrl, tiktokUrl, facebookUrl, contactEm
               {[
                 { href: '/products', label: tr.footer.collection },
                 { href: '/products?featured=true', label: tr.footer.newArrivals },
-                { href: '/products?category=femme', label: tr.footer.women },
-                { href: '/products?category=homme', label: tr.footer.men },
+                { href: '/products?category=eclairage-led', label: lang === 'fr' ? 'Éclairage LED' : 'LED Lighting' },
+                { href: '/products?category=tech-sans-fil', label: lang === 'fr' ? 'Tech Sans Fil' : 'Wireless Tech' },
               ].map((l) => (
                 <li key={l.href}>
                   <Link href={l.href} className="hover:text-brand-gold transition-colors">{l.label}</Link>
@@ -78,7 +78,7 @@ export default function Footer({ instagramUrl, tiktokUrl, facebookUrl, contactEm
           <div>
             <h4 className="text-[10px] tracking-[0.2em] uppercase text-brand-white/40 mb-4">{tr.footer.info}</h4>
             <ul className="space-y-3 text-sm">
-              <li><Link href="/#live" className="hover:text-brand-gold transition-colors">{tr.footer.liveSessions}</Link></li>
+              <li><Link href="/#community" className="hover:text-brand-gold transition-colors">{tr.footer.liveSessions}</Link></li>
               <li><Link href="/cart" className="hover:text-brand-gold transition-colors">{tr.footer.myCart}</Link></li>
               <li className="text-brand-white/40 text-xs leading-relaxed pt-1">
                 {tr.footer.securePayment}<br />{tr.footer.delivery}
