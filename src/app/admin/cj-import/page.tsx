@@ -5,8 +5,12 @@ import Image from 'next/image'
 import toast from 'react-hot-toast'
 
 const MAD_TO_CAD = 0.148
+const USD_TO_CAD = 1.38  // direct rate for displaying CJ USD costs
 function cad(mad: number) {
   return (mad * MAD_TO_CAD).toLocaleString('en-US', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 })
+}
+function cadUSD(usd: number, decimals = 2) {
+  return (usd * USD_TO_CAD).toLocaleString('en-US', { style: 'currency', currency: 'CAD', minimumFractionDigits: decimals, maximumFractionDigits: decimals })
 }
 
 interface CJVariant {
@@ -470,7 +474,7 @@ export default function CJImportPage() {
             <div className="p-3">
               <p className="text-white text-xs font-medium line-clamp-2 mb-1">{product.productNameEn}</p>
               <p className="text-white/40 text-[10px] mb-2">{product.categoryName}</p>
-              <span className="text-brand-gold text-xs font-bold">${product.sellingPrice?.toFixed(2)}</span>
+              <span className="text-brand-gold text-xs font-bold">{cadUSD(product.sellingPrice ?? 0)}</span>
             </div>
           </div>
         ))}
@@ -540,7 +544,7 @@ export default function CJImportPage() {
                   <div className="grid grid-cols-2 gap-2">
                     <div className="bg-white/5 px-3 py-2">
                       <p className="text-white/40 text-[10px] mb-0.5">CJ COST (FROM)</p>
-                      <p className="text-brand-gold font-bold text-sm">${cjCost.toFixed(2)}</p>
+                      <p className="text-brand-gold font-bold text-sm">{cadUSD(cjCost)}</p>
                     </div>
                     <div className="bg-white/5 px-3 py-2">
                       <p className="text-white/40 text-[10px] mb-0.5">WEIGHT</p>
@@ -577,7 +581,7 @@ export default function CJImportPage() {
                         {preview.variants!.map((v) => (
                           <div key={v.vid} className="grid grid-cols-4 text-[11px] px-3 py-1.5 border-b border-white/5 hover:bg-white/3">
                             <span className="text-white truncate">{v.variantNameEn}</span>
-                            <span className="text-brand-gold">${(v.variantPrice ?? 0).toFixed(2)}</span>
+                            <span className="text-brand-gold">{cadUSD(v.variantPrice ?? 0)}</span>
                             <span className={v.variantStock > 0 ? 'text-green-400' : 'text-red-400'}>{v.variantStock}</span>
                             <span className="text-white/40">{v.variantWeight}g</span>
                           </div>
@@ -642,7 +646,7 @@ export default function CJImportPage() {
                           }`}>
                           <div className="flex items-center justify-between">
                             <span className="font-semibold">{opt.logisticNameEn || opt.logisticName}</span>
-                            <span className="text-brand-gold font-bold">${(opt.logisticPrice ?? 0).toFixed(2)}</span>
+                            <span className="text-brand-gold font-bold">{cadUSD(opt.logisticPrice ?? 0)}</span>
                           </div>
                           <p className="text-white/40 mt-0.5">
                             {opt.agingMin > 0 ? `${opt.agingMin}–${opt.agingMax} days` : 'Est. 7–20 days'}
@@ -658,15 +662,15 @@ export default function CJImportPage() {
                 <div className="bg-white/3 border border-white/8 px-4 py-3 text-xs space-y-1.5">
                   <div className="flex justify-between text-white/50">
                     <span>Product cost (CJ)</span>
-                    <span>${minCjCost.toFixed(2)}{maxCjCost !== minCjCost ? `–$${maxCjCost.toFixed(2)}` : ''}</span>
+                    <span>{cadUSD(minCjCost)}{maxCjCost !== minCjCost ? `–${cadUSD(maxCjCost)}` : ''}</span>
                   </div>
                   <div className="flex justify-between text-white/50">
                     <span>Shipping (included in price)</span>
-                    <span className={shippingUSD > 0 ? 'text-white' : ''}>{shippingUSD > 0 ? `$${shippingUSD.toFixed(2)}` : '— select shipping'}</span>
+                    <span className={shippingUSD > 0 ? 'text-white' : ''}>{shippingUSD > 0 ? cadUSD(shippingUSD) : '— select shipping'}</span>
                   </div>
                   <div className="flex justify-between border-t border-white/10 pt-1.5 text-white/70">
                     <span>Total CJ cost (min)</span>
-                    <span>${(minCjCost + shippingUSD).toFixed(2)} = {cad(Math.round((minCjCost + shippingUSD) * MAD_PER_USD))}</span>
+                    <span>{cadUSD(minCjCost + shippingUSD)}</span>
                   </div>
                   {avgMarginMAD !== null && (
                     <div className={`flex justify-between font-bold ${avgMarginMAD > 0 ? 'text-green-400' : 'text-red-400'}`}>
@@ -756,7 +760,7 @@ export default function CJImportPage() {
                     </div>
                     <div className="border border-white/10 overflow-hidden">
                       <div className="grid grid-cols-[20px_1fr_56px_80px_52px_44px] text-[9px] text-white/30 px-2 py-1.5 border-b border-white/10 bg-white/3 gap-1.5">
-                        <span></span><span>Name</span><span>CJ $</span><span>Sell (MAD)</span><span>Margin CAD</span><span>%</span>
+                        <span></span><span>Name</span><span>CJ CA$</span><span>Sell (MAD)</span><span>Margin CA$</span><span>%</span>
                       </div>
                       <div className="max-h-56 overflow-y-auto">
                         {(preview.variants ?? []).map((v) => {
@@ -780,7 +784,7 @@ export default function CJImportPage() {
                                 setForm((p) => ({ ...p, selectedVariants: newSel, price: minP }))
                               }} className="accent-brand-gold w-3.5 h-3.5" />
                               <span className="text-white text-[10px] truncate">{v.variantNameEn || 'One Size'}</span>
-                              <span className="text-brand-gold text-[10px]">${v.variantPrice.toFixed(2)}</span>
+                              <span className="text-brand-gold text-[10px]">{cadUSD(v.variantPrice, 0)}</span>
                               <input
                                 type="number"
                                 min="0"
