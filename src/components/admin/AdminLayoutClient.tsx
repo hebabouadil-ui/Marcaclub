@@ -76,29 +76,11 @@ function NavLink({ item, active, badges, onClick }: {
 
 function AdminNav() {
   const pathname = usePathname()
-  const { data: session, status } = useSession()
+  const { data: session } = useSession()
   const [open, setOpen] = useState(false)
   const badges = useBadges()
 
-  // Redirect to login if not authenticated (except on login page itself)
-  useEffect(() => {
-    if (pathname === '/admin/login') return
-    if (status === 'loading') return
-    if (!session?.user) {
-      window.location.href = '/admin/login'
-    }
-  }, [session, status, pathname])
-
   if (pathname === '/admin/login') return null
-
-  // Show nothing while checking auth or if redirecting
-  if (status === 'loading' || !session?.user) {
-    return (
-      <div className="min-h-screen bg-[#0F0F0F] flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-brand-gold/30 border-t-brand-gold rounded-full animate-spin" />
-      </div>
-    )
-  }
 
   return (
     <>
@@ -192,8 +174,31 @@ function AdminContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { data: session, status } = useSession()
 
+  useEffect(() => {
+    if (pathname === '/admin/login') return
+    if (status === 'loading') return
+    if (!session?.user) {
+      window.location.href = '/admin/login'
+    }
+  }, [session, status, pathname])
+
   if (pathname === '/admin/login') return <>{children}</>
-  if (status === 'loading' || !session?.user) return null
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen bg-[#0F0F0F] flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-brand-gold/30 border-t-brand-gold rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (!session?.user) {
+    return (
+      <div className="min-h-screen bg-[#0F0F0F] flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-brand-gold/30 border-t-brand-gold rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-[#0F0F0F]">
