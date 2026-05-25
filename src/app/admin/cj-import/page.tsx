@@ -4,6 +4,11 @@ import { Search, Download, Check, Loader2, RefreshCw, ChevronDown, ChevronUp, Tr
 import Image from 'next/image'
 import toast from 'react-hot-toast'
 
+const MAD_TO_CAD = 0.148
+function cad(mad: number) {
+  return (mad * MAD_TO_CAD).toLocaleString('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 })
+}
+
 interface CJVariant {
   vid: string
   variantSku?: string
@@ -661,12 +666,12 @@ export default function CJImportPage() {
                   </div>
                   <div className="flex justify-between border-t border-white/10 pt-1.5 text-white/70">
                     <span>Total CJ cost (min)</span>
-                    <span>${(minCjCost + shippingUSD).toFixed(2)} = {Math.round((minCjCost + shippingUSD) * MAD_PER_USD)} MAD</span>
+                    <span>${(minCjCost + shippingUSD).toFixed(2)} = {cad(Math.round((minCjCost + shippingUSD) * MAD_PER_USD))}</span>
                   </div>
                   {avgMarginMAD !== null && (
                     <div className={`flex justify-between font-bold ${avgMarginMAD > 0 ? 'text-green-400' : 'text-red-400'}`}>
                       <span>Avg margin (after shipping)</span>
-                      <span>{avgMarginMAD.toFixed(0)} MAD</span>
+                      <span>{cad(avgMarginMAD)}</span>
                     </div>
                   )}
                 </div>
@@ -751,7 +756,7 @@ export default function CJImportPage() {
                     </div>
                     <div className="border border-white/10 overflow-hidden">
                       <div className="grid grid-cols-[20px_1fr_56px_80px_52px_44px] text-[9px] text-white/30 px-2 py-1.5 border-b border-white/10 bg-white/3 gap-1.5">
-                        <span></span><span>Name</span><span>CJ $</span><span>Sell MAD</span><span>Margin</span><span>%</span>
+                        <span></span><span>Name</span><span>CJ $</span><span>Sell CAD</span><span>Margin</span><span>%</span>
                       </div>
                       <div className="max-h-56 overflow-y-auto">
                         {(preview.variants ?? []).map((v) => {
@@ -788,7 +793,7 @@ export default function CJImportPage() {
                                 }}
                                 className={`w-full bg-white/5 border text-[10px] px-1.5 py-1 focus:outline-none focus:border-brand-gold/50 ${isModified ? 'border-brand-gold/60 text-brand-gold' : 'border-white/10 text-white'}`}
                               />
-                              <span className={`text-[10px] ${marginMAD >= 0 ? 'text-white/60' : 'text-red-400'}`}>{marginMAD.toFixed(0)}</span>
+                              <span className={`text-[10px] ${marginMAD >= 0 ? 'text-white/60' : 'text-red-400'}`}>{cad(marginMAD)}</span>
                               <span className={`text-[10px] font-bold ${pctColor}`}>{marginPct}%</span>
                             </div>
                           )
