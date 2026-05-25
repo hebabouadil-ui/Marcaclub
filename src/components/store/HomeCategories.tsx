@@ -2,16 +2,17 @@
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useLanguage } from '@/lib/i18n'
+import { Zap, Wifi, Wind, ShoppingBag } from 'lucide-react'
+
+const items = [
+  { icon: Zap,       fr: 'Éclairage Ambiant',     en: 'Ambient Lighting',    sub: { fr: 'Lumières LED intérieur', en: 'Interior LED strips' } },
+  { icon: Wifi,      fr: 'Tech Sans Fil',           en: 'Wireless Tech',       sub: { fr: 'Supports & chargeurs', en: 'Holders & fast chargers' } },
+  { icon: Wind,      fr: 'Aspirateurs Mini',        en: 'Mini Vacuums',        sub: { fr: 'Nettoyage en déplacement', en: 'Clean on the go' } },
+  { icon: ShoppingBag, fr: 'Accessoires Phares',   en: 'Top Picks',           sub: { fr: 'Sélection exclusive', en: 'Exclusive selection' } },
+]
 
 export default function HomeCategories() {
-  const { tr } = useLanguage()
-
-  const categories = [
-    { label: tr.categories.women, value: 'femme', description: tr.categories.womenSub },
-    { label: tr.categories.men, value: 'homme', description: tr.categories.menSub },
-    { label: tr.categories.accessories, value: 'accessoires', description: tr.categories.accessoriesSub },
-    { label: tr.categories.newArrivals, value: 'featured=true', description: tr.categories.newArrivalsSub },
-  ]
+  const { tr, lang } = useLanguage()
 
   return (
     <section className="py-16 md:py-24 bg-brand-white">
@@ -24,26 +25,30 @@ export default function HomeCategories() {
         >
           <p className="text-[10px] tracking-[0.3em] text-brand-gold uppercase mb-2">{tr.categories.explore}</p>
           <h2 className="font-display text-3xl md:text-4xl text-brand-black">{tr.categories.title}</h2>
+          <p className="text-brand-gray text-sm mt-3 max-w-sm mx-auto">
+            {lang === 'fr' ? 'Bientôt disponible — Accessoires auto premium' : 'Coming soon — Premium car accessories'}
+          </p>
         </motion.div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-          {categories.map((cat, i) => (
+          {items.map(({ icon: Icon, fr, en, sub }, i) => (
             <motion.div
-              key={cat.label}
+              key={en}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.1 }}
             >
               <Link
-                href={`/products${cat.value ? `?${cat.value.includes('=') ? cat.value : `category=${cat.value}`}` : ''}`}
-                className="group block bg-brand-light-gray hover:bg-brand-black transition-colors duration-300 p-8 md:p-10 text-center"
+                href="/products"
+                className="group block bg-brand-light-gray hover:bg-brand-black transition-colors duration-300 p-6 md:p-8 text-center"
               >
-                <p className="font-display text-xl md:text-2xl text-brand-black group-hover:text-brand-gold transition-colors mb-1">
-                  {cat.label}
+                <Icon size={20} className="mx-auto mb-3 text-brand-gray group-hover:text-brand-gold transition-colors" strokeWidth={1.5} />
+                <p className="font-display text-lg md:text-xl text-brand-black group-hover:text-brand-gold transition-colors mb-1">
+                  {lang === 'fr' ? fr : en}
                 </p>
                 <p className="text-xs text-brand-gray group-hover:text-brand-white/50 transition-colors tracking-wide">
-                  {cat.description}
+                  {lang === 'fr' ? sub.fr : sub.en}
                 </p>
               </Link>
             </motion.div>

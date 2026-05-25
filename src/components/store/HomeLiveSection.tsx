@@ -19,9 +19,9 @@ interface Props {
 }
 
 const stats = [
-  { icon: Star, value: '10K+', label: { fr: 'Clients satisfaits', en: 'Happy customers' } },
+  { icon: Star, value: '4.9★', label: { fr: 'Note moyenne', en: 'Average rating' } },
   { icon: Globe, value: '30+', label: { fr: 'Pays livrés', en: 'Countries shipped' } },
-  { icon: Sparkles, value: '500+', label: { fr: 'Nouveautés / an', en: 'New drops / year' } },
+  { icon: Sparkles, value: '100%', label: { fr: 'Satisfait ou remboursé', en: 'Satisfaction guaranteed' } },
 ]
 
 export default function HomeLiveSection({ instagramUrl, tiktokUrl }: Props) {
@@ -109,10 +109,10 @@ export default function HomeLiveSection({ instagramUrl, tiktokUrl }: Props) {
                 <p className="text-white/20 text-[10px] tracking-[0.3em] uppercase mb-8">Global Store</p>
                 <div className="space-y-4">
                   {[
-                    { fr: 'Curation mondiale', en: 'Global curation' },
-                    { fr: 'Qualité premium', en: 'Premium quality' },
-                    { fr: 'Livraison mondiale', en: 'Worldwide shipping' },
-                    { fr: 'Service client dédié', en: 'Dedicated support' },
+                    { fr: 'Accessoires auto sélectionnés', en: 'Curated car accessories' },
+                    { fr: 'Qualité testée & approuvée', en: 'Tested & approved quality' },
+                    { fr: 'Livraison mondiale rapide', en: 'Fast worldwide shipping' },
+                    { fr: 'Support client dédié', en: 'Dedicated customer support' },
                   ].map((item) => (
                     <div key={item.en} className="flex items-center gap-3">
                       <div className="w-1 h-1 rounded-full bg-brand-gold/60 flex-shrink-0" />

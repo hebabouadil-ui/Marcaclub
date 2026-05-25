@@ -24,10 +24,10 @@ async function getData() {
 export default async function HomePage() {
   const { products, settings } = await getData()
 
-  const heroTitle = (settings as { heroTitle?: string } | null)?.heroTitle ?? 'La Mode Exclusive'
+  const heroTitle = (settings as { heroTitle?: string } | null)?.heroTitle ?? 'Upgrade Your Ride'
   const heroSubtitle =
     (settings as { heroSubtitle?: string } | null)?.heroSubtitle ??
-    "Collections importées directement de Primark Espagne"
+    "Accessoires auto premium livrés dans le monde entier"
   const liveStatus = (settings as { liveStatus?: boolean } | null)?.liveStatus ?? false
 
   return (
