@@ -196,7 +196,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
         <div className="grid md:grid-cols-[1fr_420px] gap-5 md:gap-8 lg:gap-12 items-start">
           {/* Images */}
           <div className="space-y-3">
-            <div className="relative bg-white mx-auto w-[85vw] md:w-full group aspect-square" style={{ overflow: 'clip' }}>
+            <div className="relative bg-white w-full group h-[280px] md:h-auto md:aspect-square" style={{ overflow: 'clip' }}>
               <AnimatePresence initial={false} custom={dir}>
                 <motion.div
                   key={imgIdx}
