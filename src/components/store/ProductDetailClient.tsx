@@ -196,7 +196,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
         <div className="grid md:grid-cols-[1fr_420px] gap-5 md:gap-8 lg:gap-12 items-start">
           {/* Images */}
           <div className="space-y-3">
-            <div className="relative bg-white w-full group h-[280px] md:h-auto md:aspect-square" style={{ overflow: 'clip' }}>
+            <div className="bg-white w-full flex items-center justify-center" style={{ height: '300px', position: 'relative' }}>
               <AnimatePresence initial={false} custom={dir}>
                 <motion.div
                   key={imgIdx}
@@ -206,22 +206,17 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                   animate="center"
                   exit="exit"
                   transition={swipeTransition}
-                  className="absolute inset-0 overflow-hidden"
+                  style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'white' }}
                 >
                   {images[imgIdx] ? (
-                    <Image
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
                       src={images[imgIdx]}
                       alt={product.name}
-                      fill
-                      unoptimized={isExternal(images[imgIdx])}
-                      className="object-contain"
-                      sizes="(max-width: 768px) 100vw, 50vw"
-                      priority
+                      style={{ maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto', objectFit: 'contain', display: 'block' }}
                     />
                   ) : (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-brand-gray text-xs tracking-widest uppercase">Marcaclub</span>
-                    </div>
+                    <span className="text-brand-gray text-xs tracking-widest uppercase">Marcaclub</span>
                   )}
                 </motion.div>
               </AnimatePresence>
