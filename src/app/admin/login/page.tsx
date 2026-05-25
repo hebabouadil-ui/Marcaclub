@@ -1,23 +1,38 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { signIn } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Loader2, Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
 
+const SAVED_EMAIL_KEY = 'mc-admin-email'
+
 export default function AdminLoginPage() {
-  const router = useRouter()
   const [form, setForm] = useState({ email: '', password: '' })
   const [loading, setLoading] = useState(false)
   const [showPw, setShowPw] = useState(false)
+  const [saveEmail, setSaveEmail] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
+
+  useEffect(() => {
+    const saved = localStorage.getItem(SAVED_EMAIL_KEY)
+    if (saved) { setForm((f) => ({ ...f, email: saved })); setSaveEmail(true) }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+
+    if (saveEmail) {
+      localStorage.setItem(SAVED_EMAIL_KEY, form.email)
+    } else {
+      localStorage.removeItem(SAVED_EMAIL_KEY)
+    }
+
     const res = await signIn('credentials', {
       email: form.email,
       password: form.password,
+      rememberMe: String(rememberMe),
       redirect: false,
     })
     setLoading(false)
@@ -39,7 +54,7 @@ export default function AdminLoginPage() {
           <h1 className="text-brand-gold font-display font-bold text-3xl tracking-widest uppercase">
             MARCACLUB
           </h1>
-          <p className="text-brand-white/30 text-[10px] tracking-[0.3em] uppercase mt-1">
+          <p className="text-white/30 text-[10px] tracking-[0.3em] uppercase mt-1">
             Admin Panel
           </p>
         </div>
@@ -52,17 +67,17 @@ export default function AdminLoginPage() {
               required
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className="w-full bg-white/5 border border-white/10 text-brand-white placeholder-white/30 px-4 py-3.5 text-sm focus:outline-none focus:border-brand-gold transition-colors"
+              className="w-full bg-white/5 border border-white/10 text-white placeholder-white/30 px-4 py-3.5 text-sm focus:outline-none focus:border-brand-gold transition-colors"
             />
           </div>
           <div className="relative">
             <input
               type={showPw ? 'text' : 'password'}
-              placeholder="Mot de passe"
+              placeholder="Password"
               required
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
-              className="w-full bg-white/5 border border-white/10 text-brand-white placeholder-white/30 px-4 py-3.5 text-sm focus:outline-none focus:border-brand-gold transition-colors pr-12"
+              className="w-full bg-white/5 border border-white/10 text-white placeholder-white/30 px-4 py-3.5 text-sm focus:outline-none focus:border-brand-gold transition-colors pr-12"
             />
             <button
               type="button"
@@ -73,14 +88,41 @@ export default function AdminLoginPage() {
             </button>
           </div>
 
+          <div className="space-y-2.5 pt-1">
+            <label className="flex items-center gap-3 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={saveEmail}
+                onChange={(e) => setSaveEmail(e.target.checked)}
+                className="w-4 h-4 accent-brand-gold"
+              />
+              <span className="text-white/50 text-sm group-hover:text-white/70 transition-colors">Save my email</span>
+            </label>
+            <label className="flex items-center gap-3 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 accent-brand-gold"
+              />
+              <span className="text-white/50 text-sm group-hover:text-white/70 transition-colors">
+                Keep me logged in today <span className="text-white/30 text-xs">(24h)</span>
+              </span>
+            </label>
+          </div>
+
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 bg-brand-gold text-brand-black py-3.5 text-sm tracking-[0.2em] uppercase font-semibold hover:bg-brand-white transition-colors disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 bg-brand-gold text-brand-black py-3.5 text-sm tracking-[0.2em] uppercase font-semibold hover:bg-white transition-colors disabled:opacity-50 mt-2"
           >
             {loading && <Loader2 size={16} className="animate-spin" />}
-            {loading ? 'Connexion...' : 'Se connecter'}
+            {loading ? 'Signing in...' : 'Sign in'}
           </button>
+
+          {!rememberMe && (
+            <p className="text-white/20 text-[10px] text-center">Session expires after 1 hour</p>
+          )}
         </form>
       </motion.div>
     </div>

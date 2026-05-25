@@ -76,11 +76,29 @@ function NavLink({ item, active, badges, onClick }: {
 
 function AdminNav() {
   const pathname = usePathname()
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const [open, setOpen] = useState(false)
   const badges = useBadges()
 
+  // Redirect to login if not authenticated (except on login page itself)
+  useEffect(() => {
+    if (pathname === '/admin/login') return
+    if (status === 'loading') return
+    if (!session?.user) {
+      window.location.href = '/admin/login'
+    }
+  }, [session, status, pathname])
+
   if (pathname === '/admin/login') return null
+
+  // Show nothing while checking auth or if redirecting
+  if (status === 'loading' || !session?.user) {
+    return (
+      <div className="min-h-screen bg-[#0F0F0F] flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-brand-gold/30 border-t-brand-gold rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   return (
     <>
@@ -170,13 +188,25 @@ function AdminNav() {
   )
 }
 
+function AdminContent({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
+  const { data: session, status } = useSession()
+
+  if (pathname === '/admin/login') return <>{children}</>
+  if (status === 'loading' || !session?.user) return null
+
+  return (
+    <div className="min-h-screen bg-[#0F0F0F]">
+      <AdminNav />
+      <div className="md:ml-56 pt-14 md:pt-0">{children}</div>
+    </div>
+  )
+}
+
 export default function AdminLayoutClient({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
-      <div className="min-h-screen bg-[#0F0F0F]">
-        <AdminNav />
-        <div className="md:ml-56 pt-14 md:pt-0">{children}</div>
-      </div>
+      <AdminContent>{children}</AdminContent>
     </SessionProvider>
   )
 }
