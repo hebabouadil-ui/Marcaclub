@@ -61,16 +61,18 @@ export default function HomeHero({ title, subtitle }: Props) {
         </motion.div>
       </div>
 
-      {/* Scroll indicator */}
+      {/* Scroll indicator — single animated line */}
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1">
-        {[0, 1, 2].map((i) => (
-          <motion.svg key={i} width="16" height="10" viewBox="0 0 20 12" fill="none"
-            animate={{ opacity: [0.2, 1, 0.2] }}
-            transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2, ease: 'easeInOut' }}>
-            <path d="M1 1L10 10L19 1" stroke="#C9A84C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </motion.svg>
-        ))}
+        className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
+        <span className="text-white/20 text-[9px] tracking-[0.3em] uppercase">Scroll</span>
+        <div className="w-px h-10 bg-white/10 overflow-hidden relative">
+          <motion.div
+            className="absolute top-0 left-0 w-full bg-brand-gold"
+            animate={{ y: ['-100%', '200%'] }}
+            transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+            style={{ height: '40%' }}
+          />
+        </div>
       </motion.div>
     </section>
   )

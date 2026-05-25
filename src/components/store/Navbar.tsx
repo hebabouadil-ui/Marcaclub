@@ -129,7 +129,7 @@ export default function Navbar() {
   const links = [
     { href: '/products', label: tr.nav.shop },
     { href: '/#featured', label: tr.nav.newArrivals },
-    { href: '/#live', label: tr.nav.live },
+    { href: '/#community', label: tr.nav.live },
   ]
 
   return (
