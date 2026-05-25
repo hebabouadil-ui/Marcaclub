@@ -17,8 +17,9 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { pid, name, description, price, category, selectedVariants, cjLogisticName, variantPrices, shippingBakedUSD, productWeight } = body
+    const { pid, name, description, price, category, selectedVariants, cjLogisticName, variantPrices, baseVariantPrices, shippingBakedUSD, productWeight } = body
     const variantPricesMap: Record<string, number> | undefined = variantPrices
+    const baseVariantPricesMap: Record<string, number> | undefined = baseVariantPrices
     const MAD_PER_USD = 10.05
     const shippingBakedMad = shippingBakedUSD ? shippingBakedUSD * MAD_PER_USD : undefined
 
@@ -44,6 +45,7 @@ export async function POST(req: NextRequest) {
     const sizes = variants.map((v: any) => {
       const vid = v.vid ?? v.variantId ?? ''
       const adminPrice = variantPricesMap?.[vid]
+      const adminBasePrice = baseVariantPricesMap?.[vid]
       return {
         size: (() => {
           const full = v.variantNameEn || v.variantName || ''
@@ -54,6 +56,7 @@ export async function POST(req: NextRequest) {
         stock: v.variantStock ?? v.variantInventory ?? v.stock ?? 100,
         cjVid: vid,
         variantPrice: adminPrice != null ? adminPrice : (v.variantSellPrice ?? v.variantPrice ?? v.sellPrice ?? undefined),
+        baseVariantPrice: adminBasePrice != null ? adminBasePrice : undefined,
       }
     })
 

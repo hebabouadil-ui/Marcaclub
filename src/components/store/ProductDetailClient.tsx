@@ -15,6 +15,7 @@ interface SizeEntry {
   stock: number
   cjVid?: string
   variantPrice?: number
+  baseVariantPrice?: number
 }
 
 interface Product {
@@ -133,15 +134,25 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
   const selectedStock = selectedSizeEntry?.stock ?? 0
   const totalStock = sizes.reduce((s, i) => s + i.stock, 0)
 
-  // Price: base price + dynamic shipping adjustment for user's country
-  // If shippingBakedMad is stored, we can adjust: remove baked shipping, add actual shipping
+  // Price: base price + dynamic shipping for user's country
+  // New products: baseVariantPrice stored (cost-only) + add actual shipping
+  // Old products: fallback to shippingBakedMad adjustment
   const MAD_PER_USD = 10.05
   const baseDisplayPrice = selectedSizeEntry?.variantPrice ?? product.price
   const displayPrice = (() => {
-    if (!product.shippingBakedMad || !shipping) return baseDisplayPrice
-    const newShippingMad = shipping.logisticPrice * MAD_PER_USD
-    const adjusted = baseDisplayPrice - product.shippingBakedMad + newShippingMad
-    return Math.max(adjusted, baseDisplayPrice * 0.7) // never show less than 70% of listed price
+    if (!product.cjPid || !shipping) return baseDisplayPrice
+    // New import: baseVariantPrice = cost*markup*MAD only — add actual shipping
+    const baseOnly = selectedSizeEntry?.baseVariantPrice
+    if (baseOnly != null) {
+      return baseOnly + shipping.logisticPrice * MAD_PER_USD
+    }
+    // Legacy: shippingBakedMad — adjust from baked-in shipping to actual shipping
+    if (product.shippingBakedMad) {
+      const newShippingMad = shipping.logisticPrice * MAD_PER_USD
+      const adjusted = baseDisplayPrice - product.shippingBakedMad + newShippingMad
+      return Math.max(adjusted, baseDisplayPrice * 0.7)
+    }
+    return baseDisplayPrice
   })()
 
   const originalPrice = product.originalPrice
@@ -306,11 +317,20 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                     Taille — <span className="text-brand-black">{selectedSize || 'Choisir'}</span>
                   </p>
                   <div className="flex gap-2 flex-wrap">
-                    {sizes.map(({ size: s, stock: sStock, variantPrice: vp }) => {
+                    {sizes.map(({ size: s, stock: sStock, variantPrice: vp, baseVariantPrice: bvp }) => {
                       // If name is long (full product title), extract just the short part after the last comma
                       const label = s.length > 30
                         ? (s.split(',').pop()?.trim() ?? s).replace(/^\s*\d+\s*/,'').trim() || s.split(' ').slice(-2).join(' ')
                         : s
+                      // Compute adjusted price for this variant
+                      const variantDisplayPrice = (() => {
+                        if (!product.cjPid || !shipping) return vp ?? product.price
+                        if (bvp != null) return bvp + shipping.logisticPrice * MAD_PER_USD
+                        if (product.shippingBakedMad && vp != null) {
+                          return Math.max(vp - product.shippingBakedMad + shipping.logisticPrice * MAD_PER_USD, vp * 0.7)
+                        }
+                        return vp ?? product.price
+                      })()
                       return (
                         <button
                           key={s}
@@ -326,7 +346,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                         >
                           <span>{label}</span>
                           {vp && vp !== product.price && (
-                            <span className="block text-[9px] leading-none opacity-60 mt-0.5">{format(vp)}</span>
+                            <span className="block text-[9px] leading-none opacity-60 mt-0.5">{format(variantDisplayPrice)}</span>
                           )}
                         </button>
                       )

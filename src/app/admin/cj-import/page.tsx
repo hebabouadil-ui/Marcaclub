@@ -140,6 +140,7 @@ interface ImportForm {
   cjLogisticName: string
   markupX: string
   variantPrices: Record<string, string>
+  baseVariantPrices: Record<string, string>
 }
 
 const COUNTRIES = [
@@ -176,7 +177,7 @@ export default function CJImportPage() {
   const [activeImg, setActiveImg] = useState(0)
   const [form, setForm] = useState<ImportForm>({
     name: '', description: '', price: '', category: 'eclairage-led',
-    selectedVariants: [], cjLogisticName: '', markupX: '3', variantPrices: {},
+    selectedVariants: [], cjLogisticName: '', markupX: '3', variantPrices: {}, baseVariantPrices: {},
   })
   const [importing, setImporting] = useState(false)
   const [imported, setImported] = useState<Set<string>>(new Set())
@@ -249,12 +250,16 @@ export default function CJImportPage() {
           setForm((prev) => {
             const mul = parseFloat(prev.markupX || '3')
             const newVP: Record<string, string> = {}
+            const newBaseVP: Record<string, string> = {}
             for (const v of product.variants ?? []) {
+              // base = cost * markup * MAD/USD (no shipping)
+              newBaseVP[v.vid] = String(Math.ceil(v.variantPrice * mul * 10.05))
+              // total = (cost + shipping) * markup * MAD/USD
               newVP[v.vid] = String(Math.ceil((v.variantPrice + newShipUSD) * mul * 10.05))
             }
             const prices = prev.selectedVariants.map((vid) => Number(newVP[vid] || 0)).filter((n) => n > 0)
             const minP = prices.length > 0 ? String(Math.min(...prices)) : prev.price
-            return { ...prev, cjLogisticName: fastest.logisticName, variantPrices: newVP, price: minP }
+            return { ...prev, cjLogisticName: fastest.logisticName, variantPrices: newVP, baseVariantPrices: newBaseVP, price: minP }
           })
         }
       } else {
@@ -297,6 +302,8 @@ export default function CJImportPage() {
         cjLogisticName: '',
         markupX: String(markup),
         variantPrices: vPrices,
+        // Base prices = product cost only (no shipping) — will be used for dynamic per-country pricing
+        baseVariantPrices: { ...vPrices },
       })
       fetchShipping(detail, shippingCountry)
     } catch {
@@ -336,6 +343,7 @@ export default function CJImportPage() {
           selectedVariants: form.selectedVariants,
           cjLogisticName: form.cjLogisticName || undefined,
           variantPrices: form.variantPrices,
+          baseVariantPrices: form.baseVariantPrices,
           shippingBakedUSD: shippingUSD,
           productWeight: preview.productWeight ?? 200,
         }),
