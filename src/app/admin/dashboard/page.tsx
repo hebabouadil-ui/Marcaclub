@@ -44,6 +44,12 @@ function fmt(n: number) {
   return n.toLocaleString('en-US', { maximumFractionDigits: 0 })
 }
 
+// Orders are stored in MAD — convert to CAD for display (1 MAD ≈ 0.148 CAD)
+const MAD_TO_CAD = 0.148
+function cad(mad: number) {
+  return (mad * MAD_TO_CAD).toLocaleString('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 })
+}
+
 export default function DashboardPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [products, setProducts] = useState<Product[]>([])
@@ -160,11 +166,11 @@ export default function DashboardPage() {
   const maxOrdDay = Math.max(...(stats?.ordersByDay ?? [1]), 1)
 
   const kpis = [
-    { label: 'Total Revenue', value: loading ? '—' : `$${fmt(stats.revenue)}`, icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-400/10', sub: `${loading ? '—' : stats.delivered} delivered orders` },
+    { label: 'Total Revenue', value: loading ? '—' : cad(stats.revenue), icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-400/10', sub: `${loading ? '—' : stats.delivered} delivered orders` },
     { label: 'Total Orders', value: loading ? '—' : fmt(stats.total), icon: ShoppingBag, color: 'text-brand-gold', bg: 'bg-brand-gold/10', sub: `${loading ? '—' : stats.pending} pending` },
     { label: 'Customers', value: loading ? '—' : fmt(stats.uniqueCustomers), icon: Users, color: 'text-blue-400', bg: 'bg-blue-400/10', sub: 'unique buyers' },
     { label: 'Delivery Rate', value: loading ? '—' : `${stats.deliveryRate.toFixed(0)}%`, icon: CheckCircle, color: 'text-purple-400', bg: 'bg-purple-400/10', sub: 'of non-cancelled orders' },
-    { label: 'Avg. Order', value: loading ? '—' : `$${fmt(stats.avgOrder)}`, icon: BarChart2, color: 'text-cyan-400', bg: 'bg-cyan-400/10', sub: 'confirmed orders' },
+    { label: 'Avg. Order', value: loading ? '—' : cad(stats.avgOrder), icon: BarChart2, color: 'text-cyan-400', bg: 'bg-cyan-400/10', sub: 'confirmed orders' },
     { label: 'Products', value: loading ? '—' : fmt(products.length), icon: Package, color: 'text-amber-400', bg: 'bg-amber-400/10', sub: `${loading ? '—' : products.filter((p) => p.stock === 0).length} out of stock` },
     { label: 'Visitors Now', value: visitors === null ? '—' : fmt(visitors), icon: Eye, color: 'text-green-300', bg: 'bg-green-300/10', sub: 'active in last 2 min', live: true },
     { label: 'Cancelled', value: loading ? '—' : fmt(stats.cancelled), icon: Clock, color: 'text-red-400', bg: 'bg-red-400/10', sub: `${loading ? '—' : stats.total > 0 ? ((stats.cancelled / stats.total) * 100).toFixed(0) : 0}% of total` },
@@ -234,7 +240,7 @@ export default function DashboardPage() {
             {stats.revenueByDay.map((d, i) => (
               <div key={i} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end group relative">
                 <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-black border border-white/10 px-2 py-1 text-[10px] text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
-                  ${fmt(d.value)}
+                  {cad(d.value)}
                 </div>
                 <div className="w-full bg-brand-gold/70 hover:bg-brand-gold rounded-sm transition-colors"
                   style={{ height: `${maxRevDay > 0 ? (d.value / maxRevDay) * 100 : 0}%`, minHeight: d.value > 0 ? '4px' : '0' }} />
@@ -295,7 +301,7 @@ export default function DashboardPage() {
                   <span className="text-white/20 text-xs w-4">{i + 1}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-white text-xs truncate">{p.name}</p>
-                    <p className="text-white/30 text-[10px]">${fmt(p.revenue)}</p>
+                    <p className="text-white/30 text-[10px]">{cad(p.revenue)}</p>
                   </div>
                   <span className="text-brand-gold text-xs font-semibold flex-shrink-0">×{p.qty}</span>
                 </div>
@@ -350,7 +356,7 @@ export default function DashboardPage() {
                   <span className="text-white/60 text-xs hidden sm:block">
                     {new Date(order.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   </span>
-                  <p className="text-white text-sm font-semibold">${fmt(order.total)}</p>
+                  <p className="text-white text-sm font-semibold">{cad(order.total)}</p>
                   <span className={`text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider font-medium ${STATUS_COLORS[order.status] || 'text-white/40 bg-white/5'}`}>
                     {STATUS_LABELS[order.status] || order.status}
                   </span>

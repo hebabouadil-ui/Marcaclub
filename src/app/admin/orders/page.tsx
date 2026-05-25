@@ -3,6 +3,11 @@ import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { ChevronDown, Search, Clock, Package, Truck, RefreshCw, ExternalLink } from 'lucide-react'
 
+const MAD_TO_CAD = 0.148
+function cad(mad: number) {
+  return (mad * MAD_TO_CAD).toLocaleString('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 })
+}
+
 const STATUSES = ['all', 'pending', 'confirmed', 'shipped', 'delivered', 'cancelled']
 const STATUS_LABELS: Record<string, string> = {
   pending: 'Pending', confirmed: 'Confirmed', shipped: 'Shipped',
@@ -182,7 +187,7 @@ export default function AdminOrdersPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0 ml-4">
-                  <span className="text-white text-sm hidden sm:block">{order.total.toFixed(0)} MAD</span>
+                  <span className="text-white text-sm hidden sm:block">{cad(order.total)}</span>
                   <span className={`text-[10px] px-2 py-1 rounded-full uppercase tracking-wider ${statusColors[order.status] || 'text-white/40'}`}>
                     {STATUS_LABELS[order.status] || order.status}
                   </span>
@@ -208,7 +213,7 @@ export default function AdminOrdersPage() {
                           {item.name} — {item.size} × {item.quantity}
                         </p>
                       ))}
-                      <p className="text-brand-gold font-semibold mt-2">Total: {order.total.toFixed(0)} MAD</p>
+                      <p className="text-brand-gold font-semibold mt-2">Total: {cad(order.total)}</p>
                     </div>
                   </div>
 

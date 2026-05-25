@@ -3,6 +3,11 @@ import { useEffect, useState } from 'react'
 import { Download, TrendingUp, ShoppingBag, XCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 
+const MAD_TO_CAD = 0.148
+function cad(mad: number) {
+  return (mad * MAD_TO_CAD).toLocaleString('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 })
+}
+
 interface OrderRow {
   _id: string
   orderNumber: string
@@ -122,7 +127,7 @@ export default function ReportsPage() {
           { label: 'Total Orders', value: orders.length, icon: ShoppingBag, color: 'text-brand-gold' },
           { label: 'Confirmed / Delivered', value: confirmed.length, icon: TrendingUp, color: 'text-green-400' },
           { label: 'Cancelled', value: cancelled.length, icon: XCircle, color: 'text-red-400' },
-          { label: 'Revenue', value: `${revenue.toFixed(0)} MAD`, icon: TrendingUp, color: 'text-green-400' },
+          { label: 'Revenue', value: cad(revenue), icon: TrendingUp, color: 'text-green-400' },
         ].map((card) => {
           const Icon = card.icon
           return (
@@ -162,7 +167,7 @@ export default function ReportsPage() {
                   <td className="px-4 py-3 text-white/60 text-xs max-w-[200px] truncate">
                     {o.items.map((i) => `${i.name} x${i.quantity}`).join(', ')}
                   </td>
-                  <td className="px-4 py-3 text-white">{o.total.toFixed(0)} MAD</td>
+                  <td className="px-4 py-3 text-white">{cad(o.total)}</td>
                   <td className="px-4 py-3">
                     <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider ${STATUS_COLORS[o.status] || 'text-white/40'}`}>
                       {STATUS_LABELS[o.status] || o.status}
