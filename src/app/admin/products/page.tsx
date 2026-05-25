@@ -1,5 +1,10 @@
 'use client'
 import { useEffect, useState } from 'react'
+
+const MAD_TO_CAD = 0.148
+function cad(mad: number) {
+  return (mad * MAD_TO_CAD).toLocaleString('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 })
+}
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
@@ -195,7 +200,7 @@ export default function AdminProductsPage() {
               </div>
               <div className="p-3">
                 <p className="text-white text-sm font-medium truncate">{p.name}</p>
-                <p className="text-brand-gold text-sm">{p.price.toFixed(0)} MAD</p>
+                <p className="text-brand-gold text-sm">{cad(p.price)}</p>
                 <p className="text-white/40 text-xs">Stock: {p.sizes?.reduce((s, i) => s + i.stock, 0) ?? 0}</p>
                 <div className="flex gap-2 mt-3">
                   <button
