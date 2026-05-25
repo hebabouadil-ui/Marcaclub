@@ -35,24 +35,23 @@ export default function CartPage() {
   }
 
   return (
-    <div className="min-h-screen">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
-        <h1 className="font-display text-3xl md:text-4xl text-brand-black mb-10">{tr.cart.title}</h1>
+    <div className="min-h-screen overflow-x-hidden">
+      <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-6 md:py-16">
+        <h1 className="font-display text-2xl md:text-4xl text-brand-black mb-6">{tr.cart.title}</h1>
 
-        <div className="grid lg:grid-cols-3 gap-10">
+        <div className="grid lg:grid-cols-3 gap-6 lg:gap-10">
           {/* Items */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="lg:col-span-2 space-y-3">
             <AnimatePresence>
               {items.map((item) => (
                 <motion.div
                   key={`${item.productId}-${item.size}`}
-                  layout
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="flex gap-4 bg-brand-white border border-brand-light-gray p-3 sm:p-4"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex gap-3 bg-brand-white border border-brand-light-gray p-3"
                 >
-                  <div className="relative w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0 bg-white border border-brand-light-gray overflow-hidden">
+                  <div className="relative w-20 h-20 flex-shrink-0 bg-white border border-brand-light-gray overflow-hidden">
                     {item.image ? (
                       <Image src={item.image} alt={item.name} fill className="object-contain" sizes="112px" unoptimized={!item.image.includes('cloudinary.com')} />
                     ) : (
@@ -102,7 +101,7 @@ export default function CartPage() {
 
           {/* Summary */}
           <div className="lg:col-span-1">
-            <div className="bg-brand-light-gray p-6 sticky top-24">
+            <div className="bg-brand-light-gray p-4 sm:p-6 sticky top-24">
               <h2 className="text-xs tracking-[0.2em] uppercase text-brand-gray mb-6">{tr.cart.summary}</h2>
 
               <div className="space-y-3 mb-6">
