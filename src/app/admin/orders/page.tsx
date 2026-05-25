@@ -5,7 +5,7 @@ import { ChevronDown, Search, Clock, Package, Truck, RefreshCw, ExternalLink } f
 
 const MAD_TO_CAD = 0.148
 function cad(mad: number) {
-  return (mad * MAD_TO_CAD).toLocaleString('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 })
+  return (mad * MAD_TO_CAD).toLocaleString('en-US', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 })
 }
 
 const STATUSES = ['all', 'pending', 'confirmed', 'shipped', 'delivered', 'cancelled']

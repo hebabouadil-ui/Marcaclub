@@ -47,7 +47,7 @@ function fmt(n: number) {
 // Orders are stored in MAD — convert to CAD for display (1 MAD ≈ 0.148 CAD)
 const MAD_TO_CAD = 0.148
 function cad(mad: number) {
-  return (mad * MAD_TO_CAD).toLocaleString('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 })
+  return (mad * MAD_TO_CAD).toLocaleString('en-US', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 })
 }
 
 export default function DashboardPage() {
