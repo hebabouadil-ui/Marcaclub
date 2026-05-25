@@ -182,8 +182,8 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
   }
 
   return (
-    <div className="min-h-screen">
-      <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-4 md:py-10">
+    <div style={{ minHeight: '100vh', width: '100%', overflowX: 'hidden', boxSizing: 'border-box' }}>
+      <div style={{ maxWidth: '1152px', margin: '0 auto', padding: '16px', boxSizing: 'border-box' }}>
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-xs tracking-widest uppercase text-brand-gray mb-4 md:mb-8">
           <Link href="/" className="hover:text-brand-black transition-colors">Accueil</Link>
@@ -196,7 +196,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
         <div className="grid md:grid-cols-[1fr_420px] gap-5 md:gap-8 lg:gap-12 items-start">
           {/* Images */}
           <div className="space-y-3">
-            <div className="bg-white w-full flex items-center justify-center" style={{ height: '300px', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'relative', width: '100%', height: '300px', overflow: 'hidden', background: 'white' }}>
               <AnimatePresence initial={false} custom={dir}>
                 <motion.div
                   key={imgIdx}
@@ -206,17 +206,19 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                   animate="center"
                   exit="exit"
                   transition={swipeTransition}
-                  style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'white' }}
+                  style={{ position: 'absolute', inset: 0, background: 'white', overflow: 'hidden' }}
                 >
                   {images[imgIdx] ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={images[imgIdx]}
                       alt={product.name}
-                      style={{ maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto', objectFit: 'contain', display: 'block' }}
+                      style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
                     />
                   ) : (
-                    <span className="text-brand-gray text-xs tracking-widest uppercase">Marcaclub</span>
+                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span className="text-brand-gray text-xs tracking-widest uppercase">Marcaclub</span>
+                    </div>
                   )}
                 </motion.div>
               </AnimatePresence>
