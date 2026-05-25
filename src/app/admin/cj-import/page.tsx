@@ -241,11 +241,14 @@ export default function CJImportPage() {
         setShippingLoaded(true)
         setShowShipping(true)
 
-        // Auto-select the fastest shipping option and recalculate prices
+        // Auto-select best-value option (cheap + reasonable speed)
         if (options.length > 0) {
-          const fastest = options.slice().sort((a: ShippingOption, b: ShippingOption) =>
-            (a.agingMin || 99) - (b.agingMin || 99)
-          )[0]
+          const maxPrice = Math.max(...options.map((o: ShippingOption) => o.logisticPrice), 1)
+          const maxDays = Math.max(...options.map((o: ShippingOption) => o.agingMax || o.agingMin || 30), 1)
+          const fastest = options.slice().map((o: ShippingOption) => ({
+            ...o,
+            score: (o.logisticPrice / maxPrice) * 0.7 + ((o.agingMax || o.agingMin || 30) / maxDays) * 0.3,
+          })).sort((a: { score: number }, b: { score: number }) => a.score - b.score)[0]
           const newShipUSD = fastest.logisticPrice ?? 0
           setForm((prev) => {
             const mul = parseFloat(prev.markupX || '3')

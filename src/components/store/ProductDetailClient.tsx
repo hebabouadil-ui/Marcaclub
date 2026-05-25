@@ -97,11 +97,19 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
         })
         if (options.length === 0) return
 
-        // Prefer the stored logistic name, else fastest affordable option
+        // Prefer the stored logistic name, else best value (cheap + reasonable speed)
         const preferred = product.cjLogisticName
           ? options.find((o) => o.logisticName === product.cjLogisticName)
           : null
-        setShipping(preferred ?? options.sort((a, b) => a.agingMin - b.agingMin)[0])
+        if (preferred) { setShipping(preferred); return }
+        // Score = price * 0.7 + normalised_days * 0.3 — lower is better
+        const maxPrice = Math.max(...options.map((o) => o.logisticPrice), 1)
+        const maxDays = Math.max(...options.map((o) => o.agingMax || o.agingMin || 30), 1)
+        const scored = options.map((o) => ({
+          ...o,
+          score: (o.logisticPrice / maxPrice) * 0.7 + ((o.agingMax || o.agingMin || 30) / maxDays) * 0.3,
+        }))
+        setShipping(scored.sort((a, b) => a.score - b.score)[0])
       } catch {
         // ignore shipping errors — not critical
       } finally {
