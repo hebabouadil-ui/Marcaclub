@@ -4,10 +4,12 @@ import { motion } from 'framer-motion'
 import { ArrowRight, Globe, Shield, Zap } from 'lucide-react'
 import { useLanguage } from '@/lib/i18n'
 
-interface Props { title: string; subtitle: string }
+interface Props { title: string; subtitle: string; titleEn?: string; subtitleEn?: string }
 
-export default function HomeHero({ title, subtitle }: Props) {
-  const { tr } = useLanguage()
+export default function HomeHero({ title, subtitle, titleEn, subtitleEn }: Props) {
+  const { tr, lang } = useLanguage()
+  const displayTitle = lang === 'en' && titleEn ? titleEn : title
+  const displaySubtitle = lang === 'en' && subtitleEn ? subtitleEn : subtitle
 
   return (
     <section className="relative bg-brand-black flex items-center justify-center overflow-hidden min-h-[100svh] md:min-h-[75svh]">
@@ -26,12 +28,12 @@ export default function HomeHero({ title, subtitle }: Props) {
 
         <motion.h1 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.1 }}
           className="font-display text-4xl md:text-6xl lg:text-7xl text-white leading-tight mb-6">
-          {title}
+          {displayTitle}
         </motion.h1>
 
         <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.25 }}
           className="text-white/50 text-sm md:text-base max-w-2xl mx-auto mb-10 leading-relaxed">
-          {subtitle}
+          {displaySubtitle}
         </motion.p>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.4 }}

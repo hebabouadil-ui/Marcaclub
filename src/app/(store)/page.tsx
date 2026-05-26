@@ -38,13 +38,16 @@ async function getData() {
 export default async function HomePage() {
   const { products, settings } = await getData()
 
-  const heroTitle = (settings as { heroTitle?: string } | null)?.heroTitle ?? 'Votre Beauté, Notre Priorité'
-  const heroSubtitle = (settings as { heroSubtitle?: string } | null)?.heroSubtitle ?? 'Soins & beauté premium sélectionnés — livrés partout dans le monde'
+  const s = settings as { heroTitle?: string; heroTitleEn?: string; heroSubtitle?: string; heroSubtitleEn?: string } | null
+  const heroTitle = s?.heroTitle ?? 'Votre Beauté, Notre Priorité'
+  const heroTitleEn = s?.heroTitleEn ?? 'Your Beauty, Our Priority'
+  const heroSubtitle = s?.heroSubtitle ?? 'Soins & beauté premium sélectionnés — livrés partout dans le monde'
+  const heroSubtitleEn = s?.heroSubtitleEn ?? 'Premium skincare & beauty — curated and delivered worldwide'
   const liveStatus = (settings as { liveStatus?: boolean } | null)?.liveStatus ?? false
 
   return (
     <>
-      <HomeHero title={heroTitle} subtitle={heroSubtitle} />
+      <HomeHero title={heroTitle} subtitle={heroSubtitle} titleEn={heroTitleEn} subtitleEn={heroSubtitleEn} />
       <HomeCategories />
       <FeaturedProducts products={JSON.parse(JSON.stringify(products))} />
       <HomeLiveSection

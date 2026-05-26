@@ -24,13 +24,14 @@ interface Product {
   featured: boolean
   active: boolean
   description: string
+  descriptionEn?: string
 }
 
 type ProductForm = Omit<Product, '_id' | 'stock'>
 
 const EMPTY: ProductForm = {
-  name: '', price: 0, originalPrice: undefined, category: 'eclairage-led',
-  images: [], sizes: [], featured: false, active: true, description: '',
+  name: '', price: 0, originalPrice: undefined, category: 'soins-visage',
+  images: [], sizes: [], featured: false, active: true, description: '', descriptionEn: '',
 }
 const CATEGORIES = ['soins-visage', 'soins-corps', 'soins-cheveux', 'maquillage', 'autres']
 const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '36', '37', '38', '39', '40', '41', '42', '43', 'Unique']
@@ -60,7 +61,8 @@ export default function AdminProductsPage() {
       typeof s === 'string' ? { size: s as string, stock: 0 } : s
     )
     setForm({ name: p.name, price: p.price, originalPrice: p.originalPrice, category: p.category,
-      images: p.images, sizes: normalizedSizes, featured: p.featured, active: p.active, description: p.description })
+      images: p.images, sizes: normalizedSizes, featured: p.featured, active: p.active,
+      description: p.description, descriptionEn: (p as { descriptionEn?: string }).descriptionEn ?? '' })
     setModal(true)
   }
 
@@ -295,11 +297,20 @@ export default function AdminProductsPage() {
 
                 {/* Description */}
                 <div>
-                  <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Description</label>
+                  <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Description (FR)</label>
                   <textarea
                     rows={3}
                     value={form.description}
                     onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    className="w-full bg-white/5 border border-white/10 text-white px-4 py-2.5 text-sm focus:outline-none focus:border-brand-gold resize-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Description (EN)</label>
+                  <textarea
+                    rows={3}
+                    value={form.descriptionEn ?? ''}
+                    onChange={(e) => setForm({ ...form, descriptionEn: e.target.value })}
                     className="w-full bg-white/5 border border-white/10 text-white px-4 py-2.5 text-sm focus:outline-none focus:border-brand-gold resize-none"
                   />
                 </div>

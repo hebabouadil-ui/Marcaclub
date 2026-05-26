@@ -5,7 +5,9 @@ import { Loader2 } from 'lucide-react'
 
 interface SettingsForm {
   heroTitle: string
+  heroTitleEn: string
   heroSubtitle: string
+  heroSubtitleEn: string
   announcementBar: string
   announcementActive: boolean
   instagramUrl: string
@@ -18,8 +20,10 @@ interface SettingsForm {
 }
 
 const DEFAULT: SettingsForm = {
-  heroTitle: 'Exclusive Fashion',
-  heroSubtitle: 'Premium products delivered worldwide',
+  heroTitle: 'Votre Beauté, Notre Priorité',
+  heroTitleEn: 'Your Beauty, Our Priority',
+  heroSubtitle: 'Soins premium sélectionnés pour vous — livrés partout dans le monde',
+  heroSubtitleEn: 'Premium skincare & beauty — curated and delivered worldwide',
   announcementBar: 'Free worldwide shipping • New arrivals every week • Secure checkout',
   announcementActive: true,
   instagramUrl: 'https://instagram.com/marcaclub',
@@ -74,12 +78,20 @@ export default function AdminSettingsPage() {
         <div className="bg-white/5 border border-white/5 p-5 space-y-4">
           <h2 className="text-white/60 text-xs uppercase tracking-widest">Homepage</h2>
           <div>
-            <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Hero Title</label>
+            <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Hero Title (FR)</label>
             <input className={inputClass} value={form.heroTitle} onChange={set('heroTitle')} />
           </div>
           <div>
-            <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Subtitle</label>
+            <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Hero Title (EN)</label>
+            <input className={inputClass} value={form.heroTitleEn} onChange={set('heroTitleEn')} />
+          </div>
+          <div>
+            <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Subtitle (FR)</label>
             <input className={inputClass} value={form.heroSubtitle} onChange={set('heroSubtitle')} />
+          </div>
+          <div>
+            <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Subtitle (EN)</label>
+            <input className={inputClass} value={form.heroSubtitleEn} onChange={set('heroSubtitleEn')} />
           </div>
         </div>
 

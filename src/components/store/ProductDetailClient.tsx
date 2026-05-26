@@ -23,6 +23,7 @@ interface Product {
   name: string
   slug: string
   description: string
+  descriptionEn?: string
   price: number
   originalPrice?: number
   images: string[]
@@ -59,7 +60,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
   const router = useRouter()
   const { format, shippingCostUSD } = useCurrency()
   const MAD_PER_USD = 10.05
-  const { tr } = useLanguage()
+  const { tr, lang } = useLanguage()
 
   const [shipping, setShipping] = useState<ShippingOption | null>(null)
   const [shippingLoading, setShippingLoading] = useState(false)
@@ -429,10 +430,12 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
               </div>
 
               {/* Description */}
-              {product.description && (
+              {(product.description || product.descriptionEn) && (
                 <div className="mt-6 pt-6 border-t border-brand-light-gray">
                   <p className="text-xs tracking-[0.2em] uppercase text-brand-gray mb-2">Description</p>
-                  <p className="text-sm text-brand-gray leading-relaxed">{product.description}</p>
+                  <p className="text-sm text-brand-gray leading-relaxed">
+                    {lang === 'en' && product.descriptionEn ? product.descriptionEn : product.description}
+                  </p>
                 </div>
               )}
             </motion.div>

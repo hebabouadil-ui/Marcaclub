@@ -4,7 +4,9 @@ export interface ISettings extends Document {
   liveStatus: boolean
   liveUrl?: string
   heroTitle: string
+  heroTitleEn?: string
   heroSubtitle: string
+  heroSubtitleEn?: string
   announcementBar: string
   announcementActive: boolean
   instagramUrl: string
@@ -20,10 +22,9 @@ const SettingsSchema = new Schema<ISettings>({
   liveStatus: { type: Boolean, default: false },
   liveUrl: { type: String, default: '' },
   heroTitle: { type: String, default: 'Votre Beauté, Notre Priorité' },
-  heroSubtitle: {
-    type: String,
-    default: 'Soins premium sélectionnés pour vous — livrés partout dans le monde',
-  },
+  heroTitleEn: { type: String, default: 'Your Beauty, Our Priority' },
+  heroSubtitle: { type: String, default: 'Soins premium sélectionnés pour vous — livrés partout dans le monde' },
+  heroSubtitleEn: { type: String, default: 'Premium skincare & beauty — curated and delivered worldwide' },
   announcementBar: {
     type: String,
     default: 'Livraison mondiale · Paiement sécurisé · Nouveaux produits chaque semaine',
