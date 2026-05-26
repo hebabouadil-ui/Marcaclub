@@ -90,17 +90,17 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         const productIds = order.items.map((i: { productId: string }) => i.productId)
         const products = await Product.find({ _id: { $in: productIds } }).lean() as Array<{
           _id: mongoose.Types.ObjectId; cjPid?: string; cjLogisticName?: string
-          sizes: Array<{ size: string; cjVid?: string }>
+          sizes: Array<{ size: string; cjVid?: string; cjSku?: string }>
         }>
         const productMap = new Map(products.map((p) => [String(p._id), p]))
 
-        const cjItems: { vid: string; quantity: number }[] = []
+        const cjItems: { vid: string; variantSku?: string; quantity: number }[] = []
         for (const item of order.items as unknown as { productId: string; size: string; quantity: number }[]) {
           const prod = productMap.get(String(item.productId))
           if (!prod?.cjPid) continue
           const sizeEntry = prod.sizes.find((s) => s.size === item.size)
-          if (!sizeEntry?.cjVid) continue
-          cjItems.push({ vid: sizeEntry.cjVid, quantity: item.quantity })
+          if (!sizeEntry?.cjVid && !sizeEntry?.cjSku) continue
+          cjItems.push({ vid: sizeEntry.cjVid || '', variantSku: sizeEntry.cjSku || '', quantity: item.quantity })
         }
 
         if (cjItems.length > 0) {

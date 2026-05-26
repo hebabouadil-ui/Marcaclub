@@ -108,6 +108,7 @@ export async function getCJShippingInfo(params: {
 
 export interface CJOrderItem {
   vid: string
+  variantSku?: string
   quantity: number
 }
 
@@ -143,7 +144,8 @@ export async function createCJOrder(params: {
       shippingPhone: params.shippingAddress.phone,
       remark: '',
       products: params.products.map((p) => ({
-        vid: p.vid,
+        ...(p.vid ? { vid: p.vid } : {}),
+        ...(p.variantSku ? { variantSku: p.variantSku } : {}),
         quantity: p.quantity,
       })),
     }),

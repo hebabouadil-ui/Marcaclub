@@ -41,9 +41,9 @@ export async function POST(req: NextRequest) {
       ? cjProduct.variants?.filter((v: { vid: string }) => selectedVariants.includes(v.vid))
       : cjProduct.variants ?? []
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sizes = variants.map((v: any) => {
       const vid = v.vid ?? v.variantId ?? ''
+      const sku = v.variantSku ?? v.sku ?? ''
       const adminPrice = variantPricesMap?.[vid]
       const adminBasePrice = baseVariantPricesMap?.[vid]
       return {
@@ -55,6 +55,7 @@ export async function POST(req: NextRequest) {
         })(),
         stock: v.variantStock ?? v.variantInventory ?? v.stock ?? 100,
         cjVid: vid,
+        cjSku: sku,
         variantPrice: adminPrice != null ? adminPrice : (v.variantSellPrice ?? v.variantPrice ?? v.sellPrice ?? undefined),
         baseVariantPrice: adminBasePrice != null ? adminBasePrice : undefined,
       }

@@ -25,24 +25,27 @@ export async function POST(req: NextRequest) {
   }
 
   // Build CJ products list — look up cjVid from each product's size entry
-  const cjProducts: { vid: string; quantity: number }[] = []
+  const cjProducts: { vid: string; variantSku?: string; quantity: number }[] = []
 
   for (const item of order.items as Array<{ productId: string; size: string; quantity: number; name: string }>) {
     const product = await Product.findById(item.productId).lean() as {
       cjPid?: string
-      sizes: Array<{ size: string; cjVid?: string }>
+      sizes: Array<{ size: string; cjVid?: string; cjSku?: string }>
     } | null
 
     if (!product?.cjPid) continue  // skip non-CJ products
 
     const sizeEntry = product.sizes?.find((s) => s.size === item.size)
-    const vid = sizeEntry?.cjVid
-    if (!vid) {
-      console.warn(`No cjVid for product ${item.productId} size ${item.size}`)
-      continue
+    const vid = sizeEntry?.cjVid || ''
+    const variantSku = sizeEntry?.cjSku || ''
+
+    if (!vid && !variantSku) {
+      return NextResponse.json({
+        error: `Product "${item.name}" has no CJ variant ID. Re-import it from CJ to fix.`
+      }, { status: 400 })
     }
 
-    cjProducts.push({ vid, quantity: item.quantity })
+    cjProducts.push({ vid, variantSku, quantity: item.quantity })
   }
 
   if (cjProducts.length === 0) {
