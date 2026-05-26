@@ -757,11 +757,11 @@ export default function CJImportPage() {
                   const avgSellCAD = selectedVariantObjs.length > 0
                     ? selectedVariantObjs.reduce((s, v) => s + Number(form.variantPrices[v.vid] || 0), 0) / selectedVariantObjs.length
                     : 0
-                  // True profit = sell (excl. shipping) − product cost − shipping you pay CJ
+                  // Profit = customer pays − total paid to CJ
+                  // = (sellCAD + shippingCAD) − (productCostCAD + shippingCAD)
+                  // = sellCAD − productCostCAD   (shipping cancels out)
                   const shippingCAD = shippingUSD * usdToCAD
-                  const avgProfitCAD = avgMarginCAD != null && shippingUSD > 0
-                    ? avgMarginCAD - shippingCAD
-                    : avgMarginCAD
+                  const avgProfitCAD = avgMarginCAD  // shipping paid = shipping charged, they cancel
                   const websiteCAD = minSellCAD > 0 && shippingUSD > 0
                     ? minSellCAD + shippingCAD
                     : null
