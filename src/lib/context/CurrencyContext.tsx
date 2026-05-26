@@ -108,7 +108,7 @@ const shippingCache: Record<string, number> = {}
 async function fetchBestShippingUSD(countryCode: string): Promise<number> {
   if (shippingCache[countryCode] !== undefined) return shippingCache[countryCode]
   try {
-    const res = await fetch(`/api/shipping?country=${countryCode}&weight=300`)
+    const res = await fetch(`/api/shipping?country=${countryCode}&weight=500`)
     if (!res.ok) return getShippingFallback(countryCode)
     const data = await res.json()
     const options: Array<{ logisticPrice: number; agingMax?: number; agingMin?: number }> = data.options ?? []

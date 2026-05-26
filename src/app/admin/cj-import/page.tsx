@@ -6,7 +6,10 @@ import toast from 'react-hot-toast'
 
 const MAD_PER_USD = 10.05        // 1 USD = 10.05 MAD
 const USD_TO_CAD = 1.38          // 1 USD = 1.38 CAD (for displaying CJ USD costs)
-const MAD_TO_CAD = USD_TO_CAD / MAD_PER_USD  // ≈ 0.1373 — matches storefront rate
+const MAD_TO_CAD = USD_TO_CAD / MAD_PER_USD  // ≈ 0.1373 — used for cost display
+// Website display rate: matches FALLBACK_RATES.CAD in CurrencyContext.
+// Use this when computing "Price on website" so it matches what the storefront shows.
+const WEBSITE_MAD_TO_CAD = 0.135
 
 // Estimated shipping costs in USD for the "website preview" (matches storefront fallback table)
 const PREVIEW_SHIPPING_USD: Record<string, { label: string; currency: string; usd: number }> = {
@@ -25,9 +28,10 @@ function cad(mad: number) {
 function cadUSD(usd: number, decimals = 2) {
   return (usd * USD_TO_CAD).toLocaleString('en-US', { style: 'currency', currency: 'CAD', minimumFractionDigits: decimals, maximumFractionDigits: decimals })
 }
-// Website price shown to customer = base sell price + shipping, both converted to CAD for admin preview
+// Website price shown to customer — matches the storefront's formula exactly:
+//   format(displayPrice) = (sellMAD + shippingUSD * MAD_PER_USD) * WEBSITE_MAD_TO_CAD
 function customerPriceCAD(sellMAD: number, shippingUSD: number) {
-  return (sellMAD * MAD_TO_CAD) + (shippingUSD * USD_TO_CAD)
+  return (sellMAD + shippingUSD * MAD_PER_USD) * WEBSITE_MAD_TO_CAD
 }
 
 interface CJVariant {
@@ -219,8 +223,9 @@ export default function CJImportPage() {
   const [importing, setImporting] = useState(false)
   const [imported, setImported] = useState<Set<string>>(new Set())
 
-  const [previewCountry, setPreviewCountry] = useState('CA')  // country to preview customer price
-  const [shippingCountry, setShippingCountry] = useState('US')
+  // Single country state: used for both shipping fetch and "Price on website" preview.
+  // Change this country + click Fetch to see the exact price customers in that country will pay.
+  const [shippingCountry, setShippingCountry] = useState('CA')
   const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([])
   const [shippingLoading, setShippingLoading] = useState(false)
   const [shippingLoaded, setShippingLoaded] = useState(false)
@@ -748,31 +753,24 @@ export default function CJImportPage() {
 
                 {/* Cost breakdown */}
                 {(() => {
-                  const prevInfo = PREVIEW_SHIPPING_USD[previewCountry] ?? PREVIEW_SHIPPING_USD['CA']
-                  // Scale fetched CJ shipping from the ref country to the preview country using fallback ratios.
-                  // This matches exactly what the storefront will show after import.
-                  const previewShipUSD = shippingUSD > 0
-                    ? shippingUSD * (prevInfo.usd / (PREVIEW_SHIPPING_USD[shippingCountry]?.usd ?? 7.0))
-                    : prevInfo.usd
+                  const countryInfo = PREVIEW_SHIPPING_USD[shippingCountry] ?? { label: shippingCountry, currency: 'CAD', usd: 7 }
                   const minSellMAD = selectedVariantObjs.length > 0
                     ? Math.min(...selectedVariantObjs.map(v => Number(form.variantPrices[v.vid] || 0)).filter(n => n > 0))
                     : 0
                   const avgSellMAD = selectedVariantObjs.length > 0
                     ? selectedVariantObjs.reduce((s, v) => s + Number(form.variantPrices[v.vid] || 0), 0) / selectedVariantObjs.length
                     : 0
-                  // Profit = sell price - product cost + (customer shipping - CJ shipping).
-                  // Customer pays previewShipUSD; admin pays the ref-country shippingUSD to CJ.
-                  // The difference (can be + or -) adjusts profit per country.
-                  const baseMarginCAD = avgMarginMAD != null ? avgMarginMAD * MAD_TO_CAD : null
-                  const shipDiffCAD = shippingUSD > 0
-                    ? (previewShipUSD - shippingUSD) * USD_TO_CAD
-                    : 0
-                  const avgProfitCAD = baseMarginCAD != null ? baseMarginCAD + shipDiffCAD : null
+                  // Profit = sell price in CAD - CJ product cost in CAD.
+                  // Shipping passes through: customer pays shippingUSD, admin pays shippingUSD to CJ → cancels.
+                  const avgProfitCAD = avgMarginMAD != null ? avgMarginMAD * WEBSITE_MAD_TO_CAD : null
                   const avgMarginPct = avgSellMAD > 0 && avgMarginMAD != null
                     ? Math.round((avgMarginMAD / avgSellMAD) * 100)
                     : null
-                  const websiteCAD = minSellMAD > 0
-                    ? customerPriceCAD(minSellMAD, previewShipUSD)
+                  // "Price on website" uses the EXACT same formula as the storefront:
+                  //   format(sellMAD + shippingMAD) = (sellMAD + shippingUSD * MAD_PER_USD) * WEBSITE_MAD_TO_CAD
+                  // shippingUSD here is the real CJ-fetched value for shippingCountry at this product's weight.
+                  const websiteCAD = minSellMAD > 0 && shippingUSD > 0
+                    ? customerPriceCAD(minSellMAD, shippingUSD)
                     : null
                   return (
                     <div className="bg-white/3 border border-white/8 px-4 py-3 text-xs space-y-1.5">
@@ -784,7 +782,7 @@ export default function CJImportPage() {
                       </div>
                       <div className="flex justify-between text-white/50">
                         <span>CJ shipping</span>
-                        <span className={shippingUSD > 0 ? 'text-white/70' : 'text-white/20'}>{shippingUSD > 0 ? cadUSD(shippingUSD) : '— select to estimate'}</span>
+                        <span className={shippingUSD > 0 ? 'text-white/70' : 'text-white/20'}>{shippingUSD > 0 ? cadUSD(shippingUSD) : '— fetch shipping first'}</span>
                       </div>
                       {shippingUSD > 0 && (
                         <div className="flex justify-between text-white/60 border-t border-white/8 pt-1.5">
@@ -794,7 +792,7 @@ export default function CJImportPage() {
                       )}
 
                       {/* Your profit */}
-                      {avgProfitCAD != null && (
+                      {avgProfitCAD != null && shippingUSD > 0 && (
                         <>
                           <p className="text-[9px] text-white/20 uppercase tracking-widest mt-3 mb-1">Your profit per sale</p>
                           <div className={`flex justify-between font-bold text-sm ${avgProfitCAD > 0 ? 'text-green-400' : 'text-red-400'}`}>
@@ -809,29 +807,18 @@ export default function CJImportPage() {
 
                       {/* What customer sees */}
                       <div className="border-t border-white/10 pt-2 mt-2">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <p className="text-[9px] text-white/20 uppercase tracking-widest">Customer pays</p>
-                          <select
-                            value={previewCountry}
-                            onChange={(e) => setPreviewCountry(e.target.value)}
-                            className="bg-white/5 border border-white/10 text-white/60 text-[9px] px-2 py-0.5 focus:outline-none"
-                          >
-                            {Object.entries(PREVIEW_SHIPPING_USD).map(([code, info]) => (
-                              <option key={code} value={code} className="bg-[#0f0f0f]">{info.label}</option>
-                            ))}
-                          </select>
-                        </div>
+                        <p className="text-[9px] text-white/20 uppercase tracking-widest mb-1.5">
+                          Customer pays · {countryInfo.label}
+                          {!shippingUSD && <span className="text-white/30 ml-1">(fetch shipping to see)</span>}
+                        </p>
                         <div className="flex justify-between text-white/50">
                           <span>Base sell price</span>
                           <span>{minSellMAD > 0 ? cadUSD(minSellMAD * MAD_TO_CAD / USD_TO_CAD, 0) : '—'}</span>
                         </div>
                         <div className="flex justify-between text-white/50">
-                          <span>+ Shipping ({prevInfo.label})</span>
-                          <span>
-                            {cadUSD(previewShipUSD, 0)}
-                            {shippingUSD > 0 && (
-                              <span className="ml-1 text-[9px] text-brand-gold/60">scaled</span>
-                            )}
+                          <span>+ Shipping ({countryInfo.label})</span>
+                          <span className={shippingUSD > 0 ? '' : 'text-white/20'}>
+                            {shippingUSD > 0 ? cadUSD(shippingUSD, 0) : '—'}
                           </span>
                         </div>
                         <div className={`flex justify-between font-bold mt-1 pt-1 border-t border-white/10 ${websiteCAD ? 'text-brand-gold' : 'text-white/20'}`}>
