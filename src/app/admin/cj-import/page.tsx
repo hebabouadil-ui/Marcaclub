@@ -1,13 +1,14 @@
 'use client'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Search, Download, Check, Loader2, RefreshCw, ChevronDown, ChevronUp, Truck, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import Image from 'next/image'
 import toast from 'react-hot-toast'
 
-const USD_TO_CAD = 1.38          // 1 USD = 1.38 CAD (for displaying CJ USD costs)
+// Fallback rate — overwritten immediately by live /api/rates fetch
+let _liveUsdToCAD = 1.38
 
 function cadUSD(usd: number, decimals = 2) {
-  return (usd * USD_TO_CAD).toLocaleString('en-US', { style: 'currency', currency: 'CAD', minimumFractionDigits: decimals, maximumFractionDigits: decimals })
+  return (usd * _liveUsdToCAD).toLocaleString('en-US', { style: 'currency', currency: 'CAD', minimumFractionDigits: decimals, maximumFractionDigits: decimals })
 }
 
 function cadFmt(cad: number, decimals = 0) {
@@ -146,7 +147,7 @@ function normalizeShipping(opt: any): ShippingOption {
 // e.g. cost $22, margin 60% → sell = $22 / 0.4 * 1.38 = CA$75.90 → CA$76
 function sellPriceCAD(costUSD: number, marginPct: number): number {
   const margin = Math.min(Math.max(marginPct, 1), 95) / 100
-  return Math.ceil((costUSD / (1 - margin)) * USD_TO_CAD)
+  return Math.ceil((costUSD / (1 - margin)) * _liveUsdToCAD)
 }
 // Alias used in old code paths — now same as sellPriceCAD
 const sellPriceBase = sellPriceCAD
@@ -208,6 +209,15 @@ export default function CJImportPage() {
 
   // Single country state: used for both shipping fetch and "Price on website" preview.
   // Change this country + click Fetch to see the exact price customers in that country will pay.
+  const [usdToCAD, setUsdToCAD] = useState(1.38)
+
+  useEffect(() => {
+    fetch('/api/rates').then(r => r.json()).then(d => {
+      const rate = d.rates?.USD
+      if (rate && rate > 0) { _liveUsdToCAD = 1 / rate; setUsdToCAD(1 / rate) }
+    }).catch(() => {})
+  }, [])
+
   const [shippingCountry, setShippingCountry] = useState('CA')
   const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([])
   const [shippingLoading, setShippingLoading] = useState(false)
@@ -458,7 +468,7 @@ export default function CJImportPage() {
   const avgMarginCAD = selectedVariantObjs.length > 0
     ? selectedVariantObjs.reduce((sum, v) => {
         const sellCAD = Number(form.variantPrices[v.vid] || 0)
-        const costCAD = (v.variantPrice ?? 0) * USD_TO_CAD
+        const costCAD = (v.variantPrice ?? 0) * usdToCAD
         return sum + (sellCAD - costCAD)
       }, 0) / selectedVariantObjs.length
     : null
@@ -636,10 +646,13 @@ export default function CJImportPage() {
                   </div>
 
                   {preview.description && (
-                    <div className="bg-white/5 px-3 py-2">
-                      <p className="text-white/40 text-[10px] mb-1">DESCRIPTION</p>
-                      <div className="text-white/60 text-[11px] leading-relaxed max-h-24 overflow-y-auto"
-                        dangerouslySetInnerHTML={{ __html: preview.description }} />
+                    <div className="mt-3">
+                      <p className="text-white/40 text-[10px] tracking-widest mb-2">CJ DESCRIPTION</p>
+                      <div
+                        className="bg-white rounded p-3 overflow-y-auto text-black text-sm"
+                        style={{ maxHeight: '500px' }}
+                        dangerouslySetInnerHTML={{ __html: preview.description }}
+                      />
                     </div>
                   )}
                 </div>
@@ -744,12 +757,16 @@ export default function CJImportPage() {
                   const avgSellCAD = selectedVariantObjs.length > 0
                     ? selectedVariantObjs.reduce((s, v) => s + Number(form.variantPrices[v.vid] || 0), 0) / selectedVariantObjs.length
                     : 0
-                  const avgProfitCAD = avgMarginCAD
-                  const avgMarginPct = avgSellCAD > 0 && avgMarginCAD != null
-                    ? Math.round((avgMarginCAD / avgSellCAD) * 100)
-                    : null
+                  // True profit = sell (excl. shipping) − product cost − shipping you pay CJ
+                  const shippingCAD = shippingUSD * usdToCAD
+                  const avgProfitCAD = avgMarginCAD != null && shippingUSD > 0
+                    ? avgMarginCAD - shippingCAD
+                    : avgMarginCAD
                   const websiteCAD = minSellCAD > 0 && shippingUSD > 0
-                    ? minSellCAD + shippingUSD * USD_TO_CAD
+                    ? minSellCAD + shippingCAD
+                    : null
+                  const avgMarginPct = websiteCAD && avgProfitCAD != null && websiteCAD > 0
+                    ? Math.round((avgProfitCAD / websiteCAD) * 100)
                     : null
                   return (
                     <div className="bg-white/3 border border-white/8 px-4 py-3 text-xs space-y-1.5">
@@ -915,7 +932,7 @@ export default function CJImportPage() {
                           const selected = form.selectedVariants.includes(v.vid)
                           const autoCAD = String(sellPriceBase(v.variantPrice, parseFloat(form.marginPct || '60')))
                           const sellCAD = Number((form.variantPrices[v.vid] ?? autoCAD) || 0)
-                          const costCAD = v.variantPrice * USD_TO_CAD
+                          const costCAD = v.variantPrice * usdToCAD
                           const marginCAD = sellCAD - costCAD
                           const marginPct = sellCAD > 0 ? Math.round((marginCAD / sellCAD) * 100) : 0
                           const isModified = (form.variantPrices[v.vid] ?? autoCAD) !== autoCAD
