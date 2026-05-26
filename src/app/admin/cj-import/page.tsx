@@ -210,6 +210,7 @@ export default function CJImportPage() {
       const res = await fetch(`/api/cj/products?${param}=${encodeURIComponent(query)}&page=${p}`, { credentials: 'include' })
       const data = await res.json()
       if (data.result && Array.isArray(data.data?.list)) {
+        if (data.data.list[0]) console.log('[CJ list item keys]', Object.keys(data.data.list[0]), data.data.list[0])
         setResults(data.data.list.map(normalizeProduct))
         setTotal(data.data.total ?? 0)
         setPage(p)
