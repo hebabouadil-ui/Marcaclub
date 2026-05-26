@@ -130,26 +130,33 @@ export async function createCJOrder(params: {
   products: CJOrderItem[]
   logisticName?: string
 }) {
+  const payload = {
+    orderNumber: params.orderNumber,
+    shippingZip: params.shippingAddress.zip,
+    shippingCountry: params.shippingAddress.country,
+    shippingCountryCode: params.shippingAddress.country,
+    shippingProvince: params.shippingAddress.province,
+    shippingCity: params.shippingAddress.city,
+    shippingAddress: params.shippingAddress.address,
+    shippingCustomerName: `${params.shippingAddress.firstName} ${params.shippingAddress.lastName}`,
+    shippingPhone: params.shippingAddress.phone,
+    remark: '',
+    products: params.products.map((p) => {
+      const vid = (p.vid ?? '').trim()
+      const variantSku = (p.variantSku ?? '').trim()
+      return {
+        ...(vid ? { vid } : {}),
+        ...(variantSku ? { variantSku } : {}),
+        quantity: p.quantity,
+      }
+    }),
+  }
+  console.log('CJ createOrder payload:', JSON.stringify(payload))
   const data = await cjFetch('/shopping/order/createOrderV2', {
     method: 'POST',
-    body: JSON.stringify({
-      orderNumber: params.orderNumber,
-      shippingZip: params.shippingAddress.zip,
-      shippingCountry: params.shippingAddress.country,
-      shippingCountryCode: params.shippingAddress.country,
-      shippingProvince: params.shippingAddress.province,
-      shippingCity: params.shippingAddress.city,
-      shippingAddress: params.shippingAddress.address,
-      shippingCustomerName: `${params.shippingAddress.firstName} ${params.shippingAddress.lastName}`,
-      shippingPhone: params.shippingAddress.phone,
-      remark: '',
-      products: params.products.map((p) => ({
-        ...(p.vid ? { vid: p.vid } : {}),
-        ...(p.variantSku ? { variantSku: p.variantSku } : {}),
-        quantity: p.quantity,
-      })),
-    }),
+    body: JSON.stringify(payload),
   })
+  console.log('CJ createOrder response:', JSON.stringify(data))
   return data
 }
 

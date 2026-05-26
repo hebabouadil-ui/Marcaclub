@@ -99,8 +99,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
           const prod = productMap.get(String(item.productId))
           if (!prod?.cjPid) continue
           const sizeEntry = prod.sizes.find((s) => s.size === item.size)
-          if (!sizeEntry?.cjVid && !sizeEntry?.cjSku) continue
-          cjItems.push({ vid: sizeEntry.cjVid || '', variantSku: sizeEntry.cjSku || '', quantity: item.quantity })
+          const vid = (sizeEntry?.cjVid ?? '').trim()
+          const variantSku = (sizeEntry?.cjSku ?? '').trim()
+          if (!vid && !variantSku) continue
+          cjItems.push({ vid, variantSku, quantity: item.quantity })
         }
 
         if (cjItems.length > 0) {

@@ -36,12 +36,14 @@ export async function POST(req: NextRequest) {
     if (!product?.cjPid) continue  // skip non-CJ products
 
     const sizeEntry = product.sizes?.find((s) => s.size === item.size)
-    const vid = sizeEntry?.cjVid || ''
-    const variantSku = sizeEntry?.cjSku || ''
+    const vid = (sizeEntry?.cjVid ?? '').trim()
+    const variantSku = (sizeEntry?.cjSku ?? '').trim()
+
+    console.log(`CJ fulfill item: ${item.name} size=${item.size} vid="${vid}" variantSku="${variantSku}"`)
 
     if (!vid && !variantSku) {
       return NextResponse.json({
-        error: `Product "${item.name}" has no CJ variant ID. Re-import it from CJ to fix.`
+        error: `Product "${item.name}" (size: ${item.size}) has no CJ variant ID. Re-import it from CJ to fix.`
       }, { status: 400 })
     }
 
