@@ -204,25 +204,22 @@ export default function CJImportPage() {
   const [sortOrder, setSortOrder] = useState<'none' | 'asc' | 'desc'>('none')
   const [cardPrices, setCardPrices] = useState<Record<string, number>>({})
 
-  // After search results load, fetch detail prices in background
+  // After search results load, fetch detail prices sequentially to avoid rate limits
   const fetchCardPrices = useCallback(async (products: CJProduct[]) => {
     setCardPrices({})
-    const results = await Promise.allSettled(
-      products.map(async (p) => {
+    for (const p of products) {
+      try {
         const res = await fetch(`/api/cj/products?pid=${p.pid}`, { credentials: 'include' })
         const data = await res.json()
         if (data.result && data.data) {
           const detail = normalizeProduct(data.data)
-          return { pid: p.pid, price: detail.sellingPrice }
+          if (detail.sellingPrice > 0) {
+            setCardPrices((prev) => ({ ...prev, [p.pid]: detail.sellingPrice }))
+          }
         }
-        return null
-      })
-    )
-    const prices: Record<string, number> = {}
-    for (const r of results) {
-      if (r.status === 'fulfilled' && r.value) prices[r.value.pid] = r.value.price
+      } catch {}
+      await new Promise((r) => setTimeout(r, 200)) // 200ms between requests
     }
-    setCardPrices(prices)
   }, [])
 
   const search = async (p = 1) => {
@@ -291,13 +288,20 @@ export default function CJImportPage() {
           const newShipUSD = fastest.logisticPrice ?? 0
           setForm((prev) => {
             const mul = parseFloat(prev.markupX || '3')
-            const newVP: Record<string, string> = {}
+            const newVP: Record<string, string> = { ...prev.variantPrices }
             const newBaseVP: Record<string, string> = {}
+            // Auto-recalc base prices; only update sell price if user hasn't manually edited it
+            const autoWithoutShip: Record<string, string> = {}
             for (const v of product.variants ?? []) {
-              // base = cost * markup * MAD/USD (no shipping)
+              autoWithoutShip[v.vid] = String(Math.ceil(v.variantPrice * mul * 10.05))
+            }
+            for (const v of product.variants ?? []) {
               newBaseVP[v.vid] = String(Math.ceil(v.variantPrice * mul * 10.05))
-              // total = (cost + shipping) * markup * MAD/USD
-              newVP[v.vid] = String(Math.ceil((v.variantPrice + newShipUSD) * mul * 10.05))
+              // Only overwrite if the current value equals the old auto-calculated value (not manually edited)
+              const wasAuto = !prev.variantPrices[v.vid] || prev.variantPrices[v.vid] === autoWithoutShip[v.vid]
+              if (wasAuto) {
+                newVP[v.vid] = String(Math.ceil((v.variantPrice + newShipUSD) * mul * 10.05))
+              }
             }
             const prices = prev.selectedVariants.map((vid) => Number(newVP[vid] || 0)).filter((n) => n > 0)
             const minP = prices.length > 0 ? String(Math.min(...prices)) : prev.price
@@ -526,7 +530,7 @@ export default function CJImportPage() {
               {(() => {
                 const price = cardPrices[product.pid] ?? (product.sellingPrice > 0 ? product.sellingPrice : null)
                 return price != null
-                  ? <span className="text-brand-gold text-xs font-bold">{cadUSD(price)}</span>
+                  ? <span className="text-xs"><span className="text-white/30">Cost </span><span className="text-brand-gold font-bold">{cadUSD(price)}</span></span>
                   : <span className="text-white/20 text-xs animate-pulse">loading…</span>
               })()}
             </div>
