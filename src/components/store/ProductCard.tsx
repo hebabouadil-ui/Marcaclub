@@ -6,6 +6,8 @@ import { Eye } from 'lucide-react'
 import { useCurrency } from '@/lib/context/CurrencyContext'
 import { useLanguage } from '@/lib/i18n'
 
+const MAD_PER_USD = 10.05
+
 interface Props {
   product: {
     _id: string
@@ -17,15 +19,25 @@ interface Props {
     stock: number
     sizes: Array<{ size: string; stock: number }>
     category: string
+    cjPid?: string
   }
 }
 
 export default function ProductCard({ product }: Props) {
   const [hovered, setHovered] = useState(false)
-  const { format } = useCurrency()
+  const { format, shippingCostUSD } = useCurrency()
   const { tr } = useLanguage()
-  const discount = product.originalPrice
-    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+
+  // For CJ products: add shipping for user's country to the base sell price
+  const displayPrice = product.cjPid && shippingCostUSD > 0
+    ? product.price + shippingCostUSD * MAD_PER_USD
+    : product.price
+  const originalDisplay = product.originalPrice && product.cjPid && shippingCostUSD > 0
+    ? product.originalPrice + shippingCostUSD * MAD_PER_USD
+    : product.originalPrice
+
+  const discount = originalDisplay && originalDisplay > displayPrice
+    ? Math.round(((originalDisplay - displayPrice) / originalDisplay) * 100)
     : null
 
   const img0 = product.images?.[0] || null
@@ -109,9 +121,9 @@ export default function ProductCard({ product }: Props) {
           {product.name}
         </Link>
         <div className="flex items-center gap-2 mt-1.5">
-          <span className="text-brand-black font-semibold text-sm">{format(product.price)}</span>
-          {product.originalPrice && (
-            <span className="text-brand-gray text-xs line-through">{format(product.originalPrice)}</span>
+          <span className="text-brand-black font-semibold text-sm">{format(displayPrice)}</span>
+          {originalDisplay && originalDisplay > displayPrice && (
+            <span className="text-brand-gray text-xs line-through">{format(originalDisplay)}</span>
           )}
         </div>
       </div>

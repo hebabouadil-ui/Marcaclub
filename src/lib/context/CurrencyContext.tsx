@@ -12,6 +12,7 @@ interface CurrencyCtx {
   setCurrency: (code: string) => void
   geo: GeoInfo | null
   available: { code: string; name: string; symbol: string }[]
+  shippingCostUSD: number  // best shipping option for user's country (0 until loaded)
 }
 
 export const CURRENCIES: { code: string; name: string; symbol: string }[] = [
@@ -67,6 +68,31 @@ const DEFAULT: CurrencyCtx = {
   setCurrency: () => {},
   geo: null,
   available: CURRENCIES,
+  shippingCostUSD: 0,
+}
+
+// Module-level cache so shipping isn't refetched on re-renders
+const shippingCache: Record<string, number> = {}
+
+async function fetchBestShippingUSD(countryCode: string): Promise<number> {
+  if (shippingCache[countryCode] !== undefined) return shippingCache[countryCode]
+  try {
+    const res = await fetch(`/api/shipping?country=${countryCode}&weight=300`)
+    if (!res.ok) return 0
+    const data = await res.json()
+    const options: Array<{ logisticPrice: number; agingMax?: number; agingMin?: number }> = data.options ?? []
+    if (options.length === 0) return 0
+    const maxPrice = Math.max(...options.map(o => o.logisticPrice), 1)
+    const maxDays = Math.max(...options.map(o => o.agingMax ?? o.agingMin ?? 30), 1)
+    const best = options
+      .map(o => ({ ...o, score: (o.logisticPrice / maxPrice) * 0.7 + ((o.agingMax ?? o.agingMin ?? 30) / maxDays) * 0.3 }))
+      .sort((a, b) => a.score - b.score)[0]
+    const cost = best?.logisticPrice ?? 0
+    shippingCache[countryCode] = cost
+    return cost
+  } catch {
+    return 0
+  }
 }
 
 const Ctx = createContext<CurrencyCtx>(DEFAULT)
@@ -96,6 +122,7 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
   const [rate, setRate] = useState(1)
   const [geo, setGeo] = useState<GeoInfo | null>(null)
   const [rates, setRates] = useState<Record<string, number>>(FALLBACK_RATES)
+  const [shippingCostUSD, setShippingCostUSD] = useState(0)
 
   const applyCode = useCallback((code: string, ratesMap: Record<string, number>) => {
     const r = ratesMap[code] ?? FALLBACK_RATES[code] ?? 1
@@ -129,6 +156,7 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
           if (gd.countryCode) {
             setGeo(gd)
             detectedCode = COUNTRY_CURRENCY[gd.countryCode] ?? 'CAD'
+            fetchBestShippingUSD(gd.countryCode).then(setShippingCostUSD)
           }
         }
       } catch {}
@@ -154,6 +182,7 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
       setCurrency,
       geo,
       available: CURRENCIES,
+      shippingCostUSD,
     }}>
       {children}
     </Ctx.Provider>

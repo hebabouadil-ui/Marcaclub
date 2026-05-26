@@ -18,6 +18,7 @@ interface Props {
     stock: number
     sizes: Array<{ size: string; stock: number }>
     category: string
+    cjPid?: string
   }>
   filters: { category?: string; q?: string }
 }

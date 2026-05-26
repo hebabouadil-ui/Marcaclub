@@ -57,7 +57,8 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
   const [added, setAdded] = useState(false)
   const addItem = useCartStore((s) => s.addItem)
   const router = useRouter()
-  const { format } = useCurrency()
+  const { format, shippingCostUSD } = useCurrency()
+  const MAD_PER_USD = 10.05
   const { tr } = useLanguage()
 
   const [shipping, setShipping] = useState<ShippingOption | null>(null)
@@ -142,9 +143,12 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
   const selectedStock = selectedSizeEntry?.stock ?? 0
   const totalStock = sizes.reduce((s, i) => s + i.stock, 0)
 
-  // Show the stored sell price — shipping is included (displayed as free).
-  // Price never changes based on country or async shipping fetch.
-  const displayPrice = selectedSizeEntry?.variantPrice ?? product.price
+  // Base sell price (stored in DB in MAD, excludes shipping).
+  // Add per-country shipping so the displayed price matches what the customer pays.
+  const basePrice = selectedSizeEntry?.variantPrice ?? product.price
+  const displayPrice = product.cjPid && shippingCostUSD > 0
+    ? basePrice + shippingCostUSD * MAD_PER_USD
+    : basePrice
 
   const originalPrice = product.originalPrice
   const discount = originalPrice && displayPrice < originalPrice
@@ -342,7 +346,9 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                         >
                           <span>{label}</span>
                           {vp && vp !== product.price && (
-                            <span className="block text-[9px] leading-none opacity-60 mt-0.5">{format(vp)}</span>
+                            <span className="block text-[9px] leading-none opacity-60 mt-0.5">
+                              {format(product.cjPid && shippingCostUSD > 0 ? vp + shippingCostUSD * MAD_PER_USD : vp)}
+                            </span>
                           )}
                         </button>
                       )
