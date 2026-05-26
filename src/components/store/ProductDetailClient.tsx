@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ShoppingBag, ChevronLeft, ChevronRight, ArrowRight, ShoppingCart, Truck, MapPin, Play } from 'lucide-react'
+import { ShoppingBag, ChevronLeft, ChevronRight, ArrowRight, ShoppingCart, Truck, Play } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cartStore'
 import { useCurrency } from '@/lib/context/CurrencyContext'
 import { useLanguage } from '@/lib/i18n'
@@ -383,18 +383,63 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
               <p className="text-[10px] tracking-[0.3em] text-brand-gold uppercase mb-2">{product.category}</p>
               <h1 className="font-display text-2xl md:text-3xl text-brand-black leading-tight mb-4" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{product.name}</h1>
 
-              {/* Price */}
-              <div className="flex items-center gap-3 mb-2">
-                <span className="text-2xl font-bold text-brand-black">{format(displayPrice)}</span>
-                {originalPrice && originalPrice > displayPrice && (
-                  <>
-                    <span className="text-brand-gray line-through text-base">{format(originalPrice)}</span>
-                    {discount && <span className="bg-brand-gold text-brand-black text-xs font-bold px-2 py-0.5">-{discount}%</span>}
-                  </>
-                )}
-              </div>
-              {product.cjPid && (
-                <p className="text-[10px] text-brand-gray tracking-widest mb-4">Livraison incluse dans le prix</p>
+              {/* Price breakdown */}
+              {product.cjPid ? (
+                <div className="mb-6 space-y-1.5">
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-xs text-brand-gray tracking-widest uppercase">Produit</span>
+                    <span className="text-base font-semibold text-brand-black">{format(basePrice)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Truck size={12} className="text-brand-gray flex-shrink-0" />
+                      <span className="text-xs text-brand-gray tracking-widest uppercase">Livraison</span>
+                      <select
+                        value={shipCountry}
+                        onChange={(e) => handleCountryChange(e.target.value)}
+                        className="text-[10px] border border-brand-light-gray px-1.5 py-0.5 bg-white text-brand-black focus:outline-none focus:border-brand-black ml-1"
+                      >
+                        {SHIP_COUNTRIES.map((c) => (
+                          <option key={c.code} value={c.code}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <span className="text-base font-semibold text-brand-black">
+                      {shippingLoading
+                        ? <span className="text-xs text-brand-gray animate-pulse">...</span>
+                        : effectiveShipUSD > 0
+                          ? format(effectiveShipUSD * usdToCAD)
+                          : '—'}
+                    </span>
+                  </div>
+                  <div className="flex items-baseline justify-between pt-2 border-t border-brand-light-gray">
+                    <span className="text-xs text-brand-black font-semibold tracking-widest uppercase">Total</span>
+                    <div className="flex items-center gap-2">
+                      {originalPrice && originalPrice > displayPrice && (
+                        <>
+                          <span className="text-brand-gray line-through text-sm">{format(originalPrice)}</span>
+                          {discount && <span className="bg-brand-gold text-brand-black text-[10px] font-bold px-1.5 py-0.5">-{discount}%</span>}
+                        </>
+                      )}
+                      <span className="text-2xl font-bold text-brand-black">{format(displayPrice)}</span>
+                    </div>
+                  </div>
+                  {shipping && (
+                    <p className="text-[10px] text-brand-gray">
+                      Livraison en {shipping.agingMin > 0 ? `${shipping.agingMin}–${shipping.agingMax}` : '7–20'} jours · ✓ Paiement sécurisé
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 mb-6">
+                  <span className="text-2xl font-bold text-brand-black">{format(displayPrice)}</span>
+                  {originalPrice && originalPrice > displayPrice && (
+                    <>
+                      <span className="text-brand-gray line-through text-base">{format(originalPrice)}</span>
+                      {discount && <span className="bg-brand-gold text-brand-black text-xs font-bold px-2 py-0.5">-{discount}%</span>}
+                    </>
+                  )}
+                </div>
               )}
 
               {/* Stock status */}
@@ -490,51 +535,12 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                 </AnimatePresence>
               )}
 
-              {/* Shipping section with country selector */}
-              <div className="mt-5 border border-brand-light-gray p-4 space-y-3">
-                {/* Ship to selector */}
-                {product.cjPid && (
-                  <div className="flex items-center gap-2">
-                    <MapPin size={13} className="text-brand-gray flex-shrink-0" />
-                    <span className="text-xs text-brand-gray">Livrer vers :</span>
-                    <select
-                      value={shipCountry}
-                      onChange={(e) => handleCountryChange(e.target.value)}
-                      className="flex-1 text-xs border border-brand-light-gray px-2 py-1 bg-white text-brand-black focus:outline-none focus:border-brand-black"
-                    >
-                      {SHIP_COUNTRIES.map((c) => (
-                        <option key={c.code} value={c.code}>{c.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {shippingLoading ? (
-                  <div className="flex items-center gap-2 text-xs text-brand-gray">
-                    <Truck size={14} className="animate-pulse" />
-                    <span>Calcul de la livraison...</span>
-                  </div>
-                ) : shipping ? (
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-xs text-brand-black font-medium">
-                        <Truck size={14} />
-                        <span>Livraison gratuite</span>
-                      </div>
-                      <span className="text-[10px] bg-green-600 text-white px-2 py-0.5 font-semibold tracking-wide">GRATUIT</span>
-                    </div>
-                    <p className="text-xs text-brand-gray pl-5">
-                      Délai estimé : {shipping.agingMin > 0 ? `${shipping.agingMin}–${shipping.agingMax}` : '7–20'} jours ouvrés
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-1">
-                    <p className="text-xs text-brand-black font-medium flex items-center gap-2"><Truck size={14} /> Livraison gratuite</p>
-                    <p className="text-xs text-brand-gray">Délai estimé : 7–15 jours ouvrés</p>
-                  </div>
-                )}
-                <p className="text-xs text-brand-gray">✓ Paiement sécurisé</p>
-              </div>
+              {/* Secure payment note for non-CJ products */}
+              {!product.cjPid && (
+                <div className="mt-4 border border-brand-light-gray px-4 py-3">
+                  <p className="text-xs text-brand-gray">✓ Paiement sécurisé · Livraison 7–15 jours ouvrés</p>
+                </div>
+              )}
 
               {/* Description */}
               {(product.description || product.descriptionEn) && (
