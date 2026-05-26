@@ -203,61 +203,79 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
         </div>
 
         <div className="grid md:grid-cols-[1fr_420px] gap-5 md:gap-8 lg:gap-12 items-start" style={{ overflow: 'hidden' }}>
-          {/* Images */}
-          <div className="space-y-3" style={{ minWidth: 0, overflow: 'hidden' }}>
-            <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1', overflow: 'hidden', background: 'white' }}>
-              <AnimatePresence initial={false} custom={dir}>
-                <motion.div
-                  key={imgIdx}
-                  custom={dir}
-                  variants={swipeVariants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  transition={swipeTransition}
-                  style={{ position: 'absolute', inset: 0, background: 'white', overflow: 'hidden' }}
-                >
-                  {images[imgIdx] ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={images[imgIdx]}
-                      alt={product.name}
-                      style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
-                    />
-                  ) : (
-                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span className="text-brand-gray text-xs tracking-widest uppercase">Marcaclub</span>
-                    </div>
-                  )}
-                </motion.div>
-              </AnimatePresence>
-
+          {/* Images — thumbnails left (desktop) / below (mobile) */}
+          <div style={{ minWidth: 0 }}>
+            {/* Mobile: main image, then thumbnails row below */}
+            {/* Desktop: side-by-side [thumbs | main] */}
+            <div className="flex gap-2 md:gap-3">
+              {/* Vertical thumbnail strip — desktop only */}
               {images.length > 1 && (
-                <>
-                  <button onClick={prev} className="absolute left-3 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white p-2.5 shadow-md transition-all hover:scale-110 active:scale-95">
-                    <ChevronLeft size={18} />
-                  </button>
-                  <button onClick={next} className="absolute right-3 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white p-2.5 shadow-md transition-all hover:scale-110 active:scale-95">
-                    <ChevronRight size={18} />
-                  </button>
-                  <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 z-10">
-                    {images.map((_, i) => (
-                      <button key={i} onClick={() => goTo(i)}
-                        className={`rounded-full transition-all duration-300 ${i === imgIdx ? 'w-6 h-2 bg-white shadow' : 'w-2 h-2 bg-white/50 hover:bg-white/80'}`} />
-                    ))}
-                  </div>
-                </>
+                <div className="hidden md:flex flex-col gap-2 flex-shrink-0" style={{ width: '72px' }}>
+                  {images.map((img, i) => (
+                    <button key={i} onClick={() => goTo(i)}
+                      className={`relative w-full flex-shrink-0 overflow-hidden border-2 transition-all duration-200 ${i === imgIdx ? 'border-brand-black opacity-100' : 'border-transparent opacity-60 hover:opacity-90'}`}
+                      style={{ aspectRatio: '1/1' }}>
+                      <Image src={img} alt="" fill unoptimized={isExternal(img)} className="object-cover bg-white" sizes="72px" />
+                    </button>
+                  ))}
+                </div>
               )}
+
+              {/* Main image */}
+              <div style={{ position: 'relative', flex: 1, aspectRatio: '1/1', maxHeight: '480px', overflow: 'hidden', background: '#f8f8f8' }}>
+                <AnimatePresence initial={false} custom={dir}>
+                  <motion.div
+                    key={imgIdx}
+                    custom={dir}
+                    variants={swipeVariants}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    transition={swipeTransition}
+                    style={{ position: 'absolute', inset: 0, background: '#f8f8f8', overflow: 'hidden' }}
+                  >
+                    {images[imgIdx] ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={images[imgIdx]}
+                        alt={product.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                      />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span className="text-brand-gray text-xs tracking-widest uppercase">Marcaclub</span>
+                      </div>
+                    )}
+                  </motion.div>
+                </AnimatePresence>
+
+                {images.length > 1 && (
+                  <>
+                    <button onClick={prev} className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white p-2 shadow-md transition-all hover:scale-110 active:scale-95">
+                      <ChevronLeft size={16} />
+                    </button>
+                    <button onClick={next} className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white p-2 shadow-md transition-all hover:scale-110 active:scale-95">
+                      <ChevronRight size={16} />
+                    </button>
+                    <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5 z-10 md:hidden">
+                      {images.map((_, i) => (
+                        <button key={i} onClick={() => goTo(i)}
+                          className={`rounded-full transition-all duration-300 ${i === imgIdx ? 'w-5 h-1.5 bg-white shadow' : 'w-1.5 h-1.5 bg-white/60 hover:bg-white/90'}`} />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
 
-            {/* Thumbnails */}
+            {/* Horizontal thumbnail strip — mobile only */}
             {images.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto pb-1">
+              <div className="flex md:hidden gap-2 mt-2 overflow-x-auto pb-1">
                 {images.map((img, i) => (
                   <button key={i} onClick={() => goTo(i)}
-                    className={`relative flex-shrink-0 w-14 overflow-hidden border-2 transition-all duration-200 ${i === imgIdx ? 'border-brand-black opacity-100' : 'border-transparent opacity-50 hover:opacity-80'}`}
-                    style={{ height: '72px' }}>
-                    <Image src={img} alt="" fill unoptimized={isExternal(img)} className="object-contain bg-white" sizes="56px" />
+                    className={`relative flex-shrink-0 overflow-hidden border-2 transition-all duration-200 ${i === imgIdx ? 'border-brand-black opacity-100' : 'border-transparent opacity-60 hover:opacity-90'}`}
+                    style={{ width: '60px', height: '60px' }}>
+                    <Image src={img} alt="" fill unoptimized={isExternal(img)} className="object-cover bg-white" sizes="60px" />
                   </button>
                 ))}
               </div>
