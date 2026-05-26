@@ -65,3 +65,18 @@ body {
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
+
+/* CJ product description HTML rendering */
+.cj-description img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto 12px;
+}
+.cj-description p { margin-bottom: 10px; font-size: 14px; color: #555; line-height: 1.7; }
+.cj-description table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 13px; }
+.cj-description td, .cj-description th { border: 1px solid #e5e5e5; padding: 8px 12px; }
+.cj-description th { background: #f5f5f5; font-weight: 600; }
+.cj-description h1, .cj-description h2, .cj-description h3 { font-weight: 600; margin-bottom: 8px; color: #111; }
+.cj-description ul, .cj-description ol { padding-left: 20px; margin-bottom: 10px; font-size: 14px; color: #555; }
+.cj-description li { margin-bottom: 4px; }

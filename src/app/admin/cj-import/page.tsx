@@ -411,6 +411,7 @@ export default function CJImportPage() {
           pid: preview.pid,
           name: form.name,
           description: form.description,
+          descriptionHtml: preview.description || undefined,
           videoUrl: form.videoUrl || undefined,
           price: Number(form.price),
           category: form.category,

@@ -5,6 +5,7 @@ export interface IProduct extends Document {
   slug: string
   description: string
   descriptionEn?: string
+  descriptionHtml?: string
   price: number
   originalPrice?: number
   images: string[]
@@ -31,6 +32,7 @@ const ProductSchema = new Schema<IProduct>(
     slug: { type: String, required: true, unique: true, lowercase: true },
     description: { type: String, default: '' },
     descriptionEn: { type: String, default: '' },
+    descriptionHtml: { type: String },
     price: { type: Number, required: true },
     originalPrice: { type: Number },
     images: [{ type: String }],

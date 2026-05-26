@@ -24,6 +24,7 @@ interface Product {
   slug: string
   description: string
   descriptionEn?: string
+  descriptionHtml?: string
   price: number
   originalPrice?: number
   images: string[]
@@ -100,7 +101,9 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
   const [selectedSize, setSelectedSize] = useState('')
   const [qty, setQty] = useState(1)
   const [added, setAdded] = useState(false)
-  const [showVideo, setShowVideo] = useState(false)
+  const videoEmbed = product.videoUrl ? getVideoEmbed(product.videoUrl) : null
+  const hasDescription = !!(product.description || product.descriptionHtml)
+  const [activeTab, setActiveTab] = useState<'description' | 'video'>(hasDescription ? 'description' : 'video')
   const addItem = useCartStore((s) => s.addItem)
   const router = useRouter()
   const { format, shippingCostUSD, usdToCAD } = useCurrency()
@@ -238,8 +241,6 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
     router.push('/checkout')
   }
 
-  const videoEmbed = product.videoUrl ? getVideoEmbed(product.videoUrl) : null
-
   return (
     <div style={{ minHeight: '100vh', width: '100%', overflowX: 'hidden', boxSizing: 'border-box' }}>
       <div style={{ maxWidth: '1152px', margin: '0 auto', padding: '16px', boxSizing: 'border-box' }}>
@@ -329,62 +330,6 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
               </div>
             )}
 
-            {/* Video — compact strip below thumbnails */}
-            {videoEmbed && (
-              <div className="mt-3">
-                {!showVideo ? (
-                  <button onClick={() => setShowVideo(true)}
-                    className="flex items-center gap-2 text-xs tracking-widest uppercase text-brand-gold hover:text-brand-black transition-colors font-medium">
-                    <Play size={13} fill="currentColor" /> Voir la vidéo produit
-                  </button>
-                ) : (
-                  <div className="flex gap-3 items-start">
-                    {/* TikTok: clip the iframe to hide the account header/footer */}
-                    {videoEmbed.type === 'tiktok' ? (
-                      <div style={{ width: '180px', flexShrink: 0, position: 'relative', overflow: 'hidden', height: '300px' }}>
-                        <iframe
-                          src={`${videoEmbed.embedUrl}?rel=0`}
-                          style={{
-                            position: 'absolute',
-                            top: '-60px',   /* clip TikTok header */
-                            left: '0',
-                            width: '100%',
-                            height: 'calc(100% + 130px)', /* compensate top+bottom clip */
-                            border: 'none',
-                            pointerEvents: 'auto',
-                          }}
-                          allow="autoplay; encrypted-media"
-                          allowFullScreen
-                        />
-                      </div>
-                    ) : videoEmbed.type === 'youtube' ? (
-                      <div style={{ width: '260px', flexShrink: 0 }}>
-                        <iframe
-                          src={videoEmbed.embedUrl}
-                          style={{ width: '100%', aspectRatio: '16/9', border: 'none', display: 'block' }}
-                          allow="autoplay; encrypted-media"
-                          allowFullScreen
-                        />
-                      </div>
-                    ) : videoEmbed.type === 'video' ? (
-                      <div style={{ width: '260px', flexShrink: 0 }}>
-                        {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-                        <video src={videoEmbed.embedUrl} controls style={{ width: '100%', maxHeight: '220px', display: 'block' }} />
-                      </div>
-                    ) : (
-                      <a href={videoEmbed.embedUrl} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-sm text-brand-gold underline">
-                        <Play size={14} /> Voir la vidéo
-                      </a>
-                    )}
-                    <button onClick={() => setShowVideo(false)}
-                      className="text-[10px] text-brand-gray hover:text-brand-black underline mt-1">
-                      ✕ Fermer
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
 
           {/* Info panel */}
@@ -551,19 +496,102 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                   <p className="text-xs text-brand-gray">✓ Paiement sécurisé · Livraison 7–15 jours ouvrés</p>
                 </div>
               )}
-
-              {/* Description */}
-              {(product.description || product.descriptionEn) && (
-                <div className="mt-6 pt-6 border-t border-brand-light-gray">
-                  <p className="text-xs tracking-[0.2em] uppercase text-brand-gray mb-2">Description</p>
-                  <p className="text-sm text-brand-gray leading-relaxed">
-                    {lang === 'en' && product.descriptionEn ? product.descriptionEn : product.description}
-                  </p>
-                </div>
-              )}
             </motion.div>
           </div>
         </div>
+
+        {/* ── Tabbed section: Description + Video ── */}
+        {(product.description || product.descriptionHtml || videoEmbed) && (
+          <div className="mt-12 border-t border-brand-light-gray">
+            {/* Tab bar */}
+            <div className="flex border-b border-brand-light-gray">
+              {(product.description || product.descriptionHtml) && (
+                <button
+                  onClick={() => setActiveTab('description')}
+                  className={`px-6 py-4 text-xs tracking-[0.25em] uppercase font-semibold transition-colors border-b-2 -mb-px ${
+                    activeTab === 'description'
+                      ? 'border-brand-black text-brand-black'
+                      : 'border-transparent text-brand-gray hover:text-brand-black'
+                  }`}
+                >
+                  Description
+                </button>
+              )}
+              {videoEmbed && (
+                <button
+                  onClick={() => setActiveTab('video')}
+                  className={`px-6 py-4 text-xs tracking-[0.25em] uppercase font-semibold transition-colors border-b-2 -mb-px flex items-center gap-2 ${
+                    activeTab === 'video'
+                      ? 'border-brand-black text-brand-black'
+                      : 'border-transparent text-brand-gray hover:text-brand-black'
+                  }`}
+                >
+                  <Play size={11} fill="currentColor" /> Vidéo
+                </button>
+              )}
+            </div>
+
+            {/* Description tab */}
+            {activeTab === 'description' && (product.description || product.descriptionHtml) && (
+              <div className="py-8">
+                {product.descriptionHtml ? (
+                  <div
+                    className="cj-description mx-auto"
+                    style={{ maxWidth: '860px' }}
+                    dangerouslySetInnerHTML={{ __html: product.descriptionHtml }}
+                  />
+                ) : (
+                  <p className="text-sm text-brand-gray leading-relaxed max-w-2xl mx-auto">
+                    {lang === 'en' && product.descriptionEn ? product.descriptionEn : product.description}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Video tab */}
+            {activeTab === 'video' && videoEmbed && (
+              <div className="py-8 flex justify-center">
+                {videoEmbed.type === 'tiktok' ? (
+                  /* TikTok: clip header (~60px) and footer (~70px) to show only the video */
+                  <div style={{ width: '340px', position: 'relative', overflow: 'hidden', height: '580px', borderRadius: '12px', boxShadow: '0 8px 40px rgba(0,0,0,0.18)' }}>
+                    <iframe
+                      src={videoEmbed.embedUrl}
+                      style={{
+                        position: 'absolute',
+                        top: '-60px',
+                        left: 0,
+                        width: '100%',
+                        height: 'calc(100% + 130px)',
+                        border: 'none',
+                      }}
+                      allow="autoplay; encrypted-media"
+                      allowFullScreen
+                    />
+                  </div>
+                ) : videoEmbed.type === 'youtube' ? (
+                  <div style={{ width: '100%', maxWidth: '720px' }}>
+                    <iframe
+                      src={videoEmbed.embedUrl}
+                      style={{ width: '100%', aspectRatio: '16/9', border: 'none', borderRadius: '8px', boxShadow: '0 8px 40px rgba(0,0,0,0.12)', display: 'block' }}
+                      allow="autoplay; encrypted-media"
+                      allowFullScreen
+                    />
+                  </div>
+                ) : videoEmbed.type === 'video' ? (
+                  <div style={{ width: '100%', maxWidth: '720px' }}>
+                    {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                    <video src={videoEmbed.embedUrl} controls style={{ width: '100%', borderRadius: '8px', boxShadow: '0 8px 40px rgba(0,0,0,0.12)', display: 'block' }} />
+                  </div>
+                ) : (
+                  <a href={videoEmbed.embedUrl} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-sm text-brand-gold underline">
+                    <Play size={14} /> Voir la vidéo
+                  </a>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
