@@ -804,11 +804,10 @@ export default function CJImportPage() {
                     <label className="block text-white/40 text-[10px] tracking-widest mb-1.5">CATEGORY *</label>
                     <select value={form.category} onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
                       className="w-full bg-white/5 border border-white/10 text-white text-sm px-4 py-2.5 focus:outline-none focus:border-brand-gold/50">
-                      <option value="eclairage-led" className="bg-[#0f0f0f]">Éclairage LED</option>
-                      <option value="tech-sans-fil" className="bg-[#0f0f0f]">Tech Sans Fil</option>
-                      <option value="aspirateurs" className="bg-[#0f0f0f]">Aspirateurs</option>
-                      <option value="chargeurs" className="bg-[#0f0f0f]">Chargeurs</option>
-                      <option value="carplay" className="bg-[#0f0f0f]">CarPlay / Écrans</option>
+                      <option value="soins-visage" className="bg-[#0f0f0f]">Soins Visage</option>
+                      <option value="soins-corps" className="bg-[#0f0f0f]">Soins Corps</option>
+                      <option value="soins-cheveux" className="bg-[#0f0f0f]">Soins Cheveux</option>
+                      <option value="maquillage" className="bg-[#0f0f0f]">Maquillage</option>
                       <option value="autres" className="bg-[#0f0f0f]">Autres</option>
                     </select>
                   </div>

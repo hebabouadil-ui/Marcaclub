@@ -109,7 +109,7 @@ export default function HomeLiveSection({ instagramUrl, tiktokUrl }: Props) {
                 <p className="text-white/20 text-[10px] tracking-[0.3em] uppercase mb-8">Global Store</p>
                 <div className="space-y-4">
                   {[
-                    { fr: 'Accessoires auto sélectionnés', en: 'Curated car accessories' },
+                    { fr: 'Soins beauté sélectionnés', en: 'Curated beauty & skincare' },
                     { fr: 'Qualité testée & approuvée', en: 'Tested & approved quality' },
                     { fr: 'Livraison mondiale rapide', en: 'Fast worldwide shipping' },
                     { fr: 'Support client dédié', en: 'Dedicated customer support' },
@@ -122,7 +122,7 @@ export default function HomeLiveSection({ instagramUrl, tiktokUrl }: Props) {
                 </div>
                 <div className="mt-8 pt-6 border-t border-white/8">
                   <p className="text-white/20 text-[10px] tracking-widest uppercase">
-                    {lang === 'fr' ? 'Auto premium · Depuis 2024' : 'Premium car accessories · Since 2024'}
+                    {lang === 'fr' ? 'Beauté premium · Depuis 2024' : 'Premium beauty · Since 2024'}
                   </p>
                 </div>
               </div>

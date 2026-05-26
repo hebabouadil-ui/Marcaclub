@@ -32,7 +32,7 @@ const EMPTY: ProductForm = {
   name: '', price: 0, originalPrice: undefined, category: 'eclairage-led',
   images: [], sizes: [], featured: false, active: true, description: '',
 }
-const CATEGORIES = ['eclairage-led', 'tech-sans-fil', 'aspirateurs', 'chargeurs', 'carplay', 'autres']
+const CATEGORIES = ['soins-visage', 'soins-corps', 'soins-cheveux', 'maquillage', 'autres']
 const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '36', '37', '38', '39', '40', '41', '42', '43', 'Unique']
 
 export default function AdminProductsPage() {

@@ -28,13 +28,12 @@ export default function ProductsClient({ products, filters }: Props) {
   const { tr, lang } = useLanguage()
   const [search, setSearch] = useState(filters.q || '')
   const [loading] = useState(false)
-  const CATEGORIES = [tr.products.all, 'soins-visage', 'soins-corps', 'soins-cheveux', 'maquillage', 'parfums', 'autres']
+  const CATEGORIES = [tr.products.all, 'soins-visage', 'soins-corps', 'soins-cheveux', 'maquillage', 'autres']
   const CATEGORY_LABELS: Record<string, string> = {
     'soins-visage': lang === 'fr' ? 'Visage' : 'Face Care',
     'soins-corps': lang === 'fr' ? 'Corps' : 'Body Care',
     'soins-cheveux': lang === 'fr' ? 'Cheveux' : 'Hair Care',
     'maquillage': lang === 'fr' ? 'Maquillage' : 'Makeup',
-    'parfums': lang === 'fr' ? 'Parfums' : 'Perfumes',
     'autres': lang === 'fr' ? 'Autres' : 'Other',
   }
 

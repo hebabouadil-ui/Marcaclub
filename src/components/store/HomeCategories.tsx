@@ -8,7 +8,7 @@ const items = [
   { icon: Sparkles, slug: 'soins-visage',  fr: 'Soins Visage',   en: 'Face Care',   sub: { fr: 'Sérums, crèmes & masques', en: 'Serums, creams & masks' } },
   { icon: Droplets, slug: 'soins-corps',   fr: 'Soins Corps',    en: 'Body Care',   sub: { fr: 'Hydratation & nutrition', en: 'Hydration & nourishment' } },
   { icon: Wind,     slug: 'soins-cheveux', fr: 'Soins Cheveux',  en: 'Hair Care',   sub: { fr: 'Shampoings & soins', en: 'Shampoos & treatments' } },
-  { icon: Star,     slug: 'parfums',       fr: 'Parfums',        en: 'Perfumes',    sub: { fr: 'Fragrances exclusives', en: 'Exclusive fragrances' } },
+  { icon: Star,     slug: 'maquillage',    fr: 'Maquillage',     en: 'Makeup',      sub: { fr: 'Teint, yeux & lèvres', en: 'Foundation, eyes & lips' } },
 ]
 
 export default function HomeCategories() {

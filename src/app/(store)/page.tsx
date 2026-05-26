@@ -24,10 +24,10 @@ async function getData() {
 export default async function HomePage() {
   const { products, settings } = await getData()
 
-  const heroTitle = (settings as { heroTitle?: string } | null)?.heroTitle ?? 'Upgrade Your Ride'
+  const heroTitle = (settings as { heroTitle?: string } | null)?.heroTitle ?? 'Votre Beauté, Notre Priorité'
   const heroSubtitle =
     (settings as { heroSubtitle?: string } | null)?.heroSubtitle ??
-    "Accessoires auto premium livrés dans le monde entier"
+    "Soins premium sélectionnés pour vous — livrés partout dans le monde"
   const liveStatus = (settings as { liveStatus?: boolean } | null)?.liveStatus ?? false
 
   return (
