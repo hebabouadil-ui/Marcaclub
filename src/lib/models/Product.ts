@@ -17,7 +17,6 @@ export interface IProduct extends Document {
   cjPid?: string
   cjLogisticName?: string
   productWeight?: number
-  shippingBakedMad?: number
   shippingBakedUSD?: number
   shippingRefCountry?: string
   videoUrl?: string
@@ -44,7 +43,6 @@ const ProductSchema = new Schema<IProduct>(
     cjPid: { type: String },
     cjLogisticName: { type: String },
     productWeight: { type: Number },
-    shippingBakedMad: { type: Number },
     shippingBakedUSD: { type: Number },
     shippingRefCountry: { type: String },
     videoUrl: { type: String },

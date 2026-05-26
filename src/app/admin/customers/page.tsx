@@ -239,7 +239,7 @@ export default function CustomersPage() {
                   </div>
                   <div className="flex items-center gap-6 flex-shrink-0 ml-4">
                     <div className="text-right hidden sm:block">
-                      <p className="text-brand-gold text-sm font-semibold">{fmt(customer.totalSpent)} MAD</p>
+                      <p className="text-brand-gold text-sm font-semibold">{fmt(customer.totalSpent)} CA$</p>
                       <p className="text-white/30 text-[10px]">{customer.orderCount} order{customer.orderCount > 1 ? 's' : ''}</p>
                     </div>
                     <ChevronDown size={14} className={`text-white/40 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -262,7 +262,7 @@ export default function CustomersPage() {
                       </div>
                       <div>
                         <p className="text-white/30 text-[10px] uppercase tracking-widest mb-1">Stats</p>
-                        <p className="text-white text-sm">{fmt(customer.totalSpent)} MAD spent</p>
+                        <p className="text-white text-sm">{fmt(customer.totalSpent)} CA$ spent</p>
                         <p className="text-white/40 text-xs">{deliveredCount} delivered · {cancelledCount} cancelled</p>
                       </div>
                     </div>
@@ -285,7 +285,7 @@ export default function CustomersPage() {
                               </p>
                             </div>
                             <div className="text-right">
-                              <p className="text-brand-gold text-sm font-semibold">{fmt(order.total)} MAD</p>
+                              <p className="text-brand-gold text-sm font-semibold">{fmt(order.total)} CA$</p>
                               <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider ${STATUS_COLORS[order.status] || 'text-white/40'}`}>
                                 {STATUS_LABELS[order.status] || order.status}
                               </span>

@@ -234,7 +234,7 @@ export async function POST(req: NextRequest) {
 
     // High order value → LOW
     if (serverTotal > 800) {
-      addSignal(`montant élevé (${serverTotal.toFixed(0)} MAD)`, 1)
+      addSignal(`montant élevé (CA$${serverTotal.toFixed(0)})`, 1)
     }
 
     // Same city + same items on same calendar day → LOW

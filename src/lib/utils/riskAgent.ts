@@ -168,11 +168,11 @@ export async function analyzeOrderRisk(order: OrderContext): Promise<RiskVerdict
 
   // ── 10. Order value risk ──────────────────────────────────────────────────
   if (order.total > 1500) {
-    signals.push({ message: `Montant très élevé — ${order.total} MAD`, points: 25, severity: 'high' })
+    signals.push({ message: `Montant très élevé — CA$${order.total.toFixed(2)}`, points: 25, severity: 'high' })
   } else if (order.total > 800) {
-    signals.push({ message: `Montant élevé — ${order.total} MAD`, points: 10, severity: 'low' })
+    signals.push({ message: `Montant élevé — CA$${order.total.toFixed(2)}`, points: 10, severity: 'low' })
   } else if (order.total < 150) {
-    signals.push({ message: `Petite commande — ${order.total} MAD`, points: -5, severity: 'positive' })
+    signals.push({ message: `Petite commande — CA$${order.total.toFixed(2)}`, points: -5, severity: 'positive' })
   }
 
   // ── 11. Night order (DST-aware Morocco time) ─────────────────────────────

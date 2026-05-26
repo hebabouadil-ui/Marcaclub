@@ -44,7 +44,7 @@ export default function AdminProductsPage() {
   const [migrating, setMigrating] = useState(false)
 
   const runMigration = async () => {
-    if (!confirm('Convertir les prix MAD → CAD pour tous les produits ? (opération unique)')) return
+    if (!confirm('Corriger les anciens prix (conversion en CAD) ? Opération unique.')) return
     setMigrating(true)
     try {
       const res = await fetch('/api/admin/migrate-prices', { method: 'POST', credentials: 'include' })
@@ -164,11 +164,11 @@ export default function AdminProductsPage() {
           <button
             onClick={runMigration}
             disabled={migrating}
-            title="Convertir les anciens prix MAD en CAD"
+            title="Corriger les anciens prix en CAD"
             className="flex items-center gap-2 bg-white/10 text-white/60 px-3 py-2 text-xs font-semibold tracking-widest uppercase hover:bg-white/20 transition-colors disabled:opacity-40"
           >
             <RefreshCw size={13} className={migrating ? 'animate-spin' : ''} />
-            Fix MAD→CAD
+            Fix old prices
           </button>
           <button
             onClick={openCreate}

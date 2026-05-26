@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
     'Ville': o.customer.city,
     'Statut': o.status,
     'Articles': o.items.map((i: { name: string; size: string; quantity: number }) => `${i.name} (${i.size}) x${i.quantity}`).join(', '),
-    'Total (MAD)': o.total,
+    'Total (CAD)': o.total,
     'Comptabilisé': ['confirmed', 'shipped', 'delivered'].includes(o.status) ? 'Oui' : 'Non',
   }))
 
@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
     { 'N° Commande': 'Total commandes', 'Date': orders.length },
     { 'N° Commande': 'Commandes confirmées/livrées', 'Date': orders.filter((o) => ['confirmed', 'shipped', 'delivered'].includes(o.status)).length },
     { 'N° Commande': 'Commandes annulées', 'Date': orders.filter((o) => o.status === 'cancelled').length },
-    { 'N° Commande': 'Chiffre d\'affaires (MAD)', 'Date': revenue.toFixed(2) },
+    { 'N° Commande': 'Chiffre d\'affaires (CAD)', 'Date': revenue.toFixed(2) },
   ]
 
   const ws = XLSX.utils.json_to_sheet([...rows, ...summaryRows])

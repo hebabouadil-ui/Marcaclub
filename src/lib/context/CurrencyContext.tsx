@@ -38,7 +38,7 @@ const COUNTRY_CURRENCY: Record<string, string> = {
   FR: 'EUR', DE: 'EUR', ES: 'EUR', IT: 'EUR', NL: 'EUR', BE: 'EUR',
   PT: 'EUR', AT: 'EUR', IE: 'EUR', FI: 'EUR', GR: 'EUR',
   CH: 'CHF', JP: 'JPY', SG: 'SGD', AE: 'AED', SA: 'SAR',
-  MA: 'EUR', DZ: 'EUR', TN: 'EUR',  // North Africa → EUR (no MAD)
+  MA: 'EUR', DZ: 'EUR', TN: 'EUR',  // North Africa → EUR
   BR: 'BRL', MX: 'MXN', IN: 'INR',
 }
 

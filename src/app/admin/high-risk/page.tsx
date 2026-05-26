@@ -196,7 +196,7 @@ export default function HighRiskPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-3 shrink-0 ml-4">
-                    <span className="text-white text-sm hidden sm:block">{order.total.toFixed(0)} MAD</span>
+                    <span className="text-white text-sm hidden sm:block">{order.total.toFixed(0)} CA$</span>
                     <span className="text-[10px] px-2 py-1 rounded-full bg-amber-400/10 text-amber-400 uppercase tracking-wider">
                       {STATUS_LABELS[order.status] || order.status}
                     </span>
@@ -221,7 +221,7 @@ export default function HighRiskPage() {
                         {order.items.map((item, i) => (
                           <p key={i} className="text-white/70 text-sm">{item.name} — {item.size} ×{item.quantity}</p>
                         ))}
-                        <p className="text-red-400 font-semibold mt-2">Total: {order.total.toFixed(0)} MAD</p>
+                        <p className="text-red-400 font-semibold mt-2">Total: CA${order.total.toFixed(2)}</p>
                       </div>
                     </div>
 
