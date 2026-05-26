@@ -65,8 +65,8 @@ export default function Footer({ instagramUrl, tiktokUrl, facebookUrl, contactEm
               {[
                 { href: '/products', label: tr.footer.collection },
                 { href: '/products?featured=true', label: tr.footer.newArrivals },
-                { href: '/products?category=eclairage-led', label: lang === 'fr' ? 'Éclairage LED' : 'LED Lighting' },
-                { href: '/products?category=tech-sans-fil', label: lang === 'fr' ? 'Tech Sans Fil' : 'Wireless Tech' },
+                { href: '/products?category=soins-visage', label: lang === 'fr' ? 'Soins Visage' : 'Face Care' },
+                { href: '/products?category=soins-corps', label: lang === 'fr' ? 'Soins Corps' : 'Body Care' },
               ].map((l) => (
                 <li key={l.href}>
                   <Link href={l.href} className="hover:text-brand-gold transition-colors">{l.label}</Link>
