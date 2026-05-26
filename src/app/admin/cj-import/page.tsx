@@ -141,6 +141,14 @@ function normalizeShipping(opt: any): ShippingOption {
   }
 }
 
+// Sell price (excl shipping) = cost / (1 - margin%)
+// e.g. cost $22, margin 60% → sell = $22 / 0.4 = $55
+function sellPriceMAD(costUSD: number, marginPct: number): number {
+  const margin = Math.min(Math.max(marginPct, 1), 95) / 100
+  return Math.ceil((costUSD / (1 - margin)) * MAD_PER_USD)
+}
+const MAD_PER_USD = 10.05
+
 function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim()
 }
@@ -152,9 +160,9 @@ interface ImportForm {
   category: string
   selectedVariants: string[]
   cjLogisticName: string
-  markupX: string
-  variantPrices: Record<string, string>
-  baseVariantPrices: Record<string, string>
+  marginPct: string        // target margin % (e.g. "60" = 60%)
+  variantPrices: Record<string, string>     // sell price in MAD (base only, no shipping)
+  baseVariantPrices: Record<string, string> // same — stored separately for storefront
 }
 
 const COUNTRIES = [
@@ -191,7 +199,7 @@ export default function CJImportPage() {
   const [activeImg, setActiveImg] = useState(0)
   const [form, setForm] = useState<ImportForm>({
     name: '', description: '', price: '', category: 'eclairage-led',
-    selectedVariants: [], cjLogisticName: '', markupX: '3', variantPrices: {}, baseVariantPrices: {},
+    selectedVariants: [], cjLogisticName: '', marginPct: '60', variantPrices: {}, baseVariantPrices: {},
   })
   const [importing, setImporting] = useState(false)
   const [imported, setImported] = useState<Set<string>>(new Set())
@@ -296,21 +304,15 @@ export default function CJImportPage() {
           })).sort((a: { score: number }, b: { score: number }) => a.score - b.score)[0]
           const newShipUSD = fastest.logisticPrice ?? 0
           setForm((prev) => {
-            const mul = parseFloat(prev.markupX || '3')
+            const margin = parseFloat(prev.marginPct || '60')
             const newVP: Record<string, string> = { ...prev.variantPrices }
             const newBaseVP: Record<string, string> = {}
-            // Auto-recalc base prices; only update sell price if user hasn't manually edited it
-            const autoWithoutShip: Record<string, string> = {}
+            // Sell price is based on cost only (shipping excluded) — recalc only if not manually edited
             for (const v of product.variants ?? []) {
-              autoWithoutShip[v.vid] = String(Math.ceil(v.variantPrice * mul * 10.05))
-            }
-            for (const v of product.variants ?? []) {
-              newBaseVP[v.vid] = String(Math.ceil(v.variantPrice * mul * 10.05))
-              // Only overwrite if the current value equals the old auto-calculated value (not manually edited)
-              const wasAuto = !prev.variantPrices[v.vid] || prev.variantPrices[v.vid] === autoWithoutShip[v.vid]
-              if (wasAuto) {
-                newVP[v.vid] = String(Math.ceil((v.variantPrice + newShipUSD) * mul * 10.05))
-              }
+              const autoSell = String(sellPriceMAD(v.variantPrice, margin))
+              newBaseVP[v.vid] = autoSell
+              const wasAuto = !prev.variantPrices[v.vid] || prev.variantPrices[v.vid] === autoSell
+              if (wasAuto) newVP[v.vid] = autoSell
             }
             const prices = prev.selectedVariants.map((vid) => Number(newVP[vid] || 0)).filter((n) => n > 0)
             const minP = prices.length > 0 ? String(Math.min(...prices)) : prev.price
@@ -339,27 +341,28 @@ export default function CJImportPage() {
       const data = await res.json()
       const detail: CJProduct = normalizeProduct(data.data ?? product)
       setPreview(detail)
-      const markup = 3
-      const MAD_PER_USD = 10.05
+      const margin = parseFloat(form.marginPct || '60')
+
+      // Sell price = cost / (1 - margin%) — shipping NOT included, added per country on store
       const vPrices: Record<string, string> = {}
       for (const v of detail.variants ?? []) {
-        vPrices[v.vid] = String(Math.ceil(v.variantPrice * markup * MAD_PER_USD))
+        vPrices[v.vid] = String(sellPriceMAD(v.variantPrice, margin))
       }
       const minPrice = Object.values(vPrices).length > 0
         ? String(Math.min(...Object.values(vPrices).map(Number)))
         : ''
-      setForm({
+      setForm((prev) => ({
         name: detail.productNameEn ?? product.productNameEn,
         description: detail.description ? stripHtml(detail.description) : '',
         price: minPrice,
-        category: 'eclairage-led',
+        category: prev.category || 'eclairage-led',
         selectedVariants: (detail.variants ?? []).map((v) => v.vid),
         cjLogisticName: '',
-        markupX: String(markup),
+        marginPct: prev.marginPct || '60',
         variantPrices: vPrices,
-        // Base prices = product cost only (no shipping) — will be used for dynamic per-country pricing
+        // baseVariantPrices = same as variantPrices (sell price excl. shipping)
         baseVariantPrices: { ...vPrices },
-      })
+      }))
       fetchShipping(detail, shippingCountry)
     } catch {
       setPreview(product)
@@ -442,16 +445,14 @@ export default function CJImportPage() {
   const selectedVariantObjs = (preview?.variants ?? []).filter((v) => form.selectedVariants.includes(v.vid))
   const totalStock = selectedVariantObjs.reduce((s, v) => s + (v.variantStock ?? 0), 0)
 
-  // Per-variant cost/margin — base cost includes shipping (which is baked into the selling price)
-  const MAD_PER_USD = 10.05
   const selectedCjCosts = selectedVariantObjs.map((v) => v.variantPrice)
   const minCjCost = selectedCjCosts.length > 0 ? Math.min(...selectedCjCosts) : cjCost
   const maxCjCost = selectedCjCosts.length > 0 ? Math.max(...selectedCjCosts) : cjCost
   const avgMarginMAD = selectedVariantObjs.length > 0
     ? selectedVariantObjs.reduce((sum, v) => {
         const sell = Number(form.variantPrices[v.vid] || 0)
-        const totalCostMAD = (v.variantPrice + shippingUSD) * MAD_PER_USD
-        return sum + (sell - totalCostMAD)
+        const costMAD = v.variantPrice * MAD_PER_USD
+        return sum + (sell - costMAD)
       }, 0) / selectedVariantObjs.length
     : null
 
@@ -696,11 +697,14 @@ export default function CJImportPage() {
                         <button key={opt.logisticName}
                           onClick={() => {
                             const toggling = form.cjLogisticName === opt.logisticName
-                            const newShipUSD = toggling ? 0 : (opt.logisticPrice ?? 0)
-                            const mul = parseFloat(form.markupX || '3')
-                            const newVP: Record<string, string> = {}
+                            // Selecting a shipping option doesn't change sell prices — shipping is per-country on the store
+                            const margin = parseFloat(form.marginPct || '60')
+                            const newVP: Record<string, string> = { ...form.variantPrices }
                             for (const v of preview?.variants ?? []) {
-                              newVP[v.vid] = String(Math.ceil((v.variantPrice + newShipUSD) * mul * 10.05))
+                              const autoSell = String(sellPriceMAD(v.variantPrice, margin))
+                              if (!form.variantPrices[v.vid] || form.variantPrices[v.vid] === autoSell) {
+                                newVP[v.vid] = autoSell
+                              }
                             }
                             const prices = form.selectedVariants.map((vid) => Number(newVP[vid] || 0)).filter((n) => n > 0)
                             const minP = prices.length > 0 ? String(Math.min(...prices)) : form.price
@@ -741,7 +745,7 @@ export default function CJImportPage() {
                   </div>
                   {avgMarginMAD !== null && (
                     <div className={`flex justify-between font-bold ${avgMarginMAD > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      <span>Avg margin (after shipping)</span>
+                      <span>Avg margin (excl. shipping)</span>
                       <span>{cad(avgMarginMAD)}</span>
                     </div>
                   )}
@@ -761,32 +765,41 @@ export default function CJImportPage() {
                     className="w-full bg-white/5 border border-white/10 text-white text-sm px-4 py-2.5 focus:outline-none focus:border-brand-gold/50 resize-none" />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-white/40 text-[10px] tracking-widest mb-1.5">MARKUP MULTIPLIER</label>
-                    <input
-                      value={form.markupX}
-                      onChange={(e) => {
-                        const markupX = e.target.value
-                        const mul = parseFloat(markupX)
-                        if (!isNaN(mul) && mul >= 1 && preview) {
-                          const newVP: Record<string, string> = {}
-                          for (const v of preview.variants ?? []) {
-                            newVP[v.vid] = String(Math.ceil((v.variantPrice + shippingUSD) * mul * 10.05))
-                          }
-                          const selectedPrices = form.selectedVariants
-                            .map((vid) => Number(newVP[vid] || 0))
-                            .filter((n) => n > 0)
-                          const minP = selectedPrices.length > 0 ? String(Math.min(...selectedPrices)) : ''
-                          setForm((p) => ({ ...p, markupX, variantPrices: newVP, price: minP }))
-                        } else {
-                          setForm((p) => ({ ...p, markupX }))
-                        }
-                      }}
-                      type="number" step="0.1" min="1"
-                      className="w-full bg-white/5 border border-white/10 text-white text-sm px-4 py-2.5 focus:outline-none focus:border-brand-gold/50"
-                    />
+                {/* Margin selector */}
+                <div className="bg-white/3 border border-white/8 px-4 py-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-white/40 text-[10px] tracking-widest">TARGET MARGIN</label>
+                    <span className="text-brand-gold font-bold text-sm">{form.marginPct}%</span>
                   </div>
+                  <input
+                    type="range" min="20" max="85" step="5"
+                    value={form.marginPct}
+                    onChange={(e) => {
+                      const marginPct = e.target.value
+                      const margin = parseFloat(marginPct)
+                      if (preview) {
+                        const newVP: Record<string, string> = {}
+                        for (const v of preview.variants ?? []) {
+                          newVP[v.vid] = String(sellPriceMAD(v.variantPrice, margin))
+                        }
+                        const selectedPrices = form.selectedVariants.map((vid) => Number(newVP[vid] || 0)).filter((n) => n > 0)
+                        const minP = selectedPrices.length > 0 ? String(Math.min(...selectedPrices)) : ''
+                        setForm((p) => ({ ...p, marginPct, variantPrices: newVP, baseVariantPrices: { ...newVP }, price: minP }))
+                      } else {
+                        setForm((p) => ({ ...p, marginPct }))
+                      }
+                    }}
+                    className="w-full accent-brand-gold"
+                  />
+                  <div className="flex justify-between text-[9px] text-white/20">
+                    <span>20%</span><span>40%</span><span>60%</span><span>85%</span>
+                  </div>
+                  <p className="text-white/30 text-[10px]">
+                    Shipping is added automatically per country — customers always pay the right amount
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-white/40 text-[10px] tracking-widest mb-1.5">CATEGORY *</label>
                     <select value={form.category} onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
@@ -832,11 +845,10 @@ export default function CJImportPage() {
                       <div className="max-h-56 overflow-y-auto">
                         {(preview.variants ?? []).map((v) => {
                           const selected = form.selectedVariants.includes(v.vid)
-                          const autoMAD = String(Math.ceil((v.variantPrice + shippingUSD) * parseFloat(form.markupX || '3') * MAD_PER_USD))
+                          const autoMAD = String(sellPriceMAD(v.variantPrice, parseFloat(form.marginPct || '60')))
                           const sellMAD = Number((form.variantPrices[v.vid] ?? autoMAD) || 0)
-                          // Display sell price in CAD (MAD * MAD_TO_CAD), allow editing in CAD
                           const sellCAD = Math.round(sellMAD * MAD_TO_CAD)
-                          const costMAD = (v.variantPrice + shippingUSD) * MAD_PER_USD
+                          const costMAD = v.variantPrice * MAD_PER_USD
                           const marginMAD = sellMAD - costMAD
                           const marginPct = sellMAD > 0 ? Math.round((marginMAD / sellMAD) * 100) : 0
                           const isModified = (form.variantPrices[v.vid] ?? autoMAD) !== autoMAD
