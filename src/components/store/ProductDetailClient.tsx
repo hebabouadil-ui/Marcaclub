@@ -9,6 +9,7 @@ import { useLanguage } from '@/lib/i18n'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { generateFakeReviews, type FakeReview } from '@/lib/utils/fakeReviews'
 
 interface SizeEntry {
   size: string
@@ -48,6 +49,7 @@ interface Review {
   photo?: string
   verified: boolean
   date: string
+  fake?: boolean
 }
 
 interface ShippingOption {
@@ -127,7 +129,16 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
   const [reviews, setReviews] = useState<Review[]>([])
 
   useEffect(() => {
-    fetch(`/api/reviews/${product._id}`).then(r => r.json()).then(d => setReviews(Array.isArray(d) ? d : []))
+    const fake = generateFakeReviews(product._id, 7)
+    fetch(`/api/reviews/${product._id}`)
+      .then(r => r.json())
+      .then((real: Review[]) => {
+        const realArr = Array.isArray(real) ? real : []
+        // Real reviews go first (pinned at top), then fake ones fill the rest
+        const combined: (Review | FakeReview)[] = [...realArr, ...fake]
+        setReviews(combined as Review[])
+      })
+      .catch(() => setReviews(fake as Review[]))
   }, [product._id])
 
   useEffect(() => {
@@ -660,62 +671,76 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
         {reviews.length > 0 && (() => {
           const avg = reviews.reduce((s, r) => s + r.rating, 0) / reviews.length
           const dist = [5,4,3,2,1].map(n => ({ n, count: reviews.filter(r => r.rating === n).length }))
+          const AVATAR_COLORS = ['#c084fc','#f472b6','#fb923c','#34d399','#60a5fa','#a78bfa','#fbbf24','#f87171']
+          const avatarColor = (id: string) => AVATAR_COLORS[id.charCodeAt(id.length - 1) % AVATAR_COLORS.length]
           return (
             <div className="mt-16 border-t border-brand-light-gray pt-12">
-              <h2 className="text-xl font-semibold tracking-wide mb-8">Avis clients</h2>
-
-              {/* Summary bar */}
-              <div className="flex flex-col sm:flex-row gap-8 mb-10">
-                <div className="flex flex-col items-center justify-center bg-brand-off-white px-8 py-6 min-w-[140px]">
-                  <span className="text-5xl font-bold text-brand-black">{avg.toFixed(1)}</span>
-                  <div className="flex gap-0.5 my-2">
+              {/* Header with overall rating */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-10">
+                <h2 className="text-xl font-semibold tracking-wide">Avis clients</h2>
+                <div className="flex items-center gap-2">
+                  <div className="flex gap-0.5">
                     {[1,2,3,4,5].map(i => (
-                      <Star key={i} size={16} fill={i <= Math.round(avg) ? '#f59e0b' : 'none'} stroke={i <= Math.round(avg) ? '#f59e0b' : '#d1d5db'} />
+                      <Star key={i} size={18} fill={i <= Math.round(avg) ? '#f59e0b' : 'none'} stroke={i <= Math.round(avg) ? '#f59e0b' : '#d1d5db'} />
                     ))}
                   </div>
-                  <span className="text-xs text-brand-gray">{reviews.length} avis</span>
+                  <span className="text-brand-black font-bold text-lg">{avg.toFixed(1)}</span>
+                  <span className="text-brand-gray text-sm">({reviews.length} avis)</span>
                 </div>
-                <div className="flex-1 space-y-1.5 justify-center flex flex-col">
+              </div>
+
+              {/* Summary bar */}
+              <div className="bg-brand-off-white p-5 mb-10 max-w-md">
+                <p className="text-xs text-brand-gray uppercase tracking-widest font-semibold mb-3">Répartition des notes</p>
+                <div className="space-y-2">
                   {dist.map(({ n, count }) => (
                     <div key={n} className="flex items-center gap-3 text-sm">
-                      <div className="flex gap-0.5 w-20 flex-shrink-0">
-                        {[1,2,3,4,5].map(i => <Star key={i} size={11} fill={i <= n ? '#f59e0b' : 'none'} stroke={i <= n ? '#f59e0b' : '#d1d5db'} />)}
+                      <div className="flex items-center gap-1 w-16 flex-shrink-0">
+                        <span className="text-xs text-brand-gray w-3">{n}</span>
+                        <Star size={11} fill="#f59e0b" stroke="#f59e0b" />
                       </div>
-                      <div className="flex-1 bg-brand-light-gray h-2 rounded-full overflow-hidden">
-                        <div className="h-full bg-amber-400 rounded-full" style={{ width: reviews.length ? `${(count / reviews.length) * 100}%` : '0%' }} />
+                      <div className="flex-1 bg-gray-200 h-2 rounded-full overflow-hidden">
+                        <div className="h-full bg-amber-400 rounded-full transition-all" style={{ width: reviews.length ? `${(count / reviews.length) * 100}%` : '0%' }} />
                       </div>
-                      <span className="text-brand-gray text-xs w-6 text-right">{count}</span>
+                      <span className="text-brand-gray text-xs w-5 text-right">{count}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
               {/* Individual reviews */}
-              <div className="space-y-6">
+              <div className="space-y-8">
                 {reviews.map((r) => (
-                  <div key={r._id} className="border-b border-brand-light-gray pb-6 last:border-0">
+                  <div key={r._id} className="border-b border-brand-light-gray pb-8 last:border-0">
                     <div className="flex items-start gap-4">
                       {r.photo ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={r.photo} alt="" className="w-12 h-12 rounded-full object-cover flex-shrink-0" />
+                        <img src={r.photo} alt="" className="w-11 h-11 rounded-full object-cover flex-shrink-0 shadow-sm" />
                       ) : (
-                        <div className="w-12 h-12 rounded-full bg-brand-off-white flex items-center justify-center flex-shrink-0 text-brand-gray font-semibold text-lg">
+                        <div
+                          className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold text-base shadow-sm"
+                          style={{ background: avatarColor(r._id) }}
+                        >
                           {r.author[0].toUpperCase()}
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 mb-2">
                           <span className="font-semibold text-brand-black text-sm">{r.author}</span>
                           {r.location && <span className="text-brand-gray text-xs">{r.location}</span>}
+                        </div>
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="flex gap-0.5">
+                            {[1,2,3,4,5].map(i => (
+                              <Star key={i} size={13} fill={i <= r.rating ? '#f59e0b' : 'none'} stroke={i <= r.rating ? '#f59e0b' : '#d1d5db'} />
+                            ))}
+                          </div>
                           {r.verified && (
-                            <span className="text-green-600 text-[10px] font-medium bg-green-50 border border-green-200 px-1.5 py-0.5 rounded">✓ Achat vérifié</span>
+                            <span className="text-green-700 text-[10px] font-semibold bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">✓ Achat vérifié</span>
                           )}
-                          <span className="text-brand-gray text-xs ml-auto">{new Date(r.date).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                          <span className="text-brand-gray text-[11px] ml-auto">{new Date(r.date).toLocaleDateString('fr-FR', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
                         </div>
-                        <div className="flex gap-0.5 mb-2">
-                          {[1,2,3,4,5].map(i => <Star key={i} size={13} fill={i <= r.rating ? '#f59e0b' : 'none'} stroke={i <= r.rating ? '#f59e0b' : '#d1d5db'} />)}
-                        </div>
-                        {r.title && <p className="font-medium text-brand-black text-sm mb-1">{r.title}</p>}
+                        {r.title && <p className="font-semibold text-brand-black text-sm mb-1.5">{r.title}</p>}
                         <p className="text-brand-gray text-sm leading-relaxed">{r.body}</p>
                       </div>
                     </div>
