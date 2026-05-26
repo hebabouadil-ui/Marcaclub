@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     // Fetch full product detail from CJ
     const cjRes = await getCJProductDetail(pid)
     if (!cjRes.result || !cjRes.data) {
-      return NextResponse.json({ error: 'CJ product not found' }, { status: 404 })
+      return NextResponse.json({ error: `CJ product not found (pid: ${pid}). CJ response: ${JSON.stringify(cjRes).slice(0, 200)}` }, { status: 404 })
     }
     const cjProduct = cjRes.data
 
@@ -124,6 +124,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, productId: String(product._id), slug: product.slug })
   } catch (err) {
     console.error('CJ import error:', err)
-    return NextResponse.json({ error: 'Import failed' }, { status: 500 })
+    const msg = err instanceof Error ? err.message : String(err)
+    // Duplicate slug = product with same name already exists
+    if (msg.includes('duplicate key') || msg.includes('E11000')) {
+      return NextResponse.json({ error: 'A product with this name already exists. Rename it and try again.' }, { status: 409 })
+    }
+    return NextResponse.json({ error: `Import failed: ${msg}` }, { status: 500 })
   }
 }
