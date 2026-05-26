@@ -98,12 +98,17 @@ function normalizeProduct(raw: any): CJProduct {
     (Array.isArray(raw.productVariants) && raw.productVariants.length > 0) ? raw.productVariants :
     (Array.isArray(raw.skuList) && raw.skuList.length > 0) ? raw.skuList : []
   const variants = variantSource.map(normalizeVariant)
+
+  // Derive cost from variants first, then fall back to API cost fields
+  const variantPrices = variants.map((v: CJVariant) => v.variantPrice).filter((p: number) => p > 0)
+  const minVariantPrice = variantPrices.length > 0 ? Math.min(...variantPrices) : 0
+  const sellingPrice = minVariantPrice || (raw.productCostPrice ?? raw.sellingPrice ?? raw.costPrice ?? raw.productSellingPrice ?? 0)
+
   return {
     pid: raw.pid ?? raw.productId ?? '',
     productNameEn: raw.productNameEn ?? raw.productName ?? '',
     productImage: parseImageField(raw.productImage ?? raw.mainImage ?? raw.productMainImage),
-    // CJ sellingPrice is the suggested retail, productCostPrice is our actual cost
-    sellingPrice: raw.productCostPrice ?? raw.sellingPrice ?? raw.costPrice ?? 0,
+    sellingPrice,
     categoryName: raw.categoryName ?? '',
     productWeight: raw.productWeight ?? raw.weight ?? undefined,
     description: raw.description ?? raw.productDescription ?? undefined,
@@ -760,18 +765,19 @@ export default function CJImportPage() {
                     </div>
                     <div className="border border-white/10 overflow-hidden">
                       <div className="grid grid-cols-[20px_1fr_56px_80px_52px_44px] text-[9px] text-white/30 px-2 py-1.5 border-b border-white/10 bg-white/3 gap-1.5">
-                        <span></span><span>Name</span><span>CJ CA$</span><span>Sell (MAD)</span><span>Margin CA$</span><span>%</span>
+                        <span></span><span>Name</span><span>Cost CA$</span><span>Sell CA$</span><span>Margin</span><span>%</span>
                       </div>
                       <div className="max-h-56 overflow-y-auto">
                         {(preview.variants ?? []).map((v) => {
                           const selected = form.selectedVariants.includes(v.vid)
-                          const autoPrice = String(Math.ceil((v.variantPrice + shippingUSD) * parseFloat(form.markupX || '3') * MAD_PER_USD))
-                          const sellStr = form.variantPrices[v.vid] ?? autoPrice
-                          const sellMAD = Number(sellStr || 0)
+                          const autoMAD = String(Math.ceil((v.variantPrice + shippingUSD) * parseFloat(form.markupX || '3') * MAD_PER_USD))
+                          const sellMAD = Number((form.variantPrices[v.vid] ?? autoMAD) || 0)
+                          // Display sell price in CAD (MAD * MAD_TO_CAD), allow editing in CAD
+                          const sellCAD = Math.round(sellMAD * MAD_TO_CAD)
                           const costMAD = (v.variantPrice + shippingUSD) * MAD_PER_USD
                           const marginMAD = sellMAD - costMAD
                           const marginPct = sellMAD > 0 ? Math.round((marginMAD / sellMAD) * 100) : 0
-                          const isModified = sellStr !== autoPrice
+                          const isModified = (form.variantPrices[v.vid] ?? autoMAD) !== autoMAD
                           const pctColor = marginPct < 30 ? 'text-red-400' : marginPct <= 50 ? 'text-yellow-400' : 'text-green-400'
                           return (
                             <div key={v.vid} className={`grid grid-cols-[20px_1fr_56px_80px_52px_44px] items-center px-2 py-1.5 border-b border-white/5 gap-1.5 ${selected ? '' : 'opacity-40'}`}>
@@ -788,9 +794,12 @@ export default function CJImportPage() {
                               <input
                                 type="number"
                                 min="0"
-                                value={sellStr}
+                                value={sellCAD || ''}
                                 onChange={(e) => {
-                                  const newVP = { ...form.variantPrices, [v.vid]: e.target.value }
+                                  // User types in CAD → convert to MAD for storage
+                                  const cadVal = Number(e.target.value)
+                                  const madVal = String(Math.round(cadVal / MAD_TO_CAD))
+                                  const newVP = { ...form.variantPrices, [v.vid]: madVal }
                                   const selectedPrices = form.selectedVariants.map((vid) => Number(newVP[vid] || 0)).filter((n) => n > 0)
                                   const minP = selectedPrices.length > 0 ? String(Math.min(...selectedPrices)) : form.price
                                   setForm((p) => ({ ...p, variantPrices: newVP, price: minP }))
