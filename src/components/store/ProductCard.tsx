@@ -6,8 +6,6 @@ import { Eye } from 'lucide-react'
 import { useCurrency } from '@/lib/context/CurrencyContext'
 import { useLanguage } from '@/lib/i18n'
 
-const MAD_PER_USD = 10.05
-
 interface Props {
   product: {
     _id: string
@@ -25,15 +23,15 @@ interface Props {
 
 export default function ProductCard({ product }: Props) {
   const [hovered, setHovered] = useState(false)
-  const { format, shippingCostUSD } = useCurrency()
+  const { format, shippingCostUSD, usdToCAD } = useCurrency()
   const { tr } = useLanguage()
 
   // For CJ products: add the visitor's country shipping (fetched by CurrencyContext for their country).
   const displayPrice = product.cjPid && shippingCostUSD > 0
-    ? product.price + shippingCostUSD * MAD_PER_USD
+    ? product.price + shippingCostUSD * usdToCAD
     : product.price
   const originalDisplay = product.originalPrice && product.cjPid && shippingCostUSD > 0
-    ? product.originalPrice + shippingCostUSD * MAD_PER_USD
+    ? product.originalPrice + shippingCostUSD * usdToCAD
     : product.originalPrice
 
   const discount = originalDisplay && originalDisplay > displayPrice

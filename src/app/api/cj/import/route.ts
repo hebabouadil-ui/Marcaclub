@@ -20,8 +20,6 @@ export async function POST(req: NextRequest) {
     const { pid, name, description, price, category, selectedVariants, cjLogisticName, variantPrices, baseVariantPrices, shippingBakedUSD, shippingRefCountry, productWeight } = body
     const variantPricesMap: Record<string, number> | undefined = variantPrices
     const baseVariantPricesMap: Record<string, number> | undefined = baseVariantPrices
-    const MAD_PER_USD = 10.05
-    const shippingBakedMad = shippingBakedUSD ? shippingBakedUSD * MAD_PER_USD : undefined
 
     if (!pid || !name || !price || !category) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -110,7 +108,6 @@ export async function POST(req: NextRequest) {
       cjPid: pid,
       cjLogisticName: cjLogisticName || undefined,
       productWeight: productWeight ? parseFloat(String(productWeight)) || undefined : undefined,
-      shippingBakedMad: shippingBakedMad || undefined,
       shippingBakedUSD: shippingBakedUSD || undefined,
       shippingRefCountry: shippingRefCountry || undefined,
       cjData: {

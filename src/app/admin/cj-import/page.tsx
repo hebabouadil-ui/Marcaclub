@@ -4,34 +4,14 @@ import { Search, Download, Check, Loader2, RefreshCw, ChevronDown, ChevronUp, Tr
 import Image from 'next/image'
 import toast from 'react-hot-toast'
 
-const MAD_PER_USD = 10.05        // 1 USD = 10.05 MAD
 const USD_TO_CAD = 1.38          // 1 USD = 1.38 CAD (for displaying CJ USD costs)
-const MAD_TO_CAD = USD_TO_CAD / MAD_PER_USD  // ≈ 0.1373 — used for cost display
-// Website display rate: matches FALLBACK_RATES.CAD in CurrencyContext.
-// Use this when computing "Price on website" so it matches what the storefront shows.
-const WEBSITE_MAD_TO_CAD = 0.135
 
-// Estimated shipping costs in USD for the "website preview" (matches storefront fallback table)
-const PREVIEW_SHIPPING_USD: Record<string, { label: string; currency: string; usd: number }> = {
-  CA:  { label: 'Canada',        currency: 'CAD', usd: 7.0 },
-  US:  { label: 'USA',           currency: 'USD', usd: 6.5 },
-  MA:  { label: 'Morocco',       currency: 'MAD', usd: 2.5 },
-  FR:  { label: 'France',        currency: 'EUR', usd: 8.5 },
-  GB:  { label: 'UK',            currency: 'GBP', usd: 8.0 },
-  AE:  { label: 'UAE',           currency: 'AED', usd: 5.5 },
-  AU:  { label: 'Australia',     currency: 'AUD', usd: 9.5 },
-}
-
-function cad(mad: number) {
-  return (mad * MAD_TO_CAD).toLocaleString('en-US', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 })
-}
 function cadUSD(usd: number, decimals = 2) {
   return (usd * USD_TO_CAD).toLocaleString('en-US', { style: 'currency', currency: 'CAD', minimumFractionDigits: decimals, maximumFractionDigits: decimals })
 }
-// Website price shown to customer — matches the storefront's formula exactly:
-//   format(displayPrice) = (sellMAD + shippingUSD * MAD_PER_USD) * WEBSITE_MAD_TO_CAD
-function customerPriceCAD(sellMAD: number, shippingUSD: number) {
-  return (sellMAD + shippingUSD * MAD_PER_USD) * WEBSITE_MAD_TO_CAD
+
+function cadFmt(cad: number, decimals = 0) {
+  return cad.toLocaleString('en-US', { style: 'currency', currency: 'CAD', minimumFractionDigits: decimals, maximumFractionDigits: decimals })
 }
 
 interface CJVariant {
@@ -162,12 +142,14 @@ function normalizeShipping(opt: any): ShippingOption {
   }
 }
 
-// Sell price (excl shipping) = cost / (1 - margin%)
-// e.g. cost $22, margin 60% → sell = $22 / 0.4 = $55
-function sellPriceMAD(costUSD: number, marginPct: number): number {
+// Sell price (excl shipping) = cost / (1 - margin%), returned in CAD
+// e.g. cost $22, margin 60% → sell = $22 / 0.4 * 1.38 = CA$75.90 → CA$76
+function sellPriceCAD(costUSD: number, marginPct: number): number {
   const margin = Math.min(Math.max(marginPct, 1), 95) / 100
-  return Math.ceil((costUSD / (1 - margin)) * MAD_PER_USD)
+  return Math.ceil((costUSD / (1 - margin)) * USD_TO_CAD)
 }
+// Alias used in old code paths — now same as sellPriceCAD
+const sellPriceBase = sellPriceCAD
 function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim()
 }
@@ -180,7 +162,7 @@ interface ImportForm {
   selectedVariants: string[]
   cjLogisticName: string
   marginPct: string        // target margin % (e.g. "60" = 60%)
-  variantPrices: Record<string, string>     // sell price in MAD (base only, no shipping)
+  variantPrices: Record<string, string>     // sell price in CAD (base only, no shipping)
   baseVariantPrices: Record<string, string> // same — stored separately for storefront
 }
 
@@ -217,7 +199,7 @@ export default function CJImportPage() {
   const [previewLoading, setPreviewLoading] = useState(false)
   const [activeImg, setActiveImg] = useState(0)
   const [form, setForm] = useState<ImportForm>({
-    name: '', description: '', price: '', category: 'eclairage-led',
+    name: '', description: '', price: '', category: 'soins-visage',
     selectedVariants: [], cjLogisticName: '', marginPct: '60', variantPrices: {}, baseVariantPrices: {},
   })
   const [importing, setImporting] = useState(false)
@@ -330,7 +312,7 @@ export default function CJImportPage() {
             const newBaseVP: Record<string, string> = {}
             // Sell price is based on cost only (shipping excluded) — recalc only if not manually edited
             for (const v of product.variants ?? []) {
-              const autoSell = String(sellPriceMAD(v.variantPrice, margin))
+              const autoSell = String(sellPriceBase(v.variantPrice, margin))
               newBaseVP[v.vid] = autoSell
               const wasAuto = !prev.variantPrices[v.vid] || prev.variantPrices[v.vid] === autoSell
               if (wasAuto) newVP[v.vid] = autoSell
@@ -367,7 +349,7 @@ export default function CJImportPage() {
       // Sell price = cost / (1 - margin%) — shipping NOT included, added per country on store
       const vPrices: Record<string, string> = {}
       for (const v of detail.variants ?? []) {
-        vPrices[v.vid] = String(sellPriceMAD(v.variantPrice, margin))
+        vPrices[v.vid] = String(sellPriceBase(v.variantPrice, margin))
       }
       const minPrice = Object.values(vPrices).length > 0
         ? String(Math.min(...Object.values(vPrices).map(Number)))
@@ -376,7 +358,7 @@ export default function CJImportPage() {
         name: detail.productNameEn ?? product.productNameEn,
         description: detail.description ? stripHtml(detail.description) : '',
         price: minPrice,
-        category: prev.category || 'eclairage-led',
+        category: prev.category || 'soins-visage',
         selectedVariants: (detail.variants ?? []).map((v) => v.vid),
         cjLogisticName: '',
         marginPct: prev.marginPct || '60',
@@ -470,11 +452,11 @@ export default function CJImportPage() {
   const selectedCjCosts = selectedVariantObjs.map((v) => v.variantPrice)
   const minCjCost = selectedCjCosts.length > 0 ? Math.min(...selectedCjCosts) : cjCost
   const maxCjCost = selectedCjCosts.length > 0 ? Math.max(...selectedCjCosts) : cjCost
-  const avgMarginMAD = selectedVariantObjs.length > 0
+  const avgMarginCAD = selectedVariantObjs.length > 0
     ? selectedVariantObjs.reduce((sum, v) => {
-        const sell = Number(form.variantPrices[v.vid] || 0)
-        const costMAD = v.variantPrice * MAD_PER_USD
-        return sum + (sell - costMAD)
+        const sellCAD = Number(form.variantPrices[v.vid] || 0)
+        const costCAD = (v.variantPrice ?? 0) * USD_TO_CAD
+        return sum + (sellCAD - costCAD)
       }, 0) / selectedVariantObjs.length
     : null
 
@@ -723,7 +705,7 @@ export default function CJImportPage() {
                             const margin = parseFloat(form.marginPct || '60')
                             const newVP: Record<string, string> = { ...form.variantPrices }
                             for (const v of preview?.variants ?? []) {
-                              const autoSell = String(sellPriceMAD(v.variantPrice, margin))
+                              const autoSell = String(sellPriceBase(v.variantPrice, margin))
                               if (!form.variantPrices[v.vid] || form.variantPrices[v.vid] === autoSell) {
                                 newVP[v.vid] = autoSell
                               }
@@ -753,24 +735,18 @@ export default function CJImportPage() {
 
                 {/* Cost breakdown */}
                 {(() => {
-                  const countryInfo = PREVIEW_SHIPPING_USD[shippingCountry] ?? { label: shippingCountry, currency: 'CAD', usd: 7 }
-                  const minSellMAD = selectedVariantObjs.length > 0
+                  const minSellCAD = selectedVariantObjs.length > 0
                     ? Math.min(...selectedVariantObjs.map(v => Number(form.variantPrices[v.vid] || 0)).filter(n => n > 0))
                     : 0
-                  const avgSellMAD = selectedVariantObjs.length > 0
+                  const avgSellCAD = selectedVariantObjs.length > 0
                     ? selectedVariantObjs.reduce((s, v) => s + Number(form.variantPrices[v.vid] || 0), 0) / selectedVariantObjs.length
                     : 0
-                  // Profit = sell price in CAD - CJ product cost in CAD.
-                  // Shipping passes through: customer pays shippingUSD, admin pays shippingUSD to CJ → cancels.
-                  const avgProfitCAD = avgMarginMAD != null ? avgMarginMAD * WEBSITE_MAD_TO_CAD : null
-                  const avgMarginPct = avgSellMAD > 0 && avgMarginMAD != null
-                    ? Math.round((avgMarginMAD / avgSellMAD) * 100)
+                  const avgProfitCAD = avgMarginCAD
+                  const avgMarginPct = avgSellCAD > 0 && avgMarginCAD != null
+                    ? Math.round((avgMarginCAD / avgSellCAD) * 100)
                     : null
-                  // "Price on website" uses the EXACT same formula as the storefront:
-                  //   format(sellMAD + shippingMAD) = (sellMAD + shippingUSD * MAD_PER_USD) * WEBSITE_MAD_TO_CAD
-                  // shippingUSD here is the real CJ-fetched value for shippingCountry at this product's weight.
-                  const websiteCAD = minSellMAD > 0 && shippingUSD > 0
-                    ? customerPriceCAD(minSellMAD, shippingUSD)
+                  const websiteCAD = minSellCAD > 0 && shippingUSD > 0
+                    ? minSellCAD + shippingUSD * USD_TO_CAD
                     : null
                   return (
                     <div className="bg-white/3 border border-white/8 px-4 py-3 text-xs space-y-1.5">
@@ -798,7 +774,7 @@ export default function CJImportPage() {
                           <div className={`flex justify-between font-bold text-sm ${avgProfitCAD > 0 ? 'text-green-400' : 'text-red-400'}`}>
                             <span>Avg profit</span>
                             <span>
-                              {avgProfitCAD.toLocaleString('en-US', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 })}
+                              {cadFmt(avgProfitCAD)}
                               {avgMarginPct != null && <span className="ml-1 text-[10px] opacity-70">({avgMarginPct}%)</span>}
                             </span>
                           </div>
@@ -808,15 +784,15 @@ export default function CJImportPage() {
                       {/* What customer sees */}
                       <div className="border-t border-white/10 pt-2 mt-2">
                         <p className="text-[9px] text-white/20 uppercase tracking-widest mb-1.5">
-                          Customer pays · {countryInfo.label}
+                          Customer pays · {shippingCountry}
                           {!shippingUSD && <span className="text-white/30 ml-1">(fetch shipping to see)</span>}
                         </p>
                         <div className="flex justify-between text-white/50">
                           <span>Base sell price</span>
-                          <span>{minSellMAD > 0 ? cadUSD(minSellMAD * MAD_TO_CAD / USD_TO_CAD, 0) : '—'}</span>
+                          <span>{minSellCAD > 0 ? cadFmt(minSellCAD) : '—'}</span>
                         </div>
                         <div className="flex justify-between text-white/50">
-                          <span>+ Shipping ({countryInfo.label})</span>
+                          <span>+ Shipping ({shippingCountry})</span>
                           <span className={shippingUSD > 0 ? '' : 'text-white/20'}>
                             {shippingUSD > 0 ? cadUSD(shippingUSD, 0) : '—'}
                           </span>
@@ -825,7 +801,7 @@ export default function CJImportPage() {
                           <span>= Price on website</span>
                           <span>
                             {websiteCAD
-                              ? websiteCAD.toLocaleString('en-US', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 })
+                              ? cadFmt(websiteCAD)
                               : '—'}
                           </span>
                         </div>
@@ -863,7 +839,7 @@ export default function CJImportPage() {
                       if (preview) {
                         const newVP: Record<string, string> = {}
                         for (const v of preview.variants ?? []) {
-                          newVP[v.vid] = String(sellPriceMAD(v.variantPrice, margin))
+                          newVP[v.vid] = String(sellPriceBase(v.variantPrice, margin))
                         }
                         const selectedPrices = form.selectedVariants.map((vid) => Number(newVP[vid] || 0)).filter((n) => n > 0)
                         const minP = selectedPrices.length > 0 ? String(Math.min(...selectedPrices)) : ''
@@ -927,13 +903,12 @@ export default function CJImportPage() {
                       <div className="max-h-56 overflow-y-auto">
                         {(preview.variants ?? []).map((v) => {
                           const selected = form.selectedVariants.includes(v.vid)
-                          const autoMAD = String(sellPriceMAD(v.variantPrice, parseFloat(form.marginPct || '60')))
-                          const sellMAD = Number((form.variantPrices[v.vid] ?? autoMAD) || 0)
-                          const sellCAD = Math.round(sellMAD * MAD_TO_CAD)
-                          const costMAD = v.variantPrice * MAD_PER_USD
-                          const marginMAD = sellMAD - costMAD
-                          const marginPct = sellMAD > 0 ? Math.round((marginMAD / sellMAD) * 100) : 0
-                          const isModified = (form.variantPrices[v.vid] ?? autoMAD) !== autoMAD
+                          const autoCAD = String(sellPriceBase(v.variantPrice, parseFloat(form.marginPct || '60')))
+                          const sellCAD = Number((form.variantPrices[v.vid] ?? autoCAD) || 0)
+                          const costCAD = v.variantPrice * USD_TO_CAD
+                          const marginCAD = sellCAD - costCAD
+                          const marginPct = sellCAD > 0 ? Math.round((marginCAD / sellCAD) * 100) : 0
+                          const isModified = (form.variantPrices[v.vid] ?? autoCAD) !== autoCAD
                           const pctColor = marginPct < 30 ? 'text-red-400' : marginPct <= 50 ? 'text-yellow-400' : 'text-green-400'
                           return (
                             <div key={v.vid} className={`grid grid-cols-[20px_1fr_56px_80px_52px_44px] items-center px-2 py-1.5 border-b border-white/5 gap-1.5 ${selected ? '' : 'opacity-40'}`}>
@@ -952,17 +927,16 @@ export default function CJImportPage() {
                                 min="0"
                                 value={sellCAD || ''}
                                 onChange={(e) => {
-                                  // User types in CAD → convert to MAD for storage
-                                  const cadVal = Number(e.target.value)
-                                  const madVal = String(Math.round(cadVal / MAD_TO_CAD))
-                                  const newVP = { ...form.variantPrices, [v.vid]: madVal }
+                                  // User types in CAD directly
+                                  const cadVal = String(Math.round(Number(e.target.value)))
+                                  const newVP = { ...form.variantPrices, [v.vid]: cadVal }
                                   const selectedPrices = form.selectedVariants.map((vid) => Number(newVP[vid] || 0)).filter((n) => n > 0)
                                   const minP = selectedPrices.length > 0 ? String(Math.min(...selectedPrices)) : form.price
                                   setForm((p) => ({ ...p, variantPrices: newVP, price: minP }))
                                 }}
                                 className={`w-full bg-white/5 border text-[10px] px-1.5 py-1 focus:outline-none focus:border-brand-gold/50 ${isModified ? 'border-brand-gold/60 text-brand-gold' : 'border-white/10 text-white'}`}
                               />
-                              <span className={`text-[10px] ${marginMAD >= 0 ? 'text-white/60' : 'text-red-400'}`}>{cad(marginMAD)}</span>
+                              <span className={`text-[10px] ${marginCAD >= 0 ? 'text-white/60' : 'text-red-400'}`}>{cadFmt(marginCAD)}</span>
                               <span className={`text-[10px] font-bold ${pctColor}`}>{marginPct}%</span>
                             </div>
                           )

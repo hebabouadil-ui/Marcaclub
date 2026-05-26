@@ -58,8 +58,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
   const [added, setAdded] = useState(false)
   const addItem = useCartStore((s) => s.addItem)
   const router = useRouter()
-  const { format, shippingCostUSD } = useCurrency()
-  const MAD_PER_USD = 10.05
+  const { format, shippingCostUSD, usdToCAD } = useCurrency()
   const { tr, lang } = useLanguage()
 
   const [shipping, setShipping] = useState<ShippingOption | null>(null)
@@ -149,7 +148,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
   const basePrice = selectedSizeEntry?.variantPrice ?? product.price
   const effectiveShipUSD = shipping ? shipping.logisticPrice : shippingCostUSD
   const displayPrice = product.cjPid && effectiveShipUSD > 0
-    ? basePrice + effectiveShipUSD * MAD_PER_USD
+    ? basePrice + effectiveShipUSD * usdToCAD
     : basePrice
 
   const originalPrice = product.originalPrice
@@ -349,7 +348,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                           <span>{label}</span>
                           {vp && vp !== product.price && (
                             <span className="block text-[9px] leading-none opacity-60 mt-0.5">
-                              {format(product.cjPid && shippingCostUSD > 0 ? vp + shippingCostUSD * MAD_PER_USD : vp)}
+                              {format(product.cjPid && shippingCostUSD > 0 ? vp + shippingCostUSD * usdToCAD : vp)}
                             </span>
                           )}
                         </button>

@@ -1,10 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
 
-const MAD_TO_CAD = 0.148
-function cad(mad: number) {
-  return (mad * MAD_TO_CAD).toLocaleString('en-US', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 })
-}
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
@@ -202,7 +198,7 @@ export default function AdminProductsPage() {
               </div>
               <div className="p-3">
                 <p className="text-white text-sm font-medium truncate">{p.name}</p>
-                <p className="text-brand-gold text-sm">{cad(p.price)}</p>
+                <p className="text-brand-gold text-sm">{p.price.toLocaleString('en-US', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 })}</p>
                 <p className="text-white/40 text-xs">Stock: {p.sizes?.reduce((s, i) => s + i.stock, 0) ?? 0}</p>
                 <div className="flex gap-2 mt-3">
                   <button
@@ -264,7 +260,7 @@ export default function AdminProductsPage() {
                 {/* Price + Original */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Prix * (MAD)</label>
+                    <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Prix * (CAD)</label>
                     <input
                       type="number"
                       value={form.price}
@@ -273,7 +269,7 @@ export default function AdminProductsPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Prix barré (MAD)</label>
+                    <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Prix barré (CAD)</label>
                     <input
                       type="number"
                       value={form.originalPrice || ''}

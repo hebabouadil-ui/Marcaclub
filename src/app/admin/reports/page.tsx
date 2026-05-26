@@ -3,9 +3,8 @@ import { useEffect, useState } from 'react'
 import { Download, TrendingUp, ShoppingBag, XCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 
-const MAD_TO_CAD = 0.148
-function cad(mad: number) {
-  return (mad * MAD_TO_CAD).toLocaleString('en-US', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 })
+function cad(amount: number) {
+  return amount.toLocaleString('en-US', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 })
 }
 
 interface OrderRow {

@@ -3,9 +3,8 @@ import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { ChevronDown, Search, Clock, Package, Truck, RefreshCw, ExternalLink } from 'lucide-react'
 
-const MAD_TO_CAD = 0.148
-function cad(mad: number) {
-  return (mad * MAD_TO_CAD).toLocaleString('en-US', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 })
+function cad(amount: number) {
+  return amount.toLocaleString('en-US', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 })
 }
 
 const STATUSES = ['all', 'pending', 'confirmed', 'shipped', 'delivered', 'cancelled']

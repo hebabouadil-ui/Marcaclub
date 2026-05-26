@@ -7,12 +7,13 @@ interface CurrencyCtx {
   currency: string
   symbol: string
   rate: number
-  format: (mad: number) => string
+  format: (cad: number) => string
   formatUSD: (usd: number) => string
   setCurrency: (code: string) => void
   geo: GeoInfo | null
   available: { code: string; name: string; symbol: string }[]
   shippingCostUSD: number
+  usdToCAD: number
 }
 
 export const CURRENCIES: { code: string; name: string; symbol: string }[] = [
@@ -68,21 +69,9 @@ function getShippingFallback(countryCode: string): number {
 }
 
 const FALLBACK_RATES: Record<string, number> = {
-  MAD: 1,
-  USD: 0.0995,
-  CAD: 0.135,
-  EUR: 0.0916,
-  GBP: 0.0786,
-  AUD: 0.152,
-  CHF: 0.0895,
-  JPY: 14.87,
-  AED: 0.365,
-  SAR: 0.373,
-  BRL: 0.494,
-  MXN: 1.71,
-  INR: 8.27,
-  SGD: 0.133,
-  NZD: 0.162,
+  CAD: 1, USD: 0.73, EUR: 0.68, GBP: 0.58, AUD: 1.10,
+  CHF: 0.66, JPY: 108, AED: 2.68, SAR: 2.74, BRL: 3.65,
+  MXN: 12.6, INR: 61.0, SGD: 0.98, NZD: 1.20,
 }
 
 // Read the country cookie set by middleware (synchronous, no API call needed)
@@ -93,13 +82,14 @@ function readCountryCookie(): string {
 }
 
 const DEFAULT: CurrencyCtx = {
-  currency: 'CAD', symbol: 'CA$', rate: 0.135,
-  format: (n) => `CA$${(n * 0.135).toFixed(2)}`,
-  formatUSD: (n) => `CA$${(n / 0.0995 * 0.135).toFixed(2)}`,
+  currency: 'CAD', symbol: 'CA$', rate: 1,
+  format: (n) => `CA$${n.toFixed(2)}`,
+  formatUSD: (n) => `CA$${(n / 0.73).toFixed(2)}`,
   setCurrency: () => {},
   geo: null,
   available: CURRENCIES,
   shippingCostUSD: SHIPPING_DEFAULT_USD,
+  usdToCAD: 1 / 0.73,
 }
 
 // Module-level cache: country → shipping cost USD
@@ -129,22 +119,15 @@ async function fetchBestShippingUSD(countryCode: string): Promise<number> {
 const Ctx = createContext<CurrencyCtx>(DEFAULT)
 
 function makeFormat(symbol: string, currency: string, rate: number) {
-  return (mad: number) => {
-    const v = mad * rate
+  return (cad: number) => {
+    const v = cad * rate
     if (currency === 'JPY') return `${symbol}${Math.round(v).toLocaleString()}`
-    if (currency === 'MAD') return `${Math.round(v).toLocaleString()} MAD`
     return `${symbol}${v.toFixed(2)}`
   }
 }
 
-function makeFormatUSD(symbol: string, currency: string, rate: number, usdRate: number) {
-  return (usd: number) => {
-    const mad = usd / usdRate
-    const v = mad * rate
-    if (currency === 'JPY') return `${symbol}${Math.round(v).toLocaleString()}`
-    if (currency === 'MAD') return `${Math.round(v).toLocaleString()} MAD`
-    return `${symbol}${v.toFixed(2)}`
-  }
+function makeFormatUSD(symbol: string, currency: string, rate: number, usdToCAD: number) {
+  return (usd: number) => makeFormat(symbol, currency, rate)(usd * usdToCAD)
 }
 
 export function CurrencyProvider({ children }: { children: React.ReactNode }) {
@@ -154,7 +137,7 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
   const initialShipping = cookieCountry ? getShippingFallback(cookieCountry) : SHIPPING_DEFAULT_USD
 
   const [currency, setCurrencyState] = useState(initialCurrency)
-  const [rate, setRate] = useState(FALLBACK_RATES[initialCurrency] ?? 0.135)
+  const [rate, setRate] = useState(FALLBACK_RATES[initialCurrency] ?? 1)
   const [geo, setGeo] = useState<GeoInfo | null>(cookieCountry ? { countryCode: cookieCountry } : null)
   const [rates, setRates] = useState<Record<string, number>>(FALLBACK_RATES)
   const [shippingCostUSD, setShippingCostUSD] = useState(initialShipping)
@@ -199,7 +182,7 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
   }, [applyCode])
 
   const info = CURRENCIES.find(c => c.code === currency) ?? CURRENCIES[0]
-  const usdRate = rates['USD'] ?? FALLBACK_RATES['USD']
+  const usdToCAD = 1 / (rates['USD'] ?? 0.73)
 
   return (
     <Ctx.Provider value={{
@@ -207,11 +190,12 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
       symbol: info.symbol,
       rate,
       format: makeFormat(info.symbol, currency, rate),
-      formatUSD: makeFormatUSD(info.symbol, currency, rate, usdRate),
+      formatUSD: makeFormatUSD(info.symbol, currency, rate, usdToCAD),
       setCurrency,
       geo,
       available: CURRENCIES,
       shippingCostUSD,
+      usdToCAD,
     }}>
       {children}
     </Ctx.Provider>
