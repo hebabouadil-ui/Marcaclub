@@ -210,7 +210,6 @@ export default function CJImportPage() {
       const res = await fetch(`/api/cj/products?${param}=${encodeURIComponent(query)}&page=${p}`, { credentials: 'include' })
       const data = await res.json()
       if (data.result && Array.isArray(data.data?.list)) {
-        if (data.data.list[0]) console.log('[CJ list item keys]', Object.keys(data.data.list[0]), data.data.list[0])
         setResults(data.data.list.map(normalizeProduct))
         setTotal(data.data.total ?? 0)
         setPage(p)
@@ -480,7 +479,9 @@ export default function CJImportPage() {
             <div className="p-3">
               <p className="text-white text-xs font-medium line-clamp-2 mb-1">{product.productNameEn}</p>
               <p className="text-white/40 text-[10px] mb-2">{product.categoryName}</p>
-              <span className="text-brand-gold text-xs font-bold">{cadUSD(product.sellingPrice ?? 0)}</span>
+              <span className="text-brand-gold text-xs font-bold">
+                {product.sellingPrice > 0 ? cadUSD(product.sellingPrice) : <span className="text-white/30">click to view</span>}
+              </span>
             </div>
           </div>
         ))}
