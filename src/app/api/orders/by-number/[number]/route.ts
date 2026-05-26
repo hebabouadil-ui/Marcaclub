@@ -10,7 +10,7 @@ export async function GET(req: NextRequest, { params }: { params: { number: stri
   try {
     await connectDB()
     const order = await Order.findOne({ orderNumber: params.number })
-      .select('orderNumber total taxAmount currency currencySymbol status createdAt customer items stripePaymentStatus')
+      .select('orderNumber total taxAmount shippingFee currency currencySymbol status createdAt customer items stripePaymentStatus')
       .lean() as Record<string, unknown> & { customer?: { email?: string } } | null
     if (!order) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
@@ -21,6 +21,7 @@ export async function GET(req: NextRequest, { params }: { params: { number: stri
         orderNumber: order.orderNumber,
         total: order.total,
         taxAmount: order.taxAmount,
+        shippingFee: order.shippingFee,
         currency: order.currency,
         currencySymbol: order.currencySymbol,
         status: order.status,

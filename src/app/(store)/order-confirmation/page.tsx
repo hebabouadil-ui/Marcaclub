@@ -18,6 +18,7 @@ interface Order {
   orderNumber: string
   total: number
   taxAmount?: number
+  shippingFee?: number
   currency: string
   currencySymbol?: string
   status: string
@@ -148,7 +149,8 @@ function ConfirmationContent() {
               const sym = order.currencySymbol ?? 'CA$'
               const fmt = (n: number) => `${sym}${n.toFixed(2)}`
               const tax = order.taxAmount ?? 0
-              const subtotal = order.total - tax
+              const shipping = order.shippingFee ?? 0
+              const subtotal = order.total - tax - shipping
               return (
                 <>
                   <div className="flex justify-between text-sm text-gray-500">
@@ -157,7 +159,7 @@ function ConfirmationContent() {
                   </div>
                   <div className="flex justify-between text-sm text-gray-500">
                     <span>Shipping</span>
-                    <span className="text-green-600 font-medium">Included</span>
+                    <span>{fmt(shipping)}</span>
                   </div>
                   {tax > 0 && (
                     <div className="flex justify-between text-sm text-gray-500">

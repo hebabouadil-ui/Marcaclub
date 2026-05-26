@@ -403,11 +403,12 @@ export default function CheckoutPage() {
   const [loadingIntent, setLoadingIntent] = useState(false)
   const [authReturnFromOAuth, setAuthReturnFromOAuth] = useState(false)
   const [taxComponents, setTaxComponents] = useState<TaxComponent[]>([])
+  const [shippingFee, setShippingFee] = useState<number | null>(null)
 
   const taxAmount = Math.round(
     taxComponents.reduce((sum, c) => sum + subtotal * c.rate, 0) * 100
   ) / 100
-  const total = subtotal + taxAmount
+  const total = subtotal + (shippingFee ?? 0) + taxAmount
 
   // Detect return from OAuth redirect (?auth=done)
   useEffect(() => {
@@ -500,6 +501,7 @@ export default function CheckoutPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setClientSecret(data.clientSecret)
+      if (typeof data.shippingFee === 'number') setShippingFee(data.shippingFee)
       setStep('payment')
     } catch { toast.error('Failed to initialize payment. Please try again.') }
     finally { setLoadingIntent(false) }
@@ -720,7 +722,7 @@ export default function CheckoutPage() {
             {/* Trust badges */}
             <div className="grid grid-cols-3 gap-4 mt-6">
               {[
-                { icon: Truck, label: 'Free Shipping', sub: '7–12 business days' },
+                { icon: Truck, label: 'Worldwide Shipping', sub: '7–12 business days' },
                 { icon: Shield, label: 'Secure Payment', sub: 'SSL & Stripe encrypted' },
                 { icon: RotateCcw, label: 'Easy Returns', sub: '30-day return policy' },
               ].map(({ icon: Icon, label, sub }) => (
@@ -759,7 +761,8 @@ export default function CheckoutPage() {
                   <span>Subtotal</span><span>{format(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm text-gray-600">
-                  <span>Shipping</span><span className="text-green-600 font-medium">Free</span>
+                  <span>Shipping</span>
+                  <span>{shippingFee !== null ? format(shippingFee) : '—'}</span>
                 </div>
                 {taxComponents.length > 0 && taxAmount > 0
                   ? taxComponents.filter(c => c.rate > 0).map((c) => (

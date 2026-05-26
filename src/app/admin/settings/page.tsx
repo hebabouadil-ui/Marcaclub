@@ -17,6 +17,7 @@ interface SettingsForm {
   emailNote: string
   contactEmail: string
   contactPhone: string
+  shippingFeeCAD: string
 }
 
 const DEFAULT: SettingsForm = {
@@ -33,6 +34,7 @@ const DEFAULT: SettingsForm = {
   emailNote: 'Our team will process your order shortly. For any questions, contact us on WhatsApp.',
   contactEmail: '',
   contactPhone: '',
+  shippingFeeCAD: '14.99',
 }
 
 const inputClass = 'w-full bg-white/5 border border-white/10 text-white px-4 py-2.5 text-sm focus:outline-none focus:border-brand-gold'
@@ -46,7 +48,7 @@ export default function AdminSettingsPage() {
     fetch('/api/settings', { credentials: 'include' })
       .then((r) => r.json())
       .then((data) => {
-        if (data && Object.keys(data).length > 0) setForm({ ...DEFAULT, ...data })
+        if (data && Object.keys(data).length > 0) setForm({ ...DEFAULT, ...data, shippingFeeCAD: String(data.shippingFeeCAD ?? 14.99) })
       })
       .finally(() => setLoading(false))
   }, [])
@@ -60,7 +62,7 @@ export default function AdminSettingsPage() {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...form, shippingFeeCAD: parseFloat(form.shippingFeeCAD) || 14.99 }),
     })
     setSaving(false)
     if (res.ok) toast.success('Settings saved')
@@ -139,6 +141,11 @@ export default function AdminSettingsPage() {
           <div>
             <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Contact Email</label>
             <input className={inputClass} value={form.contactEmail} onChange={set('contactEmail')} placeholder="contact@marcaclub.com" />
+          </div>
+          <div>
+            <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Shipping Fee (CAD)</label>
+            <input className={inputClass} type="number" min="0" step="0.01" value={form.shippingFeeCAD} onChange={set('shippingFeeCAD')} placeholder="14.99" />
+            <p className="text-white/30 text-xs mt-1">Applied to every order. Converted to customer currency at checkout.</p>
           </div>
         </div>
 

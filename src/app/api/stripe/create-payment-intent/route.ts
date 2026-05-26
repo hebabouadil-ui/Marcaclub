@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { connectDB } from '@/lib/db'
 import Product from '@/lib/models/Product'
+import Settings from '@/lib/models/Settings'
 import { getCadRates } from '@/lib/utils/getRates'
 
 export const dynamic = 'force-dynamic'
@@ -44,12 +45,17 @@ export async function POST(req: NextRequest) {
       subtotalCAD += product.price * item.quantity
     }
 
+    // Read shipping fee from Settings (in CAD)
+    const settings = await Settings.findOne().lean() as { shippingFeeCAD?: number } | null
+    const shippingFeeCAD = settings?.shippingFeeCAD ?? 14.99
+
     const subtotal = Math.round(subtotalCAD * fxRate * 100) / 100
+    const shippingFee = Math.round(shippingFeeCAD * fxRate * 100) / 100
 
     // Clamp taxRate to 0–50% to prevent abuse
     const clampedRate = Math.min(Math.max(Number(taxRate) || 0, 0), 0.5)
     const taxAmount = Math.round(subtotal * clampedRate * 100) / 100
-    const total = subtotal + taxAmount
+    const total = subtotal + shippingFee + taxAmount
 
     const isZeroDecimal = ZERO_DECIMAL.has(currencyLower)
     const amountInCents = isZeroDecimal ? Math.round(total) : Math.round(total * 100)
@@ -62,12 +68,13 @@ export async function POST(req: NextRequest) {
         items: JSON.stringify(items),
         taxRate: String(clampedRate),
         taxAmount: String(taxAmount),
+        shippingFee: String(shippingFee),
         fxRate: String(fxRate),
         displayCurrency: currencyLower.toUpperCase(),
       },
     })
 
-    return NextResponse.json({ clientSecret: paymentIntent.client_secret, amount: amountInCents, taxAmount, subtotal, fxRate, currency: currencyLower })
+    return NextResponse.json({ clientSecret: paymentIntent.client_secret, amount: amountInCents, taxAmount, shippingFee, subtotal, fxRate, currency: currencyLower })
   } catch (err) {
     console.error('create-payment-intent error:', err)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })

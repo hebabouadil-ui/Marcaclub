@@ -16,6 +16,7 @@ export interface ISettings extends Document {
   emailNote: string
   contactEmail: string
   contactPhone: string
+  shippingFeeCAD: number
 }
 
 const SettingsSchema = new Schema<ISettings>({
@@ -37,6 +38,7 @@ const SettingsSchema = new Schema<ISettings>({
   emailNote: { type: String, default: 'Notre équipe vous appellera pour confirmer votre commande. Pour toute question, contactez-nous sur WhatsApp au +212695504949.' },
   contactEmail: { type: String, default: '' },
   contactPhone: { type: String, default: '' },
+  shippingFeeCAD: { type: Number, default: 14.99 },
 })
 
 export default mongoose.models.Settings ||

@@ -92,6 +92,10 @@ export async function POST(req: NextRequest) {
       fxRate = rates[orderCurrency] ?? 1
     }
 
+    // Read shipping fee from Settings (in CAD), convert to order currency
+    const settingsDoc = await Settings.findOne().lean() as { shippingFeeCAD?: number; emailNote?: string } | null
+    const shippingFee = Math.round((settingsDoc?.shippingFeeCAD ?? 14.99) * fxRate * 100) / 100
+
     // Atomically decrement stock — validate + deduct in one operation per item
     // Build server-trusted item lines from DB (don't trust client price/name/image)
     let serverTotal = 0
@@ -314,8 +318,9 @@ export async function POST(req: NextRequest) {
       items: trustedItems,
       notes: body.notes || undefined,
       orderNumber,
-      total: Math.round((serverTotal + clientTaxAmount) * 100) / 100,
+      total: Math.round((serverTotal + shippingFee + clientTaxAmount) * 100) / 100,
       taxAmount: clientTaxAmount > 0 ? clientTaxAmount : undefined,
+      shippingFee,
       currency: orderCurrency.toLowerCase(),
       currencySymbol,
       stripePaymentIntentId: stripePaymentIntentId || undefined,
@@ -353,8 +358,7 @@ export async function POST(req: NextRequest) {
       await Order.findByIdAndUpdate(order._id, { $set: update })
     }).catch((err) => console.error('Auto risk analysis error:', err))
 
-    const settings = await Settings.findOne().lean() as { emailNote?: string } | null
-    const emailNote = settings?.emailNote
+    const emailNote = settingsDoc?.emailNote
 
     const emailPromises = []
     if (body.customer?.email) {
