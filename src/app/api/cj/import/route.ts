@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
       active: true,
       cjPid: pid,
       cjLogisticName: cjLogisticName || undefined,
-      productWeight: productWeight || undefined,
+      productWeight: productWeight ? parseFloat(String(productWeight)) || undefined : undefined,
       shippingBakedMad: shippingBakedMad || undefined,
       cjData: {
         productName: cjProduct.productNameEn,
