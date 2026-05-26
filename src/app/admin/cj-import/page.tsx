@@ -748,18 +748,29 @@ export default function CJImportPage() {
                 {/* Cost breakdown */}
                 {(() => {
                   const prevInfo = PREVIEW_SHIPPING_USD[previewCountry] ?? PREVIEW_SHIPPING_USD['CA']
+                  // Use actual fetched CJ shipping when the preview country matches the fetched country
+                  const previewShipUSD = (previewCountry === shippingCountry && shippingUSD > 0)
+                    ? shippingUSD
+                    : prevInfo.usd
                   const minSellMAD = selectedVariantObjs.length > 0
                     ? Math.min(...selectedVariantObjs.map(v => Number(form.variantPrices[v.vid] || 0)).filter(n => n > 0))
                     : 0
                   const avgSellMAD = selectedVariantObjs.length > 0
                     ? selectedVariantObjs.reduce((s, v) => s + Number(form.variantPrices[v.vid] || 0), 0) / selectedVariantObjs.length
                     : 0
-                  const avgProfitCAD = avgMarginMAD != null ? avgMarginMAD * MAD_TO_CAD : null
+                  // Real profit = sell price - product cost (shipping passes through: customer pays same as CJ charges)
+                  // When preview country matches fetched shipping country, profit also accounts for any ship mismatch
+                  const baseMarginCAD = avgMarginMAD != null ? avgMarginMAD * MAD_TO_CAD : null
+                  // If we have real shipping for the preview country, deduct any difference (customer vs CJ ship cost)
+                  const shipDiffCAD = (previewCountry === shippingCountry && shippingUSD > 0)
+                    ? (previewShipUSD - shippingUSD) * USD_TO_CAD  // 0 when same, negative = loss
+                    : 0
+                  const avgProfitCAD = baseMarginCAD != null ? baseMarginCAD + shipDiffCAD : null
                   const avgMarginPct = avgSellMAD > 0 && avgMarginMAD != null
-                    ? Math.round((avgMarginMAD / (avgSellMAD)) * 100)
+                    ? Math.round((avgMarginMAD / avgSellMAD) * 100)
                     : null
                   const websiteCAD = minSellMAD > 0
-                    ? customerPriceCAD(minSellMAD, prevInfo.usd)
+                    ? customerPriceCAD(minSellMAD, previewShipUSD)
                     : null
                   return (
                     <div className="bg-white/3 border border-white/8 px-4 py-3 text-xs space-y-1.5">
@@ -814,7 +825,12 @@ export default function CJImportPage() {
                         </div>
                         <div className="flex justify-between text-white/50">
                           <span>+ Shipping ({prevInfo.label})</span>
-                          <span>{cadUSD(prevInfo.usd, 0)}</span>
+                          <span>
+                            {cadUSD(previewShipUSD, 0)}
+                            {previewCountry === shippingCountry && shippingUSD > 0 && (
+                              <span className="ml-1 text-[9px] text-brand-gold/60">actual</span>
+                            )}
+                          </span>
                         </div>
                         <div className={`flex justify-between font-bold mt-1 pt-1 border-t border-white/10 ${websiteCAD ? 'text-brand-gold' : 'text-white/20'}`}>
                           <span>= Price on website</span>
