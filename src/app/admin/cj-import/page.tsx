@@ -204,21 +204,30 @@ export default function CJImportPage() {
   const [sortOrder, setSortOrder] = useState<'none' | 'asc' | 'desc'>('none')
   const [cardPrices, setCardPrices] = useState<Record<string, number>>({})
 
-  // After search results load, fetch detail prices sequentially to avoid rate limits
+  // Fetch detail prices in batches of 3 to balance speed vs rate limits
   const fetchCardPrices = useCallback(async (products: CJProduct[]) => {
     setCardPrices({})
-    for (const p of products) {
-      try {
-        const res = await fetch(`/api/cj/products?pid=${p.pid}`, { credentials: 'include' })
-        const data = await res.json()
-        if (data.result && data.data) {
-          const detail = normalizeProduct(data.data)
-          if (detail.sellingPrice > 0) {
-            setCardPrices((prev) => ({ ...prev, [p.pid]: detail.sellingPrice }))
+    const BATCH = 3
+    for (let i = 0; i < products.length; i += BATCH) {
+      const batch = products.slice(i, i + BATCH)
+      await Promise.all(batch.map(async (p) => {
+        try {
+          const res = await fetch(`/api/cj/products?pid=${p.pid}`, { credentials: 'include' })
+          const data = await res.json()
+          if (data.result && data.data) {
+            const detail = normalizeProduct(data.data)
+            const price = detail.sellingPrice > 0 ? detail.sellingPrice : 0
+            // Also try getting price directly from variants
+            const variantMin = (data.data.variants ?? data.data.variantList ?? [])
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              .map((v: any) => v.variantSellPrice ?? v.variantPrice ?? v.sellPrice ?? v.costPrice ?? 0)
+              .filter((n: number) => n > 0)
+            const finalPrice = variantMin.length > 0 ? Math.min(...variantMin) : price
+            if (finalPrice > 0) setCardPrices((prev) => ({ ...prev, [p.pid]: finalPrice }))
           }
-        }
-      } catch {}
-      await new Promise((r) => setTimeout(r, 200)) // 200ms between requests
+        } catch {}
+      }))
+      if (i + BATCH < products.length) await new Promise((r) => setTimeout(r, 400))
     }
   }, [])
 
