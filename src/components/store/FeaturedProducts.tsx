@@ -17,6 +17,7 @@ interface Props {
     sizes: Array<{ size: string; stock: number }>
     category: string
     cjPid?: string
+    shippingBakedUSD?: number
   }>
 }
 

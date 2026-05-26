@@ -18,6 +18,7 @@ interface Props {
     sizes: Array<{ size: string; stock: number }>
     category: string
     cjPid?: string
+    shippingBakedUSD?: number
   }
 }
 
@@ -26,12 +27,14 @@ export default function ProductCard({ product }: Props) {
   const { format, shippingCostUSD, usdToCAD } = useCurrency()
   const { tr } = useLanguage()
 
-  // For CJ products: add the visitor's country shipping (fetched by CurrencyContext for their country).
-  const displayPrice = product.cjPid && shippingCostUSD > 0
-    ? product.price + shippingCostUSD * usdToCAD
+  // Use the product's own baked shipping (set at import time) so listing matches detail page.
+  // Fall back to global context shipping if not set.
+  const shipUSD = product.shippingBakedUSD ?? shippingCostUSD
+  const displayPrice = product.cjPid && shipUSD > 0
+    ? product.price + shipUSD * usdToCAD
     : product.price
-  const originalDisplay = product.originalPrice && product.cjPid && shippingCostUSD > 0
-    ? product.originalPrice + shippingCostUSD * usdToCAD
+  const originalDisplay = product.originalPrice && product.cjPid && shipUSD > 0
+    ? product.originalPrice + shipUSD * usdToCAD
     : product.originalPrice
 
   const discount = originalDisplay && originalDisplay > displayPrice
