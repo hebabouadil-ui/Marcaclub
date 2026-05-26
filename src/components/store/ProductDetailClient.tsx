@@ -266,16 +266,6 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                       <Image src={img} alt="" fill unoptimized={isExternal(img)} className="object-cover bg-white" sizes="72px" />
                     </button>
                   ))}
-                  {/* Video thumbnail in strip */}
-                  {videoEmbed && (
-                    <button onClick={() => setShowVideo(true)}
-                      className="relative w-full flex-shrink-0 overflow-hidden border-2 border-transparent opacity-60 hover:opacity-90 hover:border-brand-gold transition-all duration-200 bg-black"
-                      style={{ aspectRatio: '1/1' }}>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <Play size={20} className="text-white" fill="white" />
-                      </div>
-                    </button>
-                  )}
                 </div>
               )}
 
@@ -336,44 +326,64 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                     <Image src={img} alt="" fill unoptimized={isExternal(img)} className="object-cover bg-white" sizes="60px" />
                   </button>
                 ))}
-                {videoEmbed && (
-                  <button onClick={() => setShowVideo(true)}
-                    className="flex-shrink-0 bg-black flex items-center justify-center border-2 border-transparent opacity-70 hover:opacity-100 hover:border-brand-gold transition-all"
-                    style={{ width: '60px', height: '60px' }}>
-                    <Play size={18} className="text-white" fill="white" />
-                  </button>
-                )}
               </div>
             )}
 
-            {/* Video embed (inline, below images) */}
-            {videoEmbed && showVideo && (
-              <div className="mt-4">
-                {videoEmbed.type === 'youtube' || videoEmbed.type === 'tiktok' ? (
-                  <iframe
-                    src={videoEmbed.embedUrl}
-                    className="w-full rounded"
-                    style={{ aspectRatio: videoEmbed.type === 'tiktok' ? '9/16' : '16/9', maxHeight: videoEmbed.type === 'tiktok' ? '560px' : undefined, border: 'none' }}
-                    allow="autoplay; encrypted-media"
-                    allowFullScreen
-                  />
-                ) : videoEmbed.type === 'video' ? (
-                  // eslint-disable-next-line jsx-a11y/media-has-caption
-                  <video src={videoEmbed.embedUrl} controls className="w-full rounded" style={{ maxHeight: '480px' }} />
+            {/* Video — compact strip below thumbnails */}
+            {videoEmbed && (
+              <div className="mt-3">
+                {!showVideo ? (
+                  <button onClick={() => setShowVideo(true)}
+                    className="flex items-center gap-2 text-xs tracking-widest uppercase text-brand-gold hover:text-brand-black transition-colors font-medium">
+                    <Play size={13} fill="currentColor" /> Voir la vidéo produit
+                  </button>
                 ) : (
-                  <a href={videoEmbed.embedUrl} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm text-brand-gold underline">
-                    <Play size={14} /> Voir la vidéo
-                  </a>
+                  <div className="flex gap-3 items-start">
+                    {/* TikTok: clip the iframe to hide the account header/footer */}
+                    {videoEmbed.type === 'tiktok' ? (
+                      <div style={{ width: '180px', flexShrink: 0, position: 'relative', overflow: 'hidden', height: '300px' }}>
+                        <iframe
+                          src={`${videoEmbed.embedUrl}?rel=0`}
+                          style={{
+                            position: 'absolute',
+                            top: '-60px',   /* clip TikTok header */
+                            left: '0',
+                            width: '100%',
+                            height: 'calc(100% + 130px)', /* compensate top+bottom clip */
+                            border: 'none',
+                            pointerEvents: 'auto',
+                          }}
+                          allow="autoplay; encrypted-media"
+                          allowFullScreen
+                        />
+                      </div>
+                    ) : videoEmbed.type === 'youtube' ? (
+                      <div style={{ width: '260px', flexShrink: 0 }}>
+                        <iframe
+                          src={videoEmbed.embedUrl}
+                          style={{ width: '100%', aspectRatio: '16/9', border: 'none', display: 'block' }}
+                          allow="autoplay; encrypted-media"
+                          allowFullScreen
+                        />
+                      </div>
+                    ) : videoEmbed.type === 'video' ? (
+                      <div style={{ width: '260px', flexShrink: 0 }}>
+                        {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                        <video src={videoEmbed.embedUrl} controls style={{ width: '100%', maxHeight: '220px', display: 'block' }} />
+                      </div>
+                    ) : (
+                      <a href={videoEmbed.embedUrl} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-sm text-brand-gold underline">
+                        <Play size={14} /> Voir la vidéo
+                      </a>
+                    )}
+                    <button onClick={() => setShowVideo(false)}
+                      className="text-[10px] text-brand-gray hover:text-brand-black underline mt-1">
+                      ✕ Fermer
+                    </button>
+                  </div>
                 )}
-                <button onClick={() => setShowVideo(false)} className="mt-2 text-xs text-brand-gray hover:text-brand-black underline">Masquer la vidéo</button>
               </div>
-            )}
-            {videoEmbed && !showVideo && (
-              <button onClick={() => setShowVideo(true)}
-                className="mt-3 flex items-center gap-2 text-xs tracking-widest uppercase text-brand-gold hover:text-brand-black transition-colors font-medium">
-                <Play size={13} fill="currentColor" /> Voir la vidéo produit
-              </button>
             )}
           </div>
 
