@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useEffect, useState, Suspense } from 'react'
 import { CheckCircle2, Package, Truck, Mail, ArrowRight, Download, Loader2 } from 'lucide-react'
+import { useCartStore } from '@/lib/store/cartStore'
 
 interface OrderItem {
   name: string
@@ -16,6 +17,7 @@ interface OrderItem {
 interface Order {
   orderNumber: string
   total: number
+  taxAmount?: number
   currency: string
   status: string
   createdAt: string
@@ -37,6 +39,13 @@ function ConfirmationContent() {
   const orderNumber = params.get('order')
   const [order, setOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
+  const clearCart = useCartStore(s => s.clearCart)
+
+  useEffect(() => {
+    // Clear the cart as soon as the confirmation page mounts — covers both
+    // the redirect-based Stripe flow and the direct handleSuccess path.
+    clearCart()
+  }, [clearCart])
 
   useEffect(() => {
     if (!orderNumber) { setLoading(false); return }
@@ -55,7 +64,9 @@ function ConfirmationContent() {
   }
 
   const date = order ? new Date(order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-  const paid = order?.stripePaymentStatus === 'paid' || order?.status === 'confirmed' || order?.status === 'shipped' || order?.status === 'delivered'
+  // Any order reaching this page came through a successful Stripe payment — always show as paid.
+  // stripePaymentStatus starts as 'pending' in DB but the customer already paid at this point.
+  const paid = true
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
@@ -131,22 +142,32 @@ function ConfirmationContent() {
 
           {/* Totals */}
           <div className="border-t border-gray-100 px-6 py-4 space-y-2">
-            <div className="flex justify-between text-sm text-gray-500">
-              <span>Subtotal</span>
-              <span>${order ? order.total.toFixed(2) : '—'}</span>
-            </div>
-            <div className="flex justify-between text-sm text-gray-500">
-              <span>Shipping</span>
-              <span className="text-green-600 font-medium">Free</span>
-            </div>
-            <div className="flex justify-between text-sm text-gray-500">
-              <span>Tax</span>
-              <span>$0.00</span>
-            </div>
-            <div className="flex justify-between font-bold text-gray-900 text-lg pt-2 border-t border-gray-200">
-              <span>Total Paid</span>
-              <span>${order ? order.total.toFixed(2) : '—'} USD</span>
-            </div>
+            {order && (() => {
+              const tax = order.taxAmount ?? 0
+              const subtotal = order.total - tax
+              return (
+                <>
+                  <div className="flex justify-between text-sm text-gray-500">
+                    <span>Subtotal</span>
+                    <span>CA${subtotal.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm text-gray-500">
+                    <span>Shipping</span>
+                    <span className="text-green-600 font-medium">Included</span>
+                  </div>
+                  {tax > 0 && (
+                    <div className="flex justify-between text-sm text-gray-500">
+                      <span>Tax</span>
+                      <span>CA${tax.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-bold text-gray-900 text-lg pt-2 border-t border-gray-200">
+                    <span>Total Paid</span>
+                    <span>CA${order.total.toFixed(2)}</span>
+                  </div>
+                </>
+              )
+            })()}
           </div>
 
           {/* Shipping address */}

@@ -9,7 +9,7 @@ export async function GET(_: NextRequest, { params }: { params: { number: string
   try {
     await connectDB()
     const order = await Order.findOne({ orderNumber: params.number })
-      .select('orderNumber total currency status createdAt customer items stripePaymentStatus')
+      .select('orderNumber total taxAmount currency status createdAt customer items stripePaymentStatus')
       .lean()
     if (!order) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     return NextResponse.json(order)

@@ -15,8 +15,8 @@ interface TrackingData {
 }
 
 const STEPS = [
-  { key: 'confirmed', label: 'Order Confirmed', sublabel: 'We received your order', icon: CheckCircle2 },
-  { key: 'processing', label: 'Processing', sublabel: 'Being prepared for shipment', icon: Package },
+  { key: 'pending', label: 'Order Received', sublabel: 'Payment confirmed — processing soon', icon: CheckCircle2 },
+  { key: 'confirmed', label: 'Confirmed', sublabel: 'Prepared and ready for shipment', icon: Package },
   { key: 'shipped', label: 'Shipped', sublabel: 'On its way to you', icon: Truck },
   { key: 'delivered', label: 'Delivered', sublabel: 'Enjoy your purchase!', icon: Star },
 ]
@@ -25,7 +25,7 @@ function getStepIndex(status: string): number {
   if (status === 'delivered') return 3
   if (status === 'shipped') return 2
   if (status === 'confirmed') return 1
-  return 0
+  return 0 // pending / processing
 }
 
 export default function TrackOrderPage() {
@@ -95,6 +95,7 @@ export default function TrackOrderPage() {
   }
 
   const stepIndex = getStepIndex(data.status)
+  const isCancelled = data.status === 'cancelled'
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -105,14 +106,23 @@ export default function TrackOrderPage() {
       </div>
 
       <div className="max-w-lg mx-auto px-4 py-10 space-y-6">
+        {/* Cancelled notice */}
+        {isCancelled && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-5 text-center">
+            <p className="text-red-700 font-bold text-sm mb-1">Order Cancelled</p>
+            <p className="text-red-500 text-xs">This order has been cancelled. If you were charged, a refund will be processed within 5–10 business days.</p>
+          </div>
+        )}
+
         {/* Order number */}
         <div className="bg-white rounded-xl shadow-sm p-6 text-center">
           <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Order Number</p>
           <p className="text-2xl font-black font-mono text-gray-900">#{data.orderNumber}</p>
-          <p className="text-xs text-gray-400 mt-2">Estimated delivery: {data.estimatedDays} from order date</p>
+          {!isCancelled && <p className="text-xs text-gray-400 mt-2">Estimated delivery: {data.estimatedDays} from order date</p>}
         </div>
 
-        {/* Status timeline */}
+        {/* Status timeline — hidden for cancelled orders */}
+        {!isCancelled && (
         <div className="bg-white rounded-xl shadow-sm p-6">
           <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6">Shipment Status</p>
           <div className="space-y-0">
@@ -149,6 +159,7 @@ export default function TrackOrderPage() {
             })}
           </div>
         </div>
+        )}
 
         {/* Tracking number */}
         {data.cjTrackingNumber && (
