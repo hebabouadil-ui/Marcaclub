@@ -187,6 +187,14 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
   const images = product.images ?? []
   const isExternal = (url: string) => !url.includes('cloudinary.com')
 
+  // Build slides: images first, then video as the last slide if present
+  type Slide = { type: 'image'; url: string } | { type: 'video'; embed: ReturnType<typeof getVideoEmbed> }
+  const slides: Slide[] = [
+    ...images.map((url) => ({ type: 'image' as const, url })),
+    ...(videoEmbed ? [{ type: 'video' as const, embed: videoEmbed }] : []),
+  ]
+  const totalSlides = slides.length
+
   const selectedSizeEntry = sizes.find((s) => s.size === selectedSize)
   const selectedStock = selectedSizeEntry?.stock ?? 0
   const totalStock = sizes.reduce((s, i) => s + i.stock, 0)
@@ -206,8 +214,8 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
     if (idx === imgIdx) return
     setPage([idx, idx > imgIdx ? 1 : -1])
   }
-  const prev = () => setPage(([i]) => [(i - 1 + images.length) % images.length, -1])
-  const next = () => setPage(([i]) => [(i + 1) % images.length, 1])
+  const prev = () => setPage(([i]) => [(i - 1 + totalSlides) % totalSlides, -1])
+  const next = () => setPage(([i]) => [(i + 1) % totalSlides, 1])
 
   const handleAddToCart = () => {
     if (!selectedSize) { toast.error(tr.product?.chooseSize ?? 'Veuillez choisir une taille'); return }
@@ -254,23 +262,30 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
         </div>
 
         <div className="grid md:grid-cols-[1fr_420px] gap-5 md:gap-8 lg:gap-12 items-start" style={{ overflow: 'hidden' }}>
-          {/* Images panel */}
+          {/* Slides panel: images + video mixed */}
           <div style={{ minWidth: 0 }}>
             <div className="flex gap-2 md:gap-3">
+
               {/* Vertical thumbnail strip — desktop only */}
-              {images.length > 1 && (
+              {totalSlides > 1 && (
                 <div className="hidden md:flex flex-col gap-2 flex-shrink-0" style={{ width: '72px' }}>
-                  {images.map((img, i) => (
+                  {slides.map((slide, i) => (
                     <button key={i} onClick={() => goTo(i)}
                       className={`relative w-full flex-shrink-0 overflow-hidden border-2 transition-all duration-200 ${i === imgIdx ? 'border-brand-black opacity-100' : 'border-transparent opacity-60 hover:opacity-90'}`}
                       style={{ aspectRatio: '1/1' }}>
-                      <Image src={img} alt="" fill unoptimized={isExternal(img)} className="object-cover bg-white" sizes="72px" />
+                      {slide.type === 'image' ? (
+                        <Image src={slide.url} alt="" fill unoptimized={isExternal(slide.url)} className="object-cover bg-white" sizes="72px" />
+                      ) : (
+                        <div className="absolute inset-0 bg-black flex items-center justify-center">
+                          <Play size={20} className="text-white" fill="white" />
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>
               )}
 
-              {/* Main image */}
+              {/* Main slide */}
               <div style={{ position: 'relative', flex: 1, aspectRatio: '1/1', maxHeight: '480px', overflow: 'hidden', background: '#f8f8f8' }}>
                 <AnimatePresence initial={false} custom={dir}>
                   <motion.div
@@ -281,15 +296,39 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                     animate="center"
                     exit="exit"
                     transition={swipeTransition}
-                    style={{ position: 'absolute', inset: 0, background: '#f8f8f8', overflow: 'hidden' }}
+                    style={{ position: 'absolute', inset: 0, background: '#111', overflow: 'hidden' }}
                   >
-                    {images[imgIdx] ? (
+                    {slides[imgIdx]?.type === 'image' ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={images[imgIdx]}
+                        src={(slides[imgIdx] as { type: 'image'; url: string }).url}
                         alt={product.name}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', background: '#f8f8f8' }}
                       />
+                    ) : slides[imgIdx]?.type === 'video' ? (
+                      (() => {
+                        const embed = (slides[imgIdx] as { type: 'video'; embed: ReturnType<typeof getVideoEmbed> }).embed
+                        if (!embed) return null
+                        if (embed.type === 'tiktok') return (
+                          <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+                            <iframe
+                              src={embed.embedUrl}
+                              style={{ position: 'absolute', top: '-60px', left: 0, width: '100%', height: 'calc(100% + 130px)', border: 'none' }}
+                              allow="autoplay; encrypted-media" allowFullScreen
+                            />
+                          </div>
+                        )
+                        if (embed.type === 'youtube') return (
+                          <iframe src={embed.embedUrl}
+                            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
+                            allow="autoplay; encrypted-media" allowFullScreen />
+                        )
+                        return (
+                          // eslint-disable-next-line jsx-a11y/media-has-caption
+                          <video src={embed.embedUrl} controls autoPlay
+                            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', background: '#000' }} />
+                        )
+                      })()
                     ) : (
                       <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <span className="text-brand-gray text-xs tracking-widest uppercase">Marcaclub</span>
@@ -298,7 +337,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                   </motion.div>
                 </AnimatePresence>
 
-                {images.length > 1 && (
+                {totalSlides > 1 && (
                   <>
                     <button onClick={prev} className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white p-2 shadow-md transition-all hover:scale-110 active:scale-95">
                       <ChevronLeft size={16} />
@@ -307,9 +346,11 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                       <ChevronRight size={16} />
                     </button>
                     <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5 z-10 md:hidden">
-                      {images.map((_, i) => (
+                      {slides.map((slide, i) => (
                         <button key={i} onClick={() => goTo(i)}
-                          className={`rounded-full transition-all duration-300 ${i === imgIdx ? 'w-5 h-1.5 bg-white shadow' : 'w-1.5 h-1.5 bg-white/60 hover:bg-white/90'}`} />
+                          className={`rounded-full transition-all duration-300 ${i === imgIdx ? 'w-5 h-1.5 bg-white shadow' : 'w-1.5 h-1.5 bg-white/40 hover:bg-white/80'}`}>
+                          {slide.type === 'video' && i !== imgIdx && <Play size={6} className="text-white m-auto" />}
+                        </button>
                       ))}
                     </div>
                   </>
@@ -317,19 +358,24 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
               </div>
             </div>
 
-            {/* Horizontal thumbnail strip — mobile only */}
-            {images.length > 1 && (
+            {/* Horizontal thumbnail strip — mobile */}
+            {totalSlides > 1 && (
               <div className="flex md:hidden gap-2 mt-2 overflow-x-auto pb-1">
-                {images.map((img, i) => (
+                {slides.map((slide, i) => (
                   <button key={i} onClick={() => goTo(i)}
                     className={`relative flex-shrink-0 overflow-hidden border-2 transition-all duration-200 ${i === imgIdx ? 'border-brand-black opacity-100' : 'border-transparent opacity-60 hover:opacity-90'}`}
                     style={{ width: '60px', height: '60px' }}>
-                    <Image src={img} alt="" fill unoptimized={isExternal(img)} className="object-cover bg-white" sizes="60px" />
+                    {slide.type === 'image' ? (
+                      <Image src={slide.url} alt="" fill unoptimized={isExternal(slide.url)} className="object-cover bg-white" sizes="60px" />
+                    ) : (
+                      <div className="absolute inset-0 bg-black flex items-center justify-center">
+                        <Play size={16} className="text-white" fill="white" />
+                      </div>
+                    )}
                   </button>
                 ))}
               </div>
             )}
-
           </div>
 
           {/* Info panel */}
