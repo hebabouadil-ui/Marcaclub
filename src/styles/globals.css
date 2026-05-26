@@ -68,10 +68,12 @@ body {
 
 /* CJ product description HTML rendering */
 .cj-description img {
-  max-width: 100%;
+  max-width: 480px;
+  width: 100%;
   height: auto;
   display: block;
-  margin: 0 auto 12px;
+  margin: 0 auto 16px;
+  border-radius: 6px;
 }
 .cj-description p { margin-bottom: 10px; font-size: 14px; color: #555; line-height: 1.7; }
 .cj-description table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 13px; }
