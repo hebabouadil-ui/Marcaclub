@@ -201,6 +201,29 @@ export default function CJImportPage() {
   const [shippingLoading, setShippingLoading] = useState(false)
   const [shippingLoaded, setShippingLoaded] = useState(false)
   const [showShipping, setShowShipping] = useState(false)
+  const [sortOrder, setSortOrder] = useState<'none' | 'asc' | 'desc'>('none')
+  const [cardPrices, setCardPrices] = useState<Record<string, number>>({})
+
+  // After search results load, fetch detail prices in background
+  const fetchCardPrices = useCallback(async (products: CJProduct[]) => {
+    setCardPrices({})
+    const results = await Promise.allSettled(
+      products.map(async (p) => {
+        const res = await fetch(`/api/cj/products?pid=${p.pid}`, { credentials: 'include' })
+        const data = await res.json()
+        if (data.result && data.data) {
+          const detail = normalizeProduct(data.data)
+          return { pid: p.pid, price: detail.sellingPrice }
+        }
+        return null
+      })
+    )
+    const prices: Record<string, number> = {}
+    for (const r of results) {
+      if (r.status === 'fulfilled' && r.value) prices[r.value.pid] = r.value.price
+    }
+    setCardPrices(prices)
+  }, [])
 
   const search = async (p = 1) => {
     if (!query.trim()) return
@@ -210,9 +233,11 @@ export default function CJImportPage() {
       const res = await fetch(`/api/cj/products?${param}=${encodeURIComponent(query)}&page=${p}`, { credentials: 'include' })
       const data = await res.json()
       if (data.result && Array.isArray(data.data?.list)) {
-        setResults(data.data.list.map(normalizeProduct))
+        const normalized = data.data.list.map(normalizeProduct)
+        setResults(normalized)
         setTotal(data.data.total ?? 0)
         setPage(p)
+        fetchCardPrices(normalized)
       } else {
         toast.error(data.message || data.error || `CJ error: ${JSON.stringify(data).slice(0, 120)}`, { duration: 8000 })
       }
@@ -453,11 +478,30 @@ export default function CJImportPage() {
         </button>
       </div>
 
-      {total > 0 && <p className="text-white/30 text-xs mb-4 tracking-wider">{total.toLocaleString()} products · page {page}</p>}
+      {total > 0 && (
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-white/30 text-xs tracking-wider">{total.toLocaleString()} products · page {page}</p>
+          <div className="flex gap-2">
+            {(['none', 'asc', 'desc'] as const).map((s) => (
+              <button key={s} onClick={() => setSortOrder(s)}
+                className={`text-[10px] px-3 py-1.5 uppercase tracking-widest transition-colors ${sortOrder === s ? 'bg-brand-gold text-brand-black' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}>
+                {s === 'none' ? 'Default' : s === 'asc' ? '↑ Price' : '↓ Price'}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Results grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
-        {results.map((product) => (
+        {[...results]
+          .sort((a, b) => {
+            if (sortOrder === 'none') return 0
+            const pa = cardPrices[a.pid] ?? a.sellingPrice ?? 0
+            const pb = cardPrices[b.pid] ?? b.sellingPrice ?? 0
+            return sortOrder === 'asc' ? pa - pb : pb - pa
+          })
+          .map((product) => (
           <div key={product.pid}
             className="bg-white/3 border border-white/8 cursor-pointer hover:border-white/20 transition-colors group"
             onClick={() => openPreview(product)}>
@@ -479,9 +523,12 @@ export default function CJImportPage() {
             <div className="p-3">
               <p className="text-white text-xs font-medium line-clamp-2 mb-1">{product.productNameEn}</p>
               <p className="text-white/40 text-[10px] mb-2">{product.categoryName}</p>
-              <span className="text-brand-gold text-xs font-bold">
-                {product.sellingPrice > 0 ? cadUSD(product.sellingPrice) : <span className="text-white/30">click to view</span>}
-              </span>
+              {(() => {
+                const price = cardPrices[product.pid] ?? (product.sellingPrice > 0 ? product.sellingPrice : null)
+                return price != null
+                  ? <span className="text-brand-gold text-xs font-bold">{cadUSD(price)}</span>
+                  : <span className="text-white/20 text-xs animate-pulse">loading…</span>
+              })()}
             </div>
           </div>
         ))}
