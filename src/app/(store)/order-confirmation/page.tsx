@@ -50,7 +50,8 @@ function ConfirmationContent() {
 
   useEffect(() => {
     if (!orderNumber) { setLoading(false); return }
-    fetch(`/api/orders/by-number/${orderNumber}`)
+    const emailQ = params.get('email') ? `?email=${encodeURIComponent(params.get('email')!)}` : ''
+    fetch(`/api/orders/by-number/${orderNumber}${emailQ}`)
       .then(r => r.ok ? r.json() : null)
       .then(data => { setOrder(data); setLoading(false) })
       .catch(() => setLoading(false))
@@ -67,7 +68,7 @@ function ConfirmationContent() {
   const date = order ? new Date(order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
   // Any order reaching this page came through a successful Stripe payment — always show as paid.
   // stripePaymentStatus starts as 'pending' in DB but the customer already paid at this point.
-  const paid = true
+  const paid = order?.status !== 'cancelled' && order?.stripePaymentStatus !== 'failed'
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">

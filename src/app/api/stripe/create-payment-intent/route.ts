@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { connectDB } from '@/lib/db'
 import Product from '@/lib/models/Product'
+import { getCadRates } from '@/lib/utils/getRates'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,13 +32,8 @@ export async function POST(req: NextRequest) {
     // Fetch live exchange rates server-side to avoid trusting client-provided rates
     let fxRate = 1 // CAD → target currency
     if (currencyLower !== 'cad') {
-      try {
-        const ratesRes = await fetch(`${process.env.NEXTAUTH_URL ?? 'http://localhost:3000'}/api/rates`, { cache: 'no-store' })
-        if (ratesRes.ok) {
-          const ratesData = await ratesRes.json()
-          fxRate = ratesData.rates?.[currencyLower.toUpperCase()] ?? 1
-        }
-      } catch { /* use rate 1 as fallback */ }
+      const rates = await getCadRates()
+      fxRate = rates[currencyLower.toUpperCase()] ?? 1
     }
 
     // Sum CAD subtotal server-side from DB prices (never trust client prices)

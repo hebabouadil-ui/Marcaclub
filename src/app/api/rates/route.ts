@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 
-export const dynamic = 'force-dynamic'
 // Revalidate every 6 hours so Vercel caches it at the edge
 export const revalidate = 21600
 

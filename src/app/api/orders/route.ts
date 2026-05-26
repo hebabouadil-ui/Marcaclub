@@ -8,6 +8,7 @@ import BlockedIP from '@/lib/models/BlockedIP'
 import { generateOrderNumber } from '@/lib/utils/generateOrderNumber'
 import { sendOrderConfirmationEmail, sendAdminOrderNotification } from '@/lib/utils/email'
 import { analyzeOrderRisk } from '@/lib/utils/riskAgent'
+import { getCadRates } from '@/lib/utils/getRates'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/authOptions'
 
@@ -63,9 +64,20 @@ export async function POST(req: NextRequest) {
       ? body.stripeClientSecret.split('_secret_')[0]
       : undefined
 
+    // Idempotency: if this payment intent already created an order, return it
+    if (stripePaymentIntentId) {
+      const existing = await Order.findOne({ stripePaymentIntentId })
+      if (existing) return NextResponse.json({ orderNumber: existing.orderNumber, orderId: String(existing._id) }, { status: 200 })
+    }
+
     // Currency the customer checked out in (e.g. 'USD', 'EUR', 'CAD')
     const orderCurrency = typeof body.currency === 'string' ? body.currency.toUpperCase() : 'CAD'
-    const currencySymbol: string = typeof body.currencySymbol === 'string' ? body.currencySymbol : 'CA$'
+    const CURRENCY_SYMBOLS: Record<string, string> = {
+      CAD: 'CA$', USD: '$', EUR: '€', GBP: '£', AUD: 'A$',
+      CHF: 'CHF ', JPY: '¥', AED: 'AED ', SAR: 'SAR ', BRL: 'R$',
+      MXN: 'MX$', INR: '₹', SGD: 'S$', NZD: 'NZ$',
+    }
+    const currencySymbol = CURRENCY_SYMBOLS[orderCurrency] ?? orderCurrency + ' '
 
     type OrderItem = { productId: string; size: string; quantity: number; name?: string }
     const items = body.items as OrderItem[]
@@ -76,13 +88,8 @@ export async function POST(req: NextRequest) {
     // Fetch live FX rate server-side: CAD → orderCurrency
     let fxRate = 1
     if (orderCurrency !== 'CAD') {
-      try {
-        const ratesRes = await fetch(`${process.env.NEXTAUTH_URL ?? 'http://localhost:3000'}/api/rates`, { cache: 'no-store' })
-        if (ratesRes.ok) {
-          const ratesData = await ratesRes.json()
-          fxRate = ratesData.rates?.[orderCurrency] ?? 1
-        }
-      } catch { /* use 1 as fallback */ }
+      const rates = await getCadRates()
+      fxRate = rates[orderCurrency] ?? 1
     }
 
     // Atomically decrement stock — validate + deduct in one operation per item

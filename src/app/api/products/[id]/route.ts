@@ -11,7 +11,10 @@ function normalizeSizes(sizes: unknown[]): { size: string; stock: number }[] {
 export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
   try {
     await connectDB()
-    const product = await Product.findById(params.id).lean()
+    const session = await getServerSession(authOptions)
+    const product = session
+      ? await Product.findById(params.id).lean()
+      : await Product.findOne({ _id: params.id, active: true }).lean()
     if (!product) return NextResponse.json({ message: 'Not found' }, { status: 404 })
     const p = product as Record<string, unknown>
     if (Array.isArray(p.sizes)) p.sizes = normalizeSizes(p.sizes as unknown[])

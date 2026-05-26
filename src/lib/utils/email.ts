@@ -1,6 +1,11 @@
 import { Resend } from 'resend'
 import { IOrder } from '../models/Order'
 
+function esc(s: string | undefined): string {
+  if (!s) return ''
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
+
 let _resend: Resend | null = null
 function getResend() {
   if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY)
@@ -48,8 +53,8 @@ function itemsTable(order: IOrder) {
   const rows = order.items.map((item) => `
     <tr>
       <td style="padding:14px 0;border-bottom:1px solid #f3f4f6;">
-        <p style="margin:0;font-size:14px;font-weight:600;color:#111827;">${item.name}</p>
-        <p style="margin:3px 0 0;font-size:12px;color:#9ca3af;">Size: ${item.size} &bull; Qty: ${item.quantity}</p>
+        <p style="margin:0;font-size:14px;font-weight:600;color:#111827;">${esc(item.name)}</p>
+        <p style="margin:3px 0 0;font-size:12px;color:#9ca3af;">Size: ${esc(item.size)} &bull; Qty: ${item.quantity}</p>
       </td>
       <td style="padding:14px 0;border-bottom:1px solid #f3f4f6;text-align:right;font-size:14px;font-weight:600;color:#111827;">
         ${fmtMoney(order, item.price * item.quantity)}
@@ -74,10 +79,10 @@ function shippingBlock(order: IOrder) {
   <div style="background:#f9fafb;border-radius:8px;padding:16px;margin-top:20px;">
     <p style="margin:0 0 8px;font-size:11px;font-weight:700;color:#9ca3af;letter-spacing:2px;text-transform:uppercase;">Ship To</p>
     <p style="margin:0;font-size:14px;color:#374151;line-height:1.7;">
-      ${c.name}<br/>
-      ${c.address}<br/>
-      ${c.city}${c.state ? `, ${c.state}` : ''} ${c.postalCode ?? ''}<br/>
-      ${c.country}
+      ${esc(c.name)}<br/>
+      ${esc(c.address)}<br/>
+      ${esc(c.city)}${c.state ? `, ${esc(c.state)}` : ''} ${esc(c.postalCode)}<br/>
+      ${esc(c.country)}
     </p>
   </div>`
 }
@@ -98,7 +103,7 @@ export async function sendOrderConfirmationEmail(order: IOrder, _emailNote?: str
         <span style="font-size:24px;">✓</span>
       </div>
       <h2 style="margin:0;font-size:22px;font-weight:700;color:#111827;">Order Confirmed!</h2>
-      <p style="margin:8px 0 0;color:#6b7280;font-size:14px;">Thank you for your purchase, ${order.customer.name}.</p>
+      <p style="margin:8px 0 0;color:#6b7280;font-size:14px;">Thank you for your purchase, ${esc(order.customer.name)}.</p>
     </div>
 
     <div style="background:#f9fafb;border-radius:8px;padding:16px;text-align:center;margin-bottom:24px;">
@@ -181,7 +186,7 @@ export async function sendOrderStatusEmail(order: IOrder, status: string) {
       <p style="margin:6px 0 0;font-size:22px;font-weight:800;color:#111827;font-family:monospace;">#${order.orderNumber}</p>
     </div>
 
-    <p style="color:#374151;font-size:14px;line-height:1.8;margin:0 0 24px;">Hi <strong>${order.customer.name}</strong>, ${cfg.body}</p>
+    <p style="color:#374151;font-size:14px;line-height:1.8;margin:0 0 24px;">Hi <strong>${esc(order.customer.name)}</strong>, ${cfg.body}</p>
 
     <h3 style="font-size:13px;font-weight:700;color:#111827;letter-spacing:1px;text-transform:uppercase;margin:0 0 16px;">Order Summary</h3>
     ${itemsTable(order)}
@@ -211,7 +216,7 @@ export async function sendAdminOrderNotification(order: IOrder) {
   const itemsText = order.items.map((i) => `  • ${i.name} (${i.size}) × ${i.quantity} — ${fmtMoney(order, i.price * i.quantity)}`).join('\n')
   const itemsHtml = order.items.map((i) => `
     <tr>
-      <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;font-size:13px;color:#374151;">${i.name} <span style="color:#9ca3af;">× ${i.quantity} · ${i.size}</span></td>
+      <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;font-size:13px;color:#374151;">${esc(i.name)} <span style="color:#9ca3af;">× ${i.quantity} · ${esc(i.size)}</span></td>
       <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;text-align:right;font-size:13px;font-weight:600;color:#111827;">${fmtMoney(order, i.price * i.quantity)}</td>
     </tr>`).join('')
 
@@ -226,10 +231,10 @@ export async function sendAdminOrderNotification(order: IOrder) {
       <p style="margin:6px 0 0;font-size:20px;font-weight:700;color:#16a34a;">${fmtMoney(order, order.total)}</p>
     </div>
     <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
-      <tr><td style="padding:8px 0;font-size:13px;color:#6b7280;">Customer</td><td style="padding:8px 0;font-size:13px;font-weight:600;color:#111827;text-align:right;">${c.name}</td></tr>
-      <tr><td style="padding:8px 0;font-size:13px;color:#6b7280;">Phone</td><td style="padding:8px 0;font-size:13px;color:#111827;text-align:right;">${c.phone}</td></tr>
-      ${c.email ? `<tr><td style="padding:8px 0;font-size:13px;color:#6b7280;">Email</td><td style="padding:8px 0;font-size:13px;color:#111827;text-align:right;">${c.email}</td></tr>` : ''}
-      <tr><td style="padding:8px 0;font-size:13px;color:#6b7280;">Ship To</td><td style="padding:8px 0;font-size:13px;color:#111827;text-align:right;">${c.city}, ${c.country}</td></tr>
+      <tr><td style="padding:8px 0;font-size:13px;color:#6b7280;">Customer</td><td style="padding:8px 0;font-size:13px;font-weight:600;color:#111827;text-align:right;">${esc(c.name)}</td></tr>
+      <tr><td style="padding:8px 0;font-size:13px;color:#6b7280;">Phone</td><td style="padding:8px 0;font-size:13px;color:#111827;text-align:right;">${esc(c.phone)}</td></tr>
+      ${c.email ? `<tr><td style="padding:8px 0;font-size:13px;color:#6b7280;">Email</td><td style="padding:8px 0;font-size:13px;color:#111827;text-align:right;">${esc(c.email)}</td></tr>` : ''}
+      <tr><td style="padding:8px 0;font-size:13px;color:#6b7280;">Ship To</td><td style="padding:8px 0;font-size:13px;color:#111827;text-align:right;">${esc(c.city)}, ${esc(c.country)}</td></tr>
     </table>
     <h3 style="font-size:12px;color:#9ca3af;letter-spacing:1px;text-transform:uppercase;margin:0 0 12px;">Items</h3>
     <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">${itemsHtml}

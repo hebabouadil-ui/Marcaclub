@@ -4,7 +4,6 @@ import { connectDB } from '@/lib/db'
 import Order from '@/lib/models/Order'
 import Product from '@/lib/models/Product'
 import { createCJOrder } from '@/lib/utils/cjApi'
-import { sendOrderConfirmationEmail, sendAdminOrderNotification } from '@/lib/utils/email'
 
 export async function POST(req: NextRequest) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' })
@@ -27,12 +26,6 @@ export async function POST(req: NextRequest) {
       { stripePaymentStatus: 'paid', status: 'confirmed' },
       { new: true }
     )
-
-    if (order) {
-      // Send confirmation emails
-      sendOrderConfirmationEmail(order).catch(e => console.error('Confirmation email failed:', e))
-      sendAdminOrderNotification(order).catch(e => console.error('Admin notification failed:', e))
-    }
 
     // Auto-forward to CJ Dropshipping if order has CJ products
     if (order && !order.cjOrderId) {
@@ -87,10 +80,20 @@ export async function POST(req: NextRequest) {
   if (event.type === 'payment_intent.payment_failed') {
     const pi = event.data.object as Stripe.PaymentIntent
     await connectDB()
-    await Order.findOneAndUpdate(
-      { stripePaymentIntentId: pi.id },
-      { stripePaymentStatus: 'failed', status: 'cancelled' }
-    )
+    const failedOrder = await Order.findOne({ stripePaymentIntentId: pi.id })
+    if (failedOrder && failedOrder.status !== 'cancelled') {
+      // Restore stock for each item before cancelling
+      for (const item of failedOrder.items) {
+        await Product.findOneAndUpdate(
+          { _id: item.productId, 'sizes.size': item.size },
+          { $inc: { 'sizes.$[el].stock': item.quantity, stock: item.quantity } },
+          { arrayFilters: [{ 'el.size': item.size }] }
+        )
+      }
+      failedOrder.stripePaymentStatus = 'failed'
+      failedOrder.status = 'cancelled'
+      await failedOrder.save()
+    }
   }
 
   return NextResponse.json({ received: true })

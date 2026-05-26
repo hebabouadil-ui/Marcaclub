@@ -151,12 +151,10 @@ export async function createCJOrder(params: {
       }
     }),
   }
-  console.log('CJ createOrder payload:', JSON.stringify(payload))
   const data = await cjFetch('/shopping/order/createOrderV2', {
     method: 'POST',
     body: JSON.stringify(payload),
   })
-  console.log('CJ createOrder response:', JSON.stringify(data))
   return data
 }
 
