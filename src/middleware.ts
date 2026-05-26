@@ -6,23 +6,23 @@ export function middleware(req: NextRequest) {
     hostname === 'admin.marca-club.com' ||
     hostname.startsWith('admin.marca-club.com:')
 
+  // Stamp the visitor's country on every response so client code can read it
+  // without an async API round-trip. Vercel injects x-vercel-ip-country on
+  // all requests (edge network) — this is the most reliable source.
+  const country = req.headers.get('x-vercel-ip-country') || 'CA'
+
   const { pathname } = req.nextUrl
 
+  const withCountry = (r: NextResponse) => {
+    r.cookies.set('mc-country-code', country, { path: '/', maxAge: 3600, sameSite: 'lax' })
+    return r
+  }
+
   if (isAdminSubdomain) {
-    // Always pass API routes and Next internals through unchanged
-    if (pathname.startsWith('/api') || pathname.startsWith('/_next')) {
-      return NextResponse.next()
-    }
-    // Root → admin dashboard
-    if (pathname === '/') {
-      return NextResponse.rewrite(new URL('/admin/dashboard', req.url))
-    }
-    // Already prefixed with /admin — pass through
-    if (pathname.startsWith('/admin')) {
-      return NextResponse.next()
-    }
-    // Any other path → rewrite under /admin
-    return NextResponse.rewrite(new URL(`/admin${pathname}`, req.url))
+    if (pathname.startsWith('/api') || pathname.startsWith('/_next')) return NextResponse.next()
+    if (pathname === '/') return withCountry(NextResponse.rewrite(new URL('/admin/dashboard', req.url)))
+    if (pathname.startsWith('/admin')) return NextResponse.next()
+    return withCountry(NextResponse.rewrite(new URL(`/admin${pathname}`, req.url)))
   }
 
   // On the main domain, redirect /admin/* to the subdomain
@@ -32,7 +32,10 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(target, 308)
   }
 
-  return NextResponse.next()
+  const res = NextResponse.next()
+  // Set country cookie on every request so it's always current
+  res.cookies.set('mc-country-code', country, { path: '/', maxAge: 3600, sameSite: 'lax' })
+  return res
 }
 
 export const config = {

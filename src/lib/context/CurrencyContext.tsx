@@ -8,11 +8,11 @@ interface CurrencyCtx {
   symbol: string
   rate: number
   format: (mad: number) => string
-  formatUSD: (usd: number) => string  // for CJ shipping prices (which are in USD)
+  formatUSD: (usd: number) => string
   setCurrency: (code: string) => void
   geo: GeoInfo | null
   available: { code: string; name: string; symbol: string }[]
-  shippingCostUSD: number  // best shipping option for user's country (0 until loaded)
+  shippingCostUSD: number
 }
 
 export const CURRENCIES: { code: string; name: string; symbol: string }[] = [
@@ -41,11 +41,34 @@ const COUNTRY_CURRENCY: Record<string, string> = {
   MA: 'MAD', BR: 'BRL', MX: 'MXN', IN: 'INR',
 }
 
-// Rates relative to MAD (1 MAD = X units of currency)
-// MAD is the base — all prices in DB are stored in MAD
+// Hardcoded shipping fallback (USD) — used instantly while CJ API loads.
+// Based on typical CJ Dropshipping rates from China per country/region.
+const SHIPPING_FALLBACK_USD: Record<string, number> = {
+  // North Africa
+  MA: 2.5, DZ: 3.0, TN: 3.0, LY: 3.5, EG: 3.5,
+  // Middle East
+  AE: 5.5, SA: 5.5, QA: 5.5, KW: 5.5, BH: 5.5, OM: 6.0, JO: 6.0,
+  // North America
+  US: 6.5, CA: 7.0, MX: 7.5,
+  // Western Europe
+  FR: 8.5, DE: 8.5, GB: 8.0, ES: 8.5, IT: 8.5, NL: 8.5, BE: 8.5,
+  PT: 9.0, CH: 9.0, AT: 9.0, IE: 9.0,
+  // Oceania
+  AU: 9.5, NZ: 10.0,
+  // Asia
+  JP: 5.0, SG: 4.5, IN: 4.0,
+  // South America
+  BR: 9.0,
+}
+const SHIPPING_DEFAULT_USD = 7.5
+
+function getShippingFallback(countryCode: string): number {
+  return SHIPPING_FALLBACK_USD[countryCode] ?? SHIPPING_DEFAULT_USD
+}
+
 const FALLBACK_RATES: Record<string, number> = {
   MAD: 1,
-  USD: 0.0995,  // 1 MAD ≈ $0.0995
+  USD: 0.0995,
   CAD: 0.135,
   EUR: 0.0916,
   GBP: 0.0786,
@@ -61,6 +84,13 @@ const FALLBACK_RATES: Record<string, number> = {
   NZD: 0.162,
 }
 
+// Read the country cookie set by middleware (synchronous, no API call needed)
+function readCountryCookie(): string {
+  if (typeof document === 'undefined') return ''
+  const match = document.cookie.match(/(?:^|;\s*)mc-country-code=([^;]+)/)
+  return match ? decodeURIComponent(match[1]) : ''
+}
+
 const DEFAULT: CurrencyCtx = {
   currency: 'CAD', symbol: 'CA$', rate: 0.135,
   format: (n) => `CA$${(n * 0.135).toFixed(2)}`,
@@ -68,36 +98,35 @@ const DEFAULT: CurrencyCtx = {
   setCurrency: () => {},
   geo: null,
   available: CURRENCIES,
-  shippingCostUSD: 0,
+  shippingCostUSD: SHIPPING_DEFAULT_USD,
 }
 
-// Module-level cache so shipping isn't refetched on re-renders
+// Module-level cache: country → shipping cost USD
 const shippingCache: Record<string, number> = {}
 
 async function fetchBestShippingUSD(countryCode: string): Promise<number> {
   if (shippingCache[countryCode] !== undefined) return shippingCache[countryCode]
   try {
     const res = await fetch(`/api/shipping?country=${countryCode}&weight=300`)
-    if (!res.ok) return 0
+    if (!res.ok) return getShippingFallback(countryCode)
     const data = await res.json()
     const options: Array<{ logisticPrice: number; agingMax?: number; agingMin?: number }> = data.options ?? []
-    if (options.length === 0) return 0
+    if (options.length === 0) return getShippingFallback(countryCode)
     const maxPrice = Math.max(...options.map(o => o.logisticPrice), 1)
     const maxDays = Math.max(...options.map(o => o.agingMax ?? o.agingMin ?? 30), 1)
     const best = options
       .map(o => ({ ...o, score: (o.logisticPrice / maxPrice) * 0.7 + ((o.agingMax ?? o.agingMin ?? 30) / maxDays) * 0.3 }))
       .sort((a, b) => a.score - b.score)[0]
-    const cost = best?.logisticPrice ?? 0
+    const cost = best?.logisticPrice ?? getShippingFallback(countryCode)
     shippingCache[countryCode] = cost
     return cost
   } catch {
-    return 0
+    return getShippingFallback(countryCode)
   }
 }
 
 const Ctx = createContext<CurrencyCtx>(DEFAULT)
 
-// Prices are stored in MAD. Rate converts MAD → display currency.
 function makeFormat(symbol: string, currency: string, rate: number) {
   return (mad: number) => {
     const v = mad * rate
@@ -118,11 +147,16 @@ function makeFormatUSD(symbol: string, currency: string, rate: number, usdRate: 
 }
 
 export function CurrencyProvider({ children }: { children: React.ReactNode }) {
-  const [currency, setCurrencyState] = useState('MAD')
-  const [rate, setRate] = useState(1)
-  const [geo, setGeo] = useState<GeoInfo | null>(null)
+  // Read country from middleware cookie synchronously — no async wait needed
+  const cookieCountry = readCountryCookie()
+  const initialCurrency = COUNTRY_CURRENCY[cookieCountry] ?? 'CAD'
+  const initialShipping = cookieCountry ? getShippingFallback(cookieCountry) : SHIPPING_DEFAULT_USD
+
+  const [currency, setCurrencyState] = useState(initialCurrency)
+  const [rate, setRate] = useState(FALLBACK_RATES[initialCurrency] ?? 0.135)
+  const [geo, setGeo] = useState<GeoInfo | null>(cookieCountry ? { countryCode: cookieCountry } : null)
   const [rates, setRates] = useState<Record<string, number>>(FALLBACK_RATES)
-  const [shippingCostUSD, setShippingCostUSD] = useState(0)
+  const [shippingCostUSD, setShippingCostUSD] = useState(initialShipping)
 
   const applyCode = useCallback((code: string, ratesMap: Record<string, number>) => {
     const r = ratesMap[code] ?? FALLBACK_RATES[code] ?? 1
@@ -137,7 +171,7 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const init = async () => {
-      // Fetch exchange rates from our server endpoint (has fallback built in)
+      // 1. Fetch live exchange rates
       let ratesMap = FALLBACK_RATES
       try {
         const r = await fetch('/api/rates')
@@ -147,29 +181,23 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
         }
       } catch {}
 
-      // Geo-detect via Vercel headers (server-side, no external API)
-      let detectedCode = 'CAD'
-      try {
-        const g = await fetch('/api/geo')
-        if (g.ok) {
-          const gd: GeoInfo = await g.json()
-          if (gd.countryCode) {
-            setGeo(gd)
-            detectedCode = COUNTRY_CURRENCY[gd.countryCode] ?? 'CAD'
-            fetchBestShippingUSD(gd.countryCode).then(setShippingCostUSD)
-          }
-        }
-      } catch {}
+      // 2. Use country from cookie (set by middleware from Vercel geo headers)
+      const country = readCountryCookie() || 'CA'
+      const detectedCurrency = COUNTRY_CURRENCY[country] ?? 'CAD'
+      setGeo({ countryCode: country })
 
-      // Manual override wins; otherwise use geo-detected currency
+      // 3. Apply currency — manual override wins
       const saved = localStorage.getItem('mc-currency')
-      applyCode(saved ?? detectedCode, ratesMap)
+      applyCode(saved ?? detectedCurrency, ratesMap)
+
+      // 4. Fetch real CJ shipping for this country (fallback already showing)
+      const realShipping = await fetchBestShippingUSD(country)
+      setShippingCostUSD(realShipping)
     }
     init()
   }, [applyCode])
 
   const info = CURRENCIES.find(c => c.code === currency) ?? CURRENCIES[0]
-
   const usdRate = rates['USD'] ?? FALLBACK_RATES['USD']
 
   return (
