@@ -16,8 +16,8 @@ interface CurrencyCtx {
 }
 
 export const CURRENCIES: { code: string; name: string; symbol: string }[] = [
-  { code: 'USD', name: 'US Dollar', symbol: '$' },
   { code: 'CAD', name: 'Canadian Dollar', symbol: 'CA$' },
+  { code: 'USD', name: 'US Dollar', symbol: '$' },
   { code: 'EUR', name: 'Euro', symbol: '€' },
   { code: 'GBP', name: 'British Pound', symbol: '£' },
   { code: 'AUD', name: 'Australian Dollar', symbol: 'A$' },
@@ -25,7 +25,6 @@ export const CURRENCIES: { code: string; name: string; symbol: string }[] = [
   { code: 'JPY', name: 'Japanese Yen', symbol: '¥' },
   { code: 'AED', name: 'UAE Dirham', symbol: 'AED ' },
   { code: 'SAR', name: 'Saudi Riyal', symbol: 'SAR ' },
-  { code: 'MAD', name: 'Moroccan Dirham', symbol: 'MAD ' },
   { code: 'BRL', name: 'Brazilian Real', symbol: 'R$' },
   { code: 'MXN', name: 'Mexican Peso', symbol: 'MX$' },
   { code: 'INR', name: 'Indian Rupee', symbol: '₹' },
@@ -38,7 +37,8 @@ const COUNTRY_CURRENCY: Record<string, string> = {
   FR: 'EUR', DE: 'EUR', ES: 'EUR', IT: 'EUR', NL: 'EUR', BE: 'EUR',
   PT: 'EUR', AT: 'EUR', IE: 'EUR', FI: 'EUR', GR: 'EUR',
   CH: 'CHF', JP: 'JPY', SG: 'SGD', AE: 'AED', SA: 'SAR',
-  MA: 'MAD', BR: 'BRL', MX: 'MXN', IN: 'INR',
+  MA: 'EUR', DZ: 'EUR', TN: 'EUR',  // North Africa → EUR (no MAD)
+  BR: 'BRL', MX: 'MXN', IN: 'INR',
 }
 
 // Hardcoded shipping fallback (USD) — used instantly while CJ API loads.
