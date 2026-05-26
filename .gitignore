@@ -18,3 +18,4 @@ public/uploads/
 *.log
 .claude/settings.local.json
 .claude/worktrees/
+tsconfig.tsbuildinfo
