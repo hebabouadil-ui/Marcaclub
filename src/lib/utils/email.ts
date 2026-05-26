@@ -39,6 +39,11 @@ function baseHtml(content: string, preheader = '') {
 </html>`
 }
 
+function fmtMoney(order: IOrder, amount: number) {
+  const sym = (order as IOrder & { currencySymbol?: string }).currencySymbol ?? 'CA$'
+  return `${sym}${amount.toFixed(2)}`
+}
+
 function itemsTable(order: IOrder) {
   const rows = order.items.map((item) => `
     <tr>
@@ -47,18 +52,18 @@ function itemsTable(order: IOrder) {
         <p style="margin:3px 0 0;font-size:12px;color:#9ca3af;">Size: ${item.size} &bull; Qty: ${item.quantity}</p>
       </td>
       <td style="padding:14px 0;border-bottom:1px solid #f3f4f6;text-align:right;font-size:14px;font-weight:600;color:#111827;">
-        $${(item.price * item.quantity).toFixed(2)}
+        ${fmtMoney(order, item.price * item.quantity)}
       </td>
     </tr>`).join('')
 
   return `<table style="width:100%;border-collapse:collapse;">${rows}
     <tr>
       <td style="padding:12px 0;color:#6b7280;font-size:13px;">Shipping</td>
-      <td style="padding:12px 0;text-align:right;font-size:13px;color:#16a34a;font-weight:600;">Free</td>
+      <td style="padding:12px 0;text-align:right;font-size:13px;color:#16a34a;font-weight:600;">Included</td>
     </tr>
     <tr>
       <td style="padding:14px 0 0;font-size:16px;font-weight:700;color:#111827;border-top:2px solid #111827;">Total Paid</td>
-      <td style="padding:14px 0 0;text-align:right;font-size:16px;font-weight:700;color:#111827;border-top:2px solid #111827;">CA$${order.total.toFixed(2)}</td>
+      <td style="padding:14px 0 0;text-align:right;font-size:16px;font-weight:700;color:#111827;border-top:2px solid #111827;">${fmtMoney(order, order.total)}</td>
     </tr>
   </table>`
 }
@@ -121,7 +126,7 @@ export async function sendOrderConfirmationEmail(order: IOrder, _emailNote?: str
     replyTo: process.env.EMAIL_USER || undefined,
     subject: `Order Confirmed #${order.orderNumber} — Marcaclub`,
     html: baseHtml(content, `Your order #${order.orderNumber} is confirmed and being processed.`),
-    text: `Order Confirmed #${order.orderNumber}\n\nThank you ${order.customer.name}!\n\nYour payment was successful. Estimated delivery: 7–12 business days.\n\nTotal paid: CA$${order.total.toFixed(2)}\n\nQuestions? support@marca-club.com`,
+    text: `Order Confirmed #${order.orderNumber}\n\nThank you ${order.customer.name}!\n\nYour payment was successful. Estimated delivery: 7–12 business days.\n\nTotal paid: ${fmtMoney(order, order.total)}\n\nQuestions? support@marca-club.com`,
   })
 }
 
@@ -193,7 +198,7 @@ export async function sendOrderStatusEmail(order: IOrder, status: string) {
     replyTo: process.env.EMAIL_USER || undefined,
     subject: cfg.subject,
     html: baseHtml(content, cfg.body.replace(/<[^>]+>/g, '')),
-    text: `${cfg.title} — Order #${order.orderNumber}\n\nHi ${order.customer.name},\n\n${cfg.body.replace(/<[^>]+>/g, '')}\n\nTotal: CA$${order.total.toFixed(2)}\n\nQuestions? support@marca-club.com`,
+    text: `${cfg.title} — Order #${order.orderNumber}\n\nHi ${order.customer.name},\n\n${cfg.body.replace(/<[^>]+>/g, '')}\n\nTotal: ${fmtMoney(order, order.total)}\n\nQuestions? support@marca-club.com`,
   })
 }
 
@@ -203,11 +208,11 @@ export async function sendAdminOrderNotification(order: IOrder) {
   if (!adminEmail) { console.error('Admin notification skipped: ADMIN_EMAIL not set'); return }
 
   const c = order.customer
-  const itemsText = order.items.map((i) => `  • ${i.name} (${i.size}) × ${i.quantity} — $${(i.price * i.quantity).toFixed(2)}`).join('\n')
+  const itemsText = order.items.map((i) => `  • ${i.name} (${i.size}) × ${i.quantity} — ${fmtMoney(order, i.price * i.quantity)}`).join('\n')
   const itemsHtml = order.items.map((i) => `
     <tr>
       <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;font-size:13px;color:#374151;">${i.name} <span style="color:#9ca3af;">× ${i.quantity} · ${i.size}</span></td>
-      <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;text-align:right;font-size:13px;font-weight:600;color:#111827;">$${(i.price * i.quantity).toFixed(2)}</td>
+      <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;text-align:right;font-size:13px;font-weight:600;color:#111827;">${fmtMoney(order, i.price * i.quantity)}</td>
     </tr>`).join('')
 
   const content = `
@@ -218,7 +223,7 @@ export async function sendAdminOrderNotification(order: IOrder) {
     <div style="background:#f9fafb;border-radius:8px;padding:16px;text-align:center;margin-bottom:20px;">
       <p style="margin:0;font-size:11px;color:#9ca3af;letter-spacing:2px;text-transform:uppercase;">Order #</p>
       <p style="margin:6px 0 0;font-size:24px;font-weight:800;color:#111827;font-family:monospace;">${order.orderNumber}</p>
-      <p style="margin:6px 0 0;font-size:20px;font-weight:700;color:#16a34a;">CA$${order.total.toFixed(2)}</p>
+      <p style="margin:6px 0 0;font-size:20px;font-weight:700;color:#16a34a;">${fmtMoney(order, order.total)}</p>
     </div>
     <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
       <tr><td style="padding:8px 0;font-size:13px;color:#6b7280;">Customer</td><td style="padding:8px 0;font-size:13px;font-weight:600;color:#111827;text-align:right;">${c.name}</td></tr>
@@ -228,7 +233,7 @@ export async function sendAdminOrderNotification(order: IOrder) {
     </table>
     <h3 style="font-size:12px;color:#9ca3af;letter-spacing:1px;text-transform:uppercase;margin:0 0 12px;">Items</h3>
     <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">${itemsHtml}
-      <tr><td style="padding:12px 0;font-weight:700;color:#111827;">Total</td><td style="padding:12px 0;text-align:right;font-weight:700;color:#16a34a;">CA$${order.total.toFixed(2)}</td></tr>
+      <tr><td style="padding:12px 0;font-weight:700;color:#111827;">Total</td><td style="padding:12px 0;text-align:right;font-weight:700;color:#16a34a;">${fmtMoney(order, order.total)}</td></tr>
     </table>
     <div style="text-align:center;">
       <a href="https://admin.marca-club.com" style="display:inline-block;background:#111827;color:#f59e0b;padding:14px 32px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:700;letter-spacing:1px;">VIEW IN ADMIN</a>
@@ -238,8 +243,8 @@ export async function sendAdminOrderNotification(order: IOrder) {
   await getResend().emails.send({
     from: getFrom(),
     to: adminEmail,
-    subject: `New Order #${order.orderNumber} — $${order.total.toFixed(2)} — ${c.name}`,
-    html: baseHtml(content, `New order from ${c.name} · $${order.total.toFixed(2)}`),
-    text: `New Order #${order.orderNumber}\n\nCustomer: ${c.name}\nPhone: ${c.phone}\nCity: ${c.city}, ${c.country}\nTotal: CA$${order.total.toFixed(2)}\n\nItems:\n${itemsText}\n\nAdmin: https://admin.marca-club.com`,
+    subject: `New Order #${order.orderNumber} — ${fmtMoney(order, order.total)} — ${c.name}`,
+    html: baseHtml(content, `New order from ${c.name} · ${fmtMoney(order, order.total)}`),
+    text: `New Order #${order.orderNumber}\n\nCustomer: ${c.name}\nPhone: ${c.phone}\nCity: ${c.city}, ${c.country}\nTotal: ${fmtMoney(order, order.total)}\n\nItems:\n${itemsText}\n\nAdmin: https://admin.marca-club.com`,
   })
 }

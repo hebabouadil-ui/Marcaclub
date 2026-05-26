@@ -63,11 +63,27 @@ export async function POST(req: NextRequest) {
       ? body.stripeClientSecret.split('_secret_')[0]
       : undefined
 
+    // Currency the customer checked out in (e.g. 'USD', 'EUR', 'CAD')
+    const orderCurrency = typeof body.currency === 'string' ? body.currency.toUpperCase() : 'CAD'
+    const currencySymbol: string = typeof body.currencySymbol === 'string' ? body.currencySymbol : 'CA$'
+
     type OrderItem = { productId: string; size: string; quantity: number; name?: string }
     const items = body.items as OrderItem[]
 
     // Accept tax amount passed from the client (validated against payment intent metadata)
     const clientTaxAmount = typeof body.taxAmount === 'number' && body.taxAmount >= 0 ? body.taxAmount : 0
+
+    // Fetch live FX rate server-side: CAD → orderCurrency
+    let fxRate = 1
+    if (orderCurrency !== 'CAD') {
+      try {
+        const ratesRes = await fetch(`${process.env.NEXTAUTH_URL ?? 'http://localhost:3000'}/api/rates`, { cache: 'no-store' })
+        if (ratesRes.ok) {
+          const ratesData = await ratesRes.json()
+          fxRate = ratesData.rates?.[orderCurrency] ?? 1
+        }
+      } catch { /* use 1 as fallback */ }
+    }
 
     // Atomically decrement stock — validate + deduct in one operation per item
     // Build server-trusted item lines from DB (don't trust client price/name/image)
@@ -105,11 +121,11 @@ export async function POST(req: NextRequest) {
       await Product.findByIdAndUpdate(item.productId, { $inc: { stock: -item.quantity } })
 
       decremented.push({ productId: item.productId, size: item.size, quantity: item.quantity })
-      serverTotal += updated.price * item.quantity
+      serverTotal += updated.price * item.quantity * fxRate
       trustedItems.push({
         productId: String(updated._id),
         name: updated.name,
-        price: updated.price,
+        price: Math.round(updated.price * fxRate * 100) / 100,
         quantity: item.quantity,
         size: item.size,
         image: updated.images?.[0] ?? '',
@@ -291,9 +307,10 @@ export async function POST(req: NextRequest) {
       items: trustedItems,
       notes: body.notes || undefined,
       orderNumber,
-      total: serverTotal + clientTaxAmount,
+      total: Math.round((serverTotal + clientTaxAmount) * 100) / 100,
       taxAmount: clientTaxAmount > 0 ? clientTaxAmount : undefined,
-      currency: 'usd',
+      currency: orderCurrency.toLowerCase(),
+      currencySymbol,
       stripePaymentIntentId: stripePaymentIntentId || undefined,
       stripePaymentStatus: stripePaymentIntentId ? 'pending' : undefined,
       status: 'pending',

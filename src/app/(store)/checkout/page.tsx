@@ -324,12 +324,14 @@ function AuthStep({
   )
 }
 
-function PaymentStep({ clientSecret, customer, items, total, taxAmount, onSuccess }: {
+function PaymentStep({ clientSecret, customer, items, total, taxAmount, currency, symbol, onSuccess }: {
   clientSecret: string
   customer: CustomerForm
   items: { productId: string; size: string; quantity: number }[]
   total: number
   taxAmount: number
+  currency: string
+  symbol: string
   onSuccess: (orderNumber: string) => void
 }) {
   const stripe = useStripe()
@@ -348,7 +350,7 @@ function PaymentStep({ clientSecret, customer, items, total, taxAmount, onSucces
     const orderRes = await fetch('/api/orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ customer, items, stripeClientSecret: clientSecret, taxAmount }),
+      body: JSON.stringify({ customer, items, stripeClientSecret: clientSecret, taxAmount, currency, currencySymbol: symbol }),
     })
     const orderData = await orderRes.json()
     if (!orderRes.ok) { toast.error(orderData.message ?? 'Failed to create order'); setPaying(false); return }
@@ -379,7 +381,7 @@ function PaymentStep({ clientSecret, customer, items, total, taxAmount, onSucces
       <button type="submit" disabled={paying || !stripe}
         className="w-full bg-gray-900 text-white font-semibold py-4 text-sm flex items-center justify-center gap-2 hover:bg-gray-800 transition-colors disabled:opacity-50 rounded-lg">
         {paying ? <Loader2 size={16} className="animate-spin" /> : <Lock size={14} />}
-        {paying ? 'Processing payment...' : `Pay ${format(total)} now`}
+        {paying ? 'Processing payment...' : `Pay ${symbol}${total.toFixed(2)} now`}
       </button>
       <div className="flex items-center justify-center gap-4 text-gray-400 text-xs">
         <span className="flex items-center gap-1"><Shield size={11} /> SSL Secured</span>
@@ -393,7 +395,7 @@ export default function CheckoutPage() {
   const router = useRouter()
   const { items, removeItem, updateQuantity, clearCart } = useCartStore()
   const subtotal = cartTotal(items)
-  const { format, currency, geo } = useCurrency()
+  const { format, currency, symbol, geo } = useCurrency()
   const { customer, loading: authLoading } = useCustomer()
   const [shippingForm, setShippingForm] = useState<CustomerForm>(emptyForm)
   const [clientSecret, setClientSecret] = useState<string | null>(null)
@@ -491,7 +493,7 @@ export default function CheckoutPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           items: items.map((i) => ({ productId: i.productId, size: i.size, quantity: i.quantity })),
-          currency: 'usd',
+          currency: currency.toLowerCase(),
           taxRate: taxComponents.reduce((s, c) => s + c.rate, 0),
         }),
       })
@@ -707,6 +709,8 @@ export default function CheckoutPage() {
                     items={items.map((i) => ({ productId: i.productId, size: i.size, quantity: i.quantity }))}
                     total={total}
                     taxAmount={taxAmount}
+                    currency={currency}
+                    symbol={symbol}
                     onSuccess={handleSuccess}
                   />
                 </Elements>
@@ -770,9 +774,6 @@ export default function CheckoutPage() {
                     </div>
                   : null
                 }
-                {currency !== 'USD' && (
-                  <p className="text-[10px] text-gray-400">* Displayed in {currency}. Charged in USD at checkout.</p>
-                )}
                 <div className="flex justify-between font-bold text-gray-900 text-base pt-2 border-t border-gray-100">
                   <span>Total</span><span>{format(total)}</span>
                 </div>

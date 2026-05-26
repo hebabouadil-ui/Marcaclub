@@ -25,6 +25,7 @@ export interface IOrder extends Document {
   total: number
   taxAmount?: number
   currency: string
+  currencySymbol?: string
   stripePaymentIntentId?: string
   stripePaymentStatus?: string
   cjOrderId?: string
@@ -70,7 +71,8 @@ const OrderSchema = new Schema<IOrder>(
     ],
     total: { type: Number, required: true },
     taxAmount: { type: Number },
-    currency: { type: String, default: 'usd' },
+    currency: { type: String, default: 'cad' },
+    currencySymbol: { type: String, default: 'CA$' },
     stripePaymentIntentId: { type: String },
     stripePaymentStatus: { type: String },
     cjOrderId: { type: String },

@@ -19,6 +19,7 @@ interface Order {
   total: number
   taxAmount?: number
   currency: string
+  currencySymbol?: string
   status: string
   createdAt: string
   customer: {
@@ -126,7 +127,7 @@ function ConfirmationContent() {
                     <p className="text-xs text-gray-400">Size: {item.size} · Qty: {item.quantity}</p>
                   </div>
                   <p className="font-semibold text-gray-900 text-sm">
-                    ${(item.price * item.quantity).toFixed(2)}
+                    {(order?.currencySymbol ?? 'CA$')}{(item.price * item.quantity).toFixed(2)}
                   </p>
                 </div>
               )) ?? (
@@ -143,13 +144,15 @@ function ConfirmationContent() {
           {/* Totals */}
           <div className="border-t border-gray-100 px-6 py-4 space-y-2">
             {order && (() => {
+              const sym = order.currencySymbol ?? 'CA$'
+              const fmt = (n: number) => `${sym}${n.toFixed(2)}`
               const tax = order.taxAmount ?? 0
               const subtotal = order.total - tax
               return (
                 <>
                   <div className="flex justify-between text-sm text-gray-500">
                     <span>Subtotal</span>
-                    <span>CA${subtotal.toFixed(2)}</span>
+                    <span>{fmt(subtotal)}</span>
                   </div>
                   <div className="flex justify-between text-sm text-gray-500">
                     <span>Shipping</span>
@@ -158,12 +161,12 @@ function ConfirmationContent() {
                   {tax > 0 && (
                     <div className="flex justify-between text-sm text-gray-500">
                       <span>Tax</span>
-                      <span>CA${tax.toFixed(2)}</span>
+                      <span>{fmt(tax)}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-bold text-gray-900 text-lg pt-2 border-t border-gray-200">
                     <span>Total Paid</span>
-                    <span>CA${order.total.toFixed(2)}</span>
+                    <span>{fmt(order.total)}</span>
                   </div>
                 </>
               )

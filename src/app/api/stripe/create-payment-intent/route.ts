@@ -5,38 +5,73 @@ import Product from '@/lib/models/Product'
 
 export const dynamic = 'force-dynamic'
 
+// Currencies Stripe supports that use zero-decimal amounts
+const ZERO_DECIMAL = new Set(['jpy', 'krw', 'bif', 'clp', 'gnf', 'mga', 'pyg', 'rwf', 'ugx', 'vnd', 'xaf', 'xof'])
+
 export async function POST(req: NextRequest) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' })
   try {
     const body = await req.json()
+    // currency: ISO code the customer selected (e.g. 'usd', 'eur', 'cad')
+    // fxRate: CAD → selected currency conversion rate (server-computed below)
     const { items, currency = 'usd', taxRate = 0 } = body
 
     if (!Array.isArray(items) || items.length === 0)
       return NextResponse.json({ error: 'No items' }, { status: 400 })
 
+    const currencyLower = String(currency).toLowerCase()
+
+    // Validate currency is supported
+    const SUPPORTED = ['usd','cad','eur','gbp','aud','chf','jpy','aed','sar','brl','mxn','inr','sgd','nzd']
+    if (!SUPPORTED.includes(currencyLower))
+      return NextResponse.json({ error: 'Unsupported currency' }, { status: 400 })
+
     await connectDB()
 
-    let subtotal = 0
+    // Fetch live exchange rates server-side to avoid trusting client-provided rates
+    let fxRate = 1 // CAD → target currency
+    if (currencyLower !== 'cad') {
+      try {
+        const ratesRes = await fetch(`${process.env.NEXTAUTH_URL ?? 'http://localhost:3000'}/api/rates`, { cache: 'no-store' })
+        if (ratesRes.ok) {
+          const ratesData = await ratesRes.json()
+          fxRate = ratesData.rates?.[currencyLower.toUpperCase()] ?? 1
+        }
+      } catch { /* use rate 1 as fallback */ }
+    }
+
+    // Sum CAD subtotal server-side from DB prices (never trust client prices)
+    let subtotalCAD = 0
     for (const item of items) {
       const product = await Product.findById(item.productId).lean() as { price: number } | null
       if (!product) return NextResponse.json({ error: 'Product not found' }, { status: 400 })
-      subtotal += product.price * item.quantity
+      subtotalCAD += product.price * item.quantity
     }
+
+    const subtotal = Math.round(subtotalCAD * fxRate * 100) / 100
 
     // Clamp taxRate to 0–50% to prevent abuse
     const clampedRate = Math.min(Math.max(Number(taxRate) || 0, 0), 0.5)
     const taxAmount = Math.round(subtotal * clampedRate * 100) / 100
     const total = subtotal + taxAmount
-    const amountInCents = Math.round(total * 100)
+
+    const isZeroDecimal = ZERO_DECIMAL.has(currencyLower)
+    const amountInCents = isZeroDecimal ? Math.round(total) : Math.round(total * 100)
 
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amountInCents,
-      currency,
+      currency: currencyLower,
       automatic_payment_methods: { enabled: true },
-      metadata: { items: JSON.stringify(items), taxRate: String(clampedRate), taxAmount: String(taxAmount) },
+      metadata: {
+        items: JSON.stringify(items),
+        taxRate: String(clampedRate),
+        taxAmount: String(taxAmount),
+        fxRate: String(fxRate),
+        displayCurrency: currencyLower.toUpperCase(),
+      },
     })
 
-    return NextResponse.json({ clientSecret: paymentIntent.client_secret, amount: amountInCents, taxAmount, subtotal })
+    return NextResponse.json({ clientSecret: paymentIntent.client_secret, amount: amountInCents, taxAmount, subtotal, fxRate, currency: currencyLower })
   } catch (err) {
     console.error('create-payment-intent error:', err)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
