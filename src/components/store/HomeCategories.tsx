@@ -2,13 +2,13 @@
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useLanguage } from '@/lib/i18n'
-import { Zap, Wifi, Wind, ShoppingBag } from 'lucide-react'
+import { Sparkles, Droplets, Wind, Star } from 'lucide-react'
 
 const items = [
-  { icon: Zap,       fr: 'Éclairage Ambiant',     en: 'Ambient Lighting',    sub: { fr: 'Lumières LED intérieur', en: 'Interior LED strips' } },
-  { icon: Wifi,      fr: 'Tech Sans Fil',           en: 'Wireless Tech',       sub: { fr: 'Supports & chargeurs', en: 'Holders & fast chargers' } },
-  { icon: Wind,      fr: 'Aspirateurs Mini',        en: 'Mini Vacuums',        sub: { fr: 'Nettoyage en déplacement', en: 'Clean on the go' } },
-  { icon: ShoppingBag, fr: 'Accessoires Phares',   en: 'Top Picks',           sub: { fr: 'Sélection exclusive', en: 'Exclusive selection' } },
+  { icon: Sparkles, slug: 'soins-visage',  fr: 'Soins Visage',   en: 'Face Care',   sub: { fr: 'Sérums, crèmes & masques', en: 'Serums, creams & masks' } },
+  { icon: Droplets, slug: 'soins-corps',   fr: 'Soins Corps',    en: 'Body Care',   sub: { fr: 'Hydratation & nutrition', en: 'Hydration & nourishment' } },
+  { icon: Wind,     slug: 'soins-cheveux', fr: 'Soins Cheveux',  en: 'Hair Care',   sub: { fr: 'Shampoings & soins', en: 'Shampoos & treatments' } },
+  { icon: Star,     slug: 'parfums',       fr: 'Parfums',        en: 'Perfumes',    sub: { fr: 'Fragrances exclusives', en: 'Exclusive fragrances' } },
 ]
 
 export default function HomeCategories() {
@@ -26,12 +26,12 @@ export default function HomeCategories() {
           <p className="text-[10px] tracking-[0.3em] text-brand-gold uppercase mb-2">{tr.categories.explore}</p>
           <h2 className="font-display text-3xl md:text-4xl text-brand-black">{tr.categories.title}</h2>
           <p className="text-brand-gray text-sm mt-3 max-w-sm mx-auto">
-            {lang === 'fr' ? 'Bientôt disponible — Accessoires auto premium' : 'Coming soon — Premium car accessories'}
+            {lang === 'fr' ? 'Beauté & skincare — sélection premium livrée partout' : 'Beauty & skincare — premium selection delivered worldwide'}
           </p>
         </motion.div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-          {items.map(({ icon: Icon, fr, en, sub }, i) => (
+          {items.map(({ icon: Icon, slug, fr, en, sub }, i) => (
             <motion.div
               key={en}
               initial={{ opacity: 0, y: 20 }}
@@ -40,7 +40,7 @@ export default function HomeCategories() {
               transition={{ delay: i * 0.1 }}
             >
               <Link
-                href="/products"
+                href={`/products?category=${slug}`}
                 className="group block bg-brand-light-gray hover:bg-brand-black transition-colors duration-300 p-6 md:p-8 text-center"
               >
                 <Icon size={20} className="mx-auto mb-3 text-brand-gray group-hover:text-brand-gold transition-colors" strokeWidth={1.5} />

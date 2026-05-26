@@ -13,8 +13,8 @@ export async function POST() {
   await connectDB()
   const existing = await Settings.findOne()
   if (existing) {
-    existing.heroTitle = 'Upgrade Your Ride'
-    existing.heroSubtitle = 'Accessoires auto premium sélectionnés — livrés partout dans le monde'
+    existing.heroTitle = 'Votre Beauté, Notre Priorité'
+    existing.heroSubtitle = 'Soins premium sélectionnés pour vous — livrés partout dans le monde'
     existing.announcementBar = 'Livraison mondiale · Paiement sécurisé · Nouveaux produits chaque semaine'
     await existing.save()
   }

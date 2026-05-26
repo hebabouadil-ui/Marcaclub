@@ -19,10 +19,10 @@ export interface ISettings extends Document {
 const SettingsSchema = new Schema<ISettings>({
   liveStatus: { type: Boolean, default: false },
   liveUrl: { type: String, default: '' },
-  heroTitle: { type: String, default: 'Upgrade Your Ride' },
+  heroTitle: { type: String, default: 'Votre Beauté, Notre Priorité' },
   heroSubtitle: {
     type: String,
-    default: 'Accessoires auto premium sélectionnés — livrés partout dans le monde',
+    default: 'Soins premium sélectionnés pour vous — livrés partout dans le monde',
   },
   announcementBar: {
     type: String,
