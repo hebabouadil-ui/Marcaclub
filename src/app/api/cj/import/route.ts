@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { pid, name, description, price, category, selectedVariants, cjLogisticName, variantPrices, baseVariantPrices, shippingBakedUSD, productWeight } = body
+    const { pid, name, description, price, category, selectedVariants, cjLogisticName, variantPrices, baseVariantPrices, shippingBakedUSD, shippingRefCountry, productWeight } = body
     const variantPricesMap: Record<string, number> | undefined = variantPrices
     const baseVariantPricesMap: Record<string, number> | undefined = baseVariantPrices
     const MAD_PER_USD = 10.05
@@ -111,6 +111,8 @@ export async function POST(req: NextRequest) {
       cjLogisticName: cjLogisticName || undefined,
       productWeight: productWeight ? parseFloat(String(productWeight)) || undefined : undefined,
       shippingBakedMad: shippingBakedMad || undefined,
+      shippingBakedUSD: shippingBakedUSD || undefined,
+      shippingRefCountry: shippingRefCountry || undefined,
       cjData: {
         productName: cjProduct.productNameEn,
         variants: variants.map((v: { vid: string; variantNameEn: string; variantPrice: number; variantWeight: number }) => ({

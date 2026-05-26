@@ -3,7 +3,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Eye } from 'lucide-react'
-import { useCurrency } from '@/lib/context/CurrencyContext'
+import { useCurrency, SHIPPING_FALLBACK_USD, SHIPPING_DEFAULT_USD } from '@/lib/context/CurrencyContext'
 import { useLanguage } from '@/lib/i18n'
 
 const MAD_PER_USD = 10.05
@@ -20,20 +20,33 @@ interface Props {
     sizes: Array<{ size: string; stock: number }>
     category: string
     cjPid?: string
+    shippingBakedUSD?: number
+    shippingRefCountry?: string
   }
 }
 
 export default function ProductCard({ product }: Props) {
   const [hovered, setHovered] = useState(false)
-  const { format, shippingCostUSD } = useCurrency()
+  const { format, shippingCostUSD, geo } = useCurrency()
   const { tr } = useLanguage()
 
-  // For CJ products: add shipping for user's country to the base sell price
-  const displayPrice = product.cjPid && shippingCostUSD > 0
-    ? product.price + shippingCostUSD * MAD_PER_USD
+  // For CJ products: compute per-country shipping.
+  // If the product has a stored shipping (from import at real product weight), scale it by country
+  // ratio using the hardcoded fallback table. Otherwise fall back to the global context shipping.
+  const effectiveShipMAD = (() => {
+    if (!product.cjPid) return 0
+    if (product.shippingBakedUSD && product.shippingBakedUSD > 0) {
+      const refFallback = SHIPPING_FALLBACK_USD[product.shippingRefCountry ?? 'US'] ?? SHIPPING_DEFAULT_USD
+      const visitorFallback = SHIPPING_FALLBACK_USD[geo?.countryCode ?? 'CA'] ?? SHIPPING_DEFAULT_USD
+      return (product.shippingBakedUSD * visitorFallback / refFallback) * MAD_PER_USD
+    }
+    return shippingCostUSD > 0 ? shippingCostUSD * MAD_PER_USD : 0
+  })()
+  const displayPrice = product.cjPid && effectiveShipMAD > 0
+    ? product.price + effectiveShipMAD
     : product.price
-  const originalDisplay = product.originalPrice && product.cjPid && shippingCostUSD > 0
-    ? product.originalPrice + shippingCostUSD * MAD_PER_USD
+  const originalDisplay = product.originalPrice && product.cjPid && effectiveShipMAD > 0
+    ? product.originalPrice + effectiveShipMAD
     : product.originalPrice
 
   const discount = originalDisplay && originalDisplay > displayPrice

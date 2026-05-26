@@ -145,10 +145,11 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
   const totalStock = sizes.reduce((s, i) => s + i.stock, 0)
 
   // Base sell price (stored in DB in MAD, excludes shipping).
-  // Add per-country shipping so the displayed price matches what the customer pays.
+  // Use the per-product fetched shipping (correct weight) when available, else global context.
   const basePrice = selectedSizeEntry?.variantPrice ?? product.price
-  const displayPrice = product.cjPid && shippingCostUSD > 0
-    ? basePrice + shippingCostUSD * MAD_PER_USD
+  const effectiveShipUSD = shipping ? shipping.logisticPrice : shippingCostUSD
+  const displayPrice = product.cjPid && effectiveShipUSD > 0
+    ? basePrice + effectiveShipUSD * MAD_PER_USD
     : basePrice
 
   const originalPrice = product.originalPrice

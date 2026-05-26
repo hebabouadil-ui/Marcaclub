@@ -43,7 +43,8 @@ const COUNTRY_CURRENCY: Record<string, string> = {
 
 // Hardcoded shipping fallback (USD) — used instantly while CJ API loads.
 // Based on typical CJ Dropshipping rates from China per country/region.
-const SHIPPING_FALLBACK_USD: Record<string, number> = {
+// Exported so components can scale per-product stored shipping by country ratio.
+export const SHIPPING_FALLBACK_USD: Record<string, number> = {
   // North Africa
   MA: 2.5, DZ: 3.0, TN: 3.0, LY: 3.5, EG: 3.5,
   // Middle East
@@ -60,7 +61,7 @@ const SHIPPING_FALLBACK_USD: Record<string, number> = {
   // South America
   BR: 9.0,
 }
-const SHIPPING_DEFAULT_USD = 7.5
+export const SHIPPING_DEFAULT_USD = 7.5
 
 function getShippingFallback(countryCode: string): number {
   return SHIPPING_FALLBACK_USD[countryCode] ?? SHIPPING_DEFAULT_USD

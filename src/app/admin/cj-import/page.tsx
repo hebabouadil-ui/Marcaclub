@@ -419,6 +419,7 @@ export default function CJImportPage() {
           variantPrices: form.variantPrices,
           baseVariantPrices: form.baseVariantPrices,
           shippingBakedUSD: shippingUSD,
+          shippingRefCountry: shippingUSD > 0 ? shippingCountry : undefined,
           productWeight: preview.productWeight ?? 200,
         }),
       })
@@ -748,9 +749,10 @@ export default function CJImportPage() {
                 {/* Cost breakdown */}
                 {(() => {
                   const prevInfo = PREVIEW_SHIPPING_USD[previewCountry] ?? PREVIEW_SHIPPING_USD['CA']
-                  // Use actual fetched CJ shipping when the preview country matches the fetched country
-                  const previewShipUSD = (previewCountry === shippingCountry && shippingUSD > 0)
-                    ? shippingUSD
+                  // Scale fetched CJ shipping from the ref country to the preview country using fallback ratios.
+                  // This matches exactly what the storefront will show after import.
+                  const previewShipUSD = shippingUSD > 0
+                    ? shippingUSD * (prevInfo.usd / (PREVIEW_SHIPPING_USD[shippingCountry]?.usd ?? 7.0))
                     : prevInfo.usd
                   const minSellMAD = selectedVariantObjs.length > 0
                     ? Math.min(...selectedVariantObjs.map(v => Number(form.variantPrices[v.vid] || 0)).filter(n => n > 0))
@@ -758,12 +760,12 @@ export default function CJImportPage() {
                   const avgSellMAD = selectedVariantObjs.length > 0
                     ? selectedVariantObjs.reduce((s, v) => s + Number(form.variantPrices[v.vid] || 0), 0) / selectedVariantObjs.length
                     : 0
-                  // Real profit = sell price - product cost (shipping passes through: customer pays same as CJ charges)
-                  // When preview country matches fetched shipping country, profit also accounts for any ship mismatch
+                  // Profit = sell price - product cost + (customer shipping - CJ shipping).
+                  // Customer pays previewShipUSD; admin pays the ref-country shippingUSD to CJ.
+                  // The difference (can be + or -) adjusts profit per country.
                   const baseMarginCAD = avgMarginMAD != null ? avgMarginMAD * MAD_TO_CAD : null
-                  // If we have real shipping for the preview country, deduct any difference (customer vs CJ ship cost)
-                  const shipDiffCAD = (previewCountry === shippingCountry && shippingUSD > 0)
-                    ? (previewShipUSD - shippingUSD) * USD_TO_CAD  // 0 when same, negative = loss
+                  const shipDiffCAD = shippingUSD > 0
+                    ? (previewShipUSD - shippingUSD) * USD_TO_CAD
                     : 0
                   const avgProfitCAD = baseMarginCAD != null ? baseMarginCAD + shipDiffCAD : null
                   const avgMarginPct = avgSellMAD > 0 && avgMarginMAD != null
@@ -827,8 +829,8 @@ export default function CJImportPage() {
                           <span>+ Shipping ({prevInfo.label})</span>
                           <span>
                             {cadUSD(previewShipUSD, 0)}
-                            {previewCountry === shippingCountry && shippingUSD > 0 && (
-                              <span className="ml-1 text-[9px] text-brand-gold/60">actual</span>
+                            {shippingUSD > 0 && (
+                              <span className="ml-1 text-[9px] text-brand-gold/60">scaled</span>
                             )}
                           </span>
                         </div>

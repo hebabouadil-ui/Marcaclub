@@ -18,6 +18,8 @@ export interface IProduct extends Document {
   cjLogisticName?: string
   productWeight?: number
   shippingBakedMad?: number
+  shippingBakedUSD?: number
+  shippingRefCountry?: string
   cjData?: Record<string, unknown>
   createdAt: Date
   updatedAt: Date
@@ -42,6 +44,8 @@ const ProductSchema = new Schema<IProduct>(
     cjLogisticName: { type: String },
     productWeight: { type: Number },
     shippingBakedMad: { type: Number },
+    shippingBakedUSD: { type: Number },
+    shippingRefCountry: { type: String },
     cjData: { type: Schema.Types.Mixed },
   },
   { timestamps: true }
