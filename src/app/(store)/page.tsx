@@ -8,14 +8,28 @@ import FeaturedProducts from '@/components/store/FeaturedProducts'
 import HomeLiveSection from '@/components/store/HomeLiveSection'
 import HomeCategories from '@/components/store/HomeCategories'
 
+const AUTO_HERO = ['Upgrade Your Ride', 'Upgrade your ride']
+const AUTO_SUB = ['Accessoires auto', 'accessoires auto', 'car accessories', 'Car accessories']
+
 async function getData() {
   try {
     await connectDB()
     const [products, settings] = await Promise.all([
       Product.find({ active: true, featured: true }).sort({ createdAt: -1 }).limit(8).lean(),
-      Settings.findOne().lean(),
+      Settings.findOne(),
     ])
-    return { products, settings }
+    // Migrate stale auto-era hero text in DB
+    if (settings) {
+      let dirty = false
+      if (!settings.heroTitle || AUTO_HERO.some(s => settings.heroTitle.includes(s))) {
+        settings.heroTitle = 'Votre Beauté, Notre Priorité'; dirty = true
+      }
+      if (!settings.heroSubtitle || AUTO_SUB.some(s => settings.heroSubtitle.includes(s))) {
+        settings.heroSubtitle = 'Soins & beauté premium sélectionnés — livrés partout dans le monde'; dirty = true
+      }
+      if (dirty) settings.save().catch(() => {})
+    }
+    return { products, settings: settings ? JSON.parse(JSON.stringify(settings)) : null }
   } catch {
     return { products: [], settings: null }
   }
@@ -25,9 +39,7 @@ export default async function HomePage() {
   const { products, settings } = await getData()
 
   const heroTitle = (settings as { heroTitle?: string } | null)?.heroTitle ?? 'Votre Beauté, Notre Priorité'
-  const heroSubtitle =
-    (settings as { heroSubtitle?: string } | null)?.heroSubtitle ??
-    "Soins premium sélectionnés pour vous — livrés partout dans le monde"
+  const heroSubtitle = (settings as { heroSubtitle?: string } | null)?.heroSubtitle ?? 'Soins & beauté premium sélectionnés — livrés partout dans le monde'
   const liveStatus = (settings as { liveStatus?: boolean } | null)?.liveStatus ?? false
 
   return (
