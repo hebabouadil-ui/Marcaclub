@@ -157,6 +157,7 @@ function stripHtml(html: string): string {
 interface ImportForm {
   name: string
   description: string
+  videoUrl: string
   price: string
   category: string
   selectedVariants: string[]
@@ -199,7 +200,7 @@ export default function CJImportPage() {
   const [previewLoading, setPreviewLoading] = useState(false)
   const [activeImg, setActiveImg] = useState(0)
   const [form, setForm] = useState<ImportForm>({
-    name: '', description: '', price: '', category: 'soins-visage',
+    name: '', description: '', videoUrl: '', price: '', category: 'soins-visage',
     selectedVariants: [], cjLogisticName: '', marginPct: '60', variantPrices: {}, baseVariantPrices: {},
   })
   const [importing, setImporting] = useState(false)
@@ -357,6 +358,7 @@ export default function CJImportPage() {
       setForm((prev) => ({
         name: detail.productNameEn ?? product.productNameEn,
         description: detail.description ? stripHtml(detail.description) : '',
+        videoUrl: prev.videoUrl || '',
         price: minPrice,
         category: prev.category || 'soins-visage',
         selectedVariants: (detail.variants ?? []).map((v) => v.vid),
@@ -399,6 +401,7 @@ export default function CJImportPage() {
           pid: preview.pid,
           name: form.name,
           description: form.description,
+          videoUrl: form.videoUrl || undefined,
           price: Number(form.price),
           category: form.category,
           selectedVariants: form.selectedVariants,
@@ -822,6 +825,13 @@ export default function CJImportPage() {
                   <textarea value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
                     rows={2} placeholder="Leave empty to use CJ description"
                     className="w-full bg-white/5 border border-white/10 text-white text-sm px-4 py-2.5 focus:outline-none focus:border-brand-gold/50 resize-none" />
+                </div>
+
+                <div>
+                  <label className="block text-white/40 text-[10px] tracking-widest mb-1.5">VIDÉO PRODUIT (TikTok / YouTube)</label>
+                  <input value={form.videoUrl} onChange={(e) => setForm((p) => ({ ...p, videoUrl: e.target.value }))}
+                    placeholder="https://www.tiktok.com/@user/video/123..."
+                    className="w-full bg-white/5 border border-white/10 text-white text-sm px-4 py-2.5 focus:outline-none focus:border-brand-gold/50 placeholder-white/20" />
                 </div>
 
                 {/* Margin selector */}

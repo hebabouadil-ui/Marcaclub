@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
-import { Plus, Pencil, Trash2, X, Loader2, Upload, Star, Crown } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Loader2, Upload, Star, Crown, RefreshCw } from 'lucide-react'
 
 interface SizeStock { size: string; stock: number }
 
@@ -21,13 +21,14 @@ interface Product {
   active: boolean
   description: string
   descriptionEn?: string
+  videoUrl?: string
 }
 
 type ProductForm = Omit<Product, '_id' | 'stock'>
 
 const EMPTY: ProductForm = {
   name: '', price: 0, originalPrice: undefined, category: 'soins-visage',
-  images: [], sizes: [], featured: false, active: true, description: '', descriptionEn: '',
+  images: [], sizes: [], featured: false, active: true, description: '', descriptionEn: '', videoUrl: '',
 }
 const CATEGORIES = ['soins-visage', 'soins-corps', 'soins-cheveux', 'maquillage', 'autres']
 const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '36', '37', '38', '39', '40', '41', '42', '43', 'Unique']
@@ -40,6 +41,19 @@ export default function AdminProductsPage() {
   const [form, setForm] = useState<ProductForm>(EMPTY)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [migrating, setMigrating] = useState(false)
+
+  const runMigration = async () => {
+    if (!confirm('Convertir les prix MAD → CAD pour tous les produits ? (opération unique)')) return
+    setMigrating(true)
+    try {
+      const res = await fetch('/api/admin/migrate-prices', { method: 'POST', credentials: 'include' })
+      const data = await res.json()
+      if (res.ok) { toast.success(`Migration terminée : ${data.migrated}/${data.total} produits convertis`); load() }
+      else toast.error(data.error || 'Erreur migration')
+    } catch { toast.error('Erreur réseau') }
+    finally { setMigrating(false) }
+  }
 
   const load = () => {
     setLoading(true)
@@ -58,7 +72,8 @@ export default function AdminProductsPage() {
     )
     setForm({ name: p.name, price: p.price, originalPrice: p.originalPrice, category: p.category,
       images: p.images, sizes: normalizedSizes, featured: p.featured, active: p.active,
-      description: p.description, descriptionEn: (p as { descriptionEn?: string }).descriptionEn ?? '' })
+      description: p.description, descriptionEn: (p as { descriptionEn?: string }).descriptionEn ?? '',
+      videoUrl: (p as { videoUrl?: string }).videoUrl ?? '' })
     setModal(true)
   }
 
@@ -145,13 +160,24 @@ export default function AdminProductsPage() {
     <div className="p-6 md:p-8 max-w-6xl">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-white text-2xl font-semibold">Produits</h1>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-2 bg-brand-gold text-brand-black px-4 py-2 text-sm font-semibold tracking-widest uppercase hover:bg-white transition-colors"
-        >
-          <Plus size={16} />
-          Ajouter
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={runMigration}
+            disabled={migrating}
+            title="Convertir les anciens prix MAD en CAD"
+            className="flex items-center gap-2 bg-white/10 text-white/60 px-3 py-2 text-xs font-semibold tracking-widest uppercase hover:bg-white/20 transition-colors disabled:opacity-40"
+          >
+            <RefreshCw size={13} className={migrating ? 'animate-spin' : ''} />
+            Fix MAD→CAD
+          </button>
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-2 bg-brand-gold text-brand-black px-4 py-2 text-sm font-semibold tracking-widest uppercase hover:bg-white transition-colors"
+          >
+            <Plus size={16} />
+            Ajouter
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -308,6 +334,17 @@ export default function AdminProductsPage() {
                     value={form.descriptionEn ?? ''}
                     onChange={(e) => setForm({ ...form, descriptionEn: e.target.value })}
                     className="w-full bg-white/5 border border-white/10 text-white px-4 py-2.5 text-sm focus:outline-none focus:border-brand-gold resize-none"
+                  />
+                </div>
+
+                {/* Video URL */}
+                <div>
+                  <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Vidéo (TikTok / YouTube / MP4)</label>
+                  <input
+                    value={(form as { videoUrl?: string }).videoUrl ?? ''}
+                    onChange={(e) => setForm({ ...form, videoUrl: e.target.value } as ProductForm)}
+                    placeholder="https://www.tiktok.com/@user/video/123 ou YouTube"
+                    className="w-full bg-white/5 border border-white/10 text-white px-4 py-2.5 text-sm focus:outline-none focus:border-brand-gold placeholder-white/20"
                   />
                 </div>
 

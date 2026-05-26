@@ -1,8 +1,8 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ShoppingBag, ChevronLeft, ChevronRight, ArrowRight, ShoppingCart, Truck, MapPin } from 'lucide-react'
+import { ShoppingBag, ChevronLeft, ChevronRight, ArrowRight, ShoppingCart, Truck, MapPin, Play } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cartStore'
 import { useCurrency } from '@/lib/context/CurrencyContext'
 import { useLanguage } from '@/lib/i18n'
@@ -33,7 +33,8 @@ interface Product {
   cjPid?: string
   cjLogisticName?: string
   productWeight?: number
-  shippingBakedMad?: number
+  shippingBakedUSD?: number
+  videoUrl?: string
 }
 
 interface ShippingOption {
@@ -44,6 +45,35 @@ interface ShippingOption {
   agingMax: number
 }
 
+const SHIP_COUNTRIES: { code: string; name: string }[] = [
+  { code: 'CA', name: 'Canada' },
+  { code: 'US', name: 'United States' },
+  { code: 'FR', name: 'France' },
+  { code: 'DE', name: 'Germany' },
+  { code: 'GB', name: 'United Kingdom' },
+  { code: 'ES', name: 'Spain' },
+  { code: 'IT', name: 'Italy' },
+  { code: 'BE', name: 'Belgium' },
+  { code: 'NL', name: 'Netherlands' },
+  { code: 'PT', name: 'Portugal' },
+  { code: 'CH', name: 'Switzerland' },
+  { code: 'AT', name: 'Austria' },
+  { code: 'IE', name: 'Ireland' },
+  { code: 'AU', name: 'Australia' },
+  { code: 'NZ', name: 'New Zealand' },
+  { code: 'JP', name: 'Japan' },
+  { code: 'SG', name: 'Singapore' },
+  { code: 'AE', name: 'UAE' },
+  { code: 'SA', name: 'Saudi Arabia' },
+  { code: 'MA', name: 'Morocco' },
+  { code: 'DZ', name: 'Algeria' },
+  { code: 'TN', name: 'Tunisia' },
+  { code: 'EG', name: 'Egypt' },
+  { code: 'BR', name: 'Brazil' },
+  { code: 'MX', name: 'Mexico' },
+  { code: 'IN', name: 'India' },
+]
+
 const swipeVariants = {
   enter: (dir: number) => ({ x: dir > 0 ? '100%' : '-100%', opacity: 0 }),
   center: { x: 0, opacity: 1 },
@@ -51,11 +81,26 @@ const swipeVariants = {
 }
 const swipeTransition = { duration: 0.4, ease: 'easeInOut' as const }
 
+function getVideoEmbed(url: string): { type: 'youtube' | 'tiktok' | 'video' | 'link'; embedUrl: string } | null {
+  if (!url) return null
+  // YouTube
+  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)
+  if (ytMatch) return { type: 'youtube', embedUrl: `https://www.youtube.com/embed/${ytMatch[1]}` }
+  // TikTok
+  const ttMatch = url.match(/tiktok\.com\/@[^/]+\/video\/(\d+)/)
+  if (ttMatch) return { type: 'tiktok', embedUrl: `https://www.tiktok.com/embed/v2/${ttMatch[1]}` }
+  // Direct video
+  if (/\.(mp4|webm|mov)(\?|$)/i.test(url)) return { type: 'video', embedUrl: url }
+  // Fallback: generic link
+  return { type: 'link', embedUrl: url }
+}
+
 export default function ProductDetailClient({ product, detectedCountry }: { product: Product; detectedCountry?: string }) {
   const [[imgIdx, dir], setPage] = useState([0, 0])
   const [selectedSize, setSelectedSize] = useState('')
   const [qty, setQty] = useState(1)
   const [added, setAdded] = useState(false)
+  const [showVideo, setShowVideo] = useState(false)
   const addItem = useCartStore((s) => s.addItem)
   const router = useRouter()
   const { format, shippingCostUSD, usdToCAD } = useCurrency()
@@ -63,7 +108,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
 
   const [shipping, setShipping] = useState<ShippingOption | null>(null)
   const [shippingLoading, setShippingLoading] = useState(false)
-  const [userCountry, setUserCountry] = useState(detectedCountry || '')
+  const [shipCountry, setShipCountry] = useState(detectedCountry || 'CA')
 
   useEffect(() => {
     setAdded(false)
@@ -71,69 +116,69 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
     setQty(1)
   }, [product._id])
 
-  // Detect country and fetch shipping if this is a CJ product
+  const loadShipping = useCallback(async (country: string) => {
+    if (!product.cjPid || !country) return
+    setShippingLoading(true)
+    try {
+      const firstSize = product.sizes?.find((s) => s.cjVid)
+      const vid = firstSize?.cjVid ?? ''
+      const weight = product.productWeight ?? 200
+      const params = new URLSearchParams({ country, weight: String(weight) })
+      if (vid) params.set('vid', vid)
+      const res = await fetch(`/api/shipping?${params}`)
+      const data = await res.json()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const options: ShippingOption[] = (data.options ?? []).map((opt: any) => {
+        let agingMin = opt.agingMin ?? opt.ageMin ?? 0
+        let agingMax = opt.agingMax ?? opt.ageMax ?? 0
+        if (!agingMin || !agingMax) {
+          const s = opt.logisticAging ?? opt.logisticAge ?? opt.aging ?? opt.deliveryTime ?? ''
+          if (s) { const p = String(s).split('-'); agingMin = parseInt(p[0]) || 0; agingMax = parseInt(p[1] ?? p[0]) || 0 }
+        }
+        return { ...opt, agingMin, agingMax }
+      })
+      if (options.length === 0) { setShipping(null); return }
+      const preferred = product.cjLogisticName
+        ? options.find((o) => o.logisticName === product.cjLogisticName)
+        : null
+      if (preferred) { setShipping(preferred); return }
+      const maxPrice = Math.max(...options.map((o) => o.logisticPrice), 1)
+      const maxDays = Math.max(...options.map((o) => o.agingMax || o.agingMin || 30), 1)
+      const scored = options.map((o) => ({
+        ...o,
+        score: (o.logisticPrice / maxPrice) * 0.7 + ((o.agingMax || o.agingMin || 30) / maxDays) * 0.3,
+      }))
+      setShipping(scored.sort((a, b) => a.score - b.score)[0])
+    } catch {
+      setShipping(null)
+    } finally {
+      setShippingLoading(false)
+    }
+  }, [product._id, product.cjPid, product.cjLogisticName, product.productWeight, product.sizes])
+
+  // Initial load
   useEffect(() => {
     if (!product.cjPid) return
-
-    const loadShipping = async (country: string) => {
-      if (!country) return
-      setShippingLoading(true)
-      try {
-        const firstSize = product.sizes?.find((s) => s.cjVid)
-        const vid = firstSize?.cjVid ?? ''
-        const weight = product.productWeight ?? 200
-        const params = new URLSearchParams({ country, weight: String(weight) })
-        if (vid) params.set('vid', vid)
-        const res = await fetch(`/api/shipping?${params}`)
-        const data = await res.json()
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const options: ShippingOption[] = (data.options ?? []).map((opt: any) => {
-          let agingMin = opt.agingMin ?? opt.ageMin ?? 0
-          let agingMax = opt.agingMax ?? opt.ageMax ?? 0
-          if (!agingMin || !agingMax) {
-            const s = opt.logisticAging ?? opt.logisticAge ?? opt.aging ?? opt.deliveryTime ?? ''
-            if (s) { const p = String(s).split('-'); agingMin = parseInt(p[0]) || 0; agingMax = parseInt(p[1] ?? p[0]) || 0 }
-          }
-          return { ...opt, agingMin, agingMax }
-        })
-        if (options.length === 0) return
-
-        // Prefer the stored logistic name, else best value (cheap + reasonable speed)
-        const preferred = product.cjLogisticName
-          ? options.find((o) => o.logisticName === product.cjLogisticName)
-          : null
-        if (preferred) { setShipping(preferred); return }
-        // Score = price * 0.7 + normalised_days * 0.3 — lower is better
-        const maxPrice = Math.max(...options.map((o) => o.logisticPrice), 1)
-        const maxDays = Math.max(...options.map((o) => o.agingMax || o.agingMin || 30), 1)
-        const scored = options.map((o) => ({
-          ...o,
-          score: (o.logisticPrice / maxPrice) * 0.7 + ((o.agingMax || o.agingMin || 30) / maxDays) * 0.3,
-        }))
-        setShipping(scored.sort((a, b) => a.score - b.score)[0])
-      } catch {
-        // ignore shipping errors — not critical
-      } finally {
-        setShippingLoading(false)
+    const init = async () => {
+      let country = detectedCountry || ''
+      if (!country) {
+        try {
+          const r = await fetch('/api/geo')
+          const d = await r.json()
+          country = d.countryCode || 'CA'
+        } catch { country = 'CA' }
       }
+      setShipCountry(country)
+      loadShipping(country)
     }
-
-    if (detectedCountry) {
-      setUserCountry(detectedCountry)
-      loadShipping(detectedCountry)
-    } else {
-      // Fallback: ask Vercel geo
-      fetch('/api/geo')
-        .then((r) => r.json())
-        .then((d) => {
-          const c = d.countryCode || 'US'
-          setUserCountry(c)
-          loadShipping(c)
-        })
-        .catch(() => loadShipping('US'))
-    }
+    init()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product._id, product.cjPid])
+
+  const handleCountryChange = (country: string) => {
+    setShipCountry(country)
+    loadShipping(country)
+  }
 
   const sizes = product.sizes ?? []
   const images = product.images ?? []
@@ -143,8 +188,6 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
   const selectedStock = selectedSizeEntry?.stock ?? 0
   const totalStock = sizes.reduce((s, i) => s + i.stock, 0)
 
-  // Base sell price (stored in DB in MAD, excludes shipping).
-  // Use the per-product fetched shipping (correct weight) when available, else global context.
   const basePrice = selectedSizeEntry?.variantPrice ?? product.price
   const effectiveShipUSD = shipping ? shipping.logisticPrice : shippingCostUSD
   const displayPrice = product.cjPid && effectiveShipUSD > 0
@@ -195,6 +238,8 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
     router.push('/checkout')
   }
 
+  const videoEmbed = product.videoUrl ? getVideoEmbed(product.videoUrl) : null
+
   return (
     <div style={{ minHeight: '100vh', width: '100%', overflowX: 'hidden', boxSizing: 'border-box' }}>
       <div style={{ maxWidth: '1152px', margin: '0 auto', padding: '16px', boxSizing: 'border-box' }}>
@@ -208,10 +253,8 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
         </div>
 
         <div className="grid md:grid-cols-[1fr_420px] gap-5 md:gap-8 lg:gap-12 items-start" style={{ overflow: 'hidden' }}>
-          {/* Images — thumbnails left (desktop) / below (mobile) */}
+          {/* Images panel */}
           <div style={{ minWidth: 0 }}>
-            {/* Mobile: main image, then thumbnails row below */}
-            {/* Desktop: side-by-side [thumbs | main] */}
             <div className="flex gap-2 md:gap-3">
               {/* Vertical thumbnail strip — desktop only */}
               {images.length > 1 && (
@@ -223,6 +266,16 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                       <Image src={img} alt="" fill unoptimized={isExternal(img)} className="object-cover bg-white" sizes="72px" />
                     </button>
                   ))}
+                  {/* Video thumbnail in strip */}
+                  {videoEmbed && (
+                    <button onClick={() => setShowVideo(true)}
+                      className="relative w-full flex-shrink-0 overflow-hidden border-2 border-transparent opacity-60 hover:opacity-90 hover:border-brand-gold transition-all duration-200 bg-black"
+                      style={{ aspectRatio: '1/1' }}>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Play size={20} className="text-white" fill="white" />
+                      </div>
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -283,7 +336,44 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                     <Image src={img} alt="" fill unoptimized={isExternal(img)} className="object-cover bg-white" sizes="60px" />
                   </button>
                 ))}
+                {videoEmbed && (
+                  <button onClick={() => setShowVideo(true)}
+                    className="flex-shrink-0 bg-black flex items-center justify-center border-2 border-transparent opacity-70 hover:opacity-100 hover:border-brand-gold transition-all"
+                    style={{ width: '60px', height: '60px' }}>
+                    <Play size={18} className="text-white" fill="white" />
+                  </button>
+                )}
               </div>
+            )}
+
+            {/* Video embed (inline, below images) */}
+            {videoEmbed && showVideo && (
+              <div className="mt-4">
+                {videoEmbed.type === 'youtube' || videoEmbed.type === 'tiktok' ? (
+                  <iframe
+                    src={videoEmbed.embedUrl}
+                    className="w-full rounded"
+                    style={{ aspectRatio: videoEmbed.type === 'tiktok' ? '9/16' : '16/9', maxHeight: videoEmbed.type === 'tiktok' ? '560px' : undefined, border: 'none' }}
+                    allow="autoplay; encrypted-media"
+                    allowFullScreen
+                  />
+                ) : videoEmbed.type === 'video' ? (
+                  // eslint-disable-next-line jsx-a11y/media-has-caption
+                  <video src={videoEmbed.embedUrl} controls className="w-full rounded" style={{ maxHeight: '480px' }} />
+                ) : (
+                  <a href={videoEmbed.embedUrl} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-sm text-brand-gold underline">
+                    <Play size={14} /> Voir la vidéo
+                  </a>
+                )}
+                <button onClick={() => setShowVideo(false)} className="mt-2 text-xs text-brand-gray hover:text-brand-black underline">Masquer la vidéo</button>
+              </div>
+            )}
+            {videoEmbed && !showVideo && (
+              <button onClick={() => setShowVideo(true)}
+                className="mt-3 flex items-center gap-2 text-xs tracking-widest uppercase text-brand-gold hover:text-brand-black transition-colors font-medium">
+                <Play size={13} fill="currentColor" /> Voir la vidéo produit
+              </button>
             )}
           </div>
 
@@ -303,6 +393,9 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                   </>
                 )}
               </div>
+              {product.cjPid && (
+                <p className="text-[10px] text-brand-gray tracking-widest mb-4">Livraison incluse dans le prix</p>
+              )}
 
               {/* Stock status */}
               <div className="mb-6">
@@ -348,7 +441,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                           <span>{label}</span>
                           {vp && vp !== product.price && (
                             <span className="block text-[9px] leading-none opacity-60 mt-0.5">
-                              {format(product.cjPid && shippingCostUSD > 0 ? vp + shippingCostUSD * usdToCAD : vp)}
+                              {format(product.cjPid && effectiveShipUSD > 0 ? vp + effectiveShipUSD * usdToCAD : vp)}
                             </span>
                           )}
                         </button>
@@ -397,15 +490,32 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                 </AnimatePresence>
               )}
 
-              {/* Shipping estimate — shipping cost is baked into the product price, shown as free */}
-              <div className="mt-5 border border-brand-light-gray p-4">
+              {/* Shipping section with country selector */}
+              <div className="mt-5 border border-brand-light-gray p-4 space-y-3">
+                {/* Ship to selector */}
+                {product.cjPid && (
+                  <div className="flex items-center gap-2">
+                    <MapPin size={13} className="text-brand-gray flex-shrink-0" />
+                    <span className="text-xs text-brand-gray">Livrer vers :</span>
+                    <select
+                      value={shipCountry}
+                      onChange={(e) => handleCountryChange(e.target.value)}
+                      className="flex-1 text-xs border border-brand-light-gray px-2 py-1 bg-white text-brand-black focus:outline-none focus:border-brand-black"
+                    >
+                      {SHIP_COUNTRIES.map((c) => (
+                        <option key={c.code} value={c.code}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 {shippingLoading ? (
                   <div className="flex items-center gap-2 text-xs text-brand-gray">
                     <Truck size={14} className="animate-pulse" />
                     <span>Calcul de la livraison...</span>
                   </div>
                 ) : shipping ? (
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-xs text-brand-black font-medium">
                         <Truck size={14} />
@@ -413,20 +523,17 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                       </div>
                       <span className="text-[10px] bg-green-600 text-white px-2 py-0.5 font-semibold tracking-wide">GRATUIT</span>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-brand-gray">
-                      <MapPin size={12} />
-                      <span>
-                        Livraison vers <strong>{userCountry}</strong> en {shipping.agingMin > 0 ? `${shipping.agingMin}–${shipping.agingMax}` : '7–20'} jours
-                      </span>
-                    </div>
+                    <p className="text-xs text-brand-gray pl-5">
+                      Délai estimé : {shipping.agingMin > 0 ? `${shipping.agingMin}–${shipping.agingMax}` : '7–20'} jours ouvrés
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-1">
                     <p className="text-xs text-brand-black font-medium flex items-center gap-2"><Truck size={14} /> Livraison gratuite</p>
-                    <p className="text-xs text-brand-gray flex items-center gap-2">Délai estimé : 7–15 jours ouvrés</p>
-                    <p className="text-xs text-brand-gray">✓ Paiement sécurisé</p>
+                    <p className="text-xs text-brand-gray">Délai estimé : 7–15 jours ouvrés</p>
                   </div>
                 )}
+                <p className="text-xs text-brand-gray">✓ Paiement sécurisé</p>
               </div>
 
               {/* Description */}

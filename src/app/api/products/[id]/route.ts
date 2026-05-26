@@ -30,7 +30,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const body = await req.json()
     const product = await Product.findById(params.id)
     if (!product) return NextResponse.json({ message: 'Not found' }, { status: 404 })
-    const fields = ['name', 'price', 'originalPrice', 'category', 'description', 'images', 'featured', 'active']
+    const fields = ['name', 'price', 'originalPrice', 'category', 'description', 'images', 'featured', 'active', 'videoUrl']
     for (const field of fields) {
       if (body[field] !== undefined) (product as Record<string, unknown>)[field] = body[field]
     }

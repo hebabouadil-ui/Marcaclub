@@ -20,6 +20,7 @@ export interface IProduct extends Document {
   shippingBakedMad?: number
   shippingBakedUSD?: number
   shippingRefCountry?: string
+  videoUrl?: string
   cjData?: Record<string, unknown>
   createdAt: Date
   updatedAt: Date
@@ -46,6 +47,7 @@ const ProductSchema = new Schema<IProduct>(
     shippingBakedMad: { type: Number },
     shippingBakedUSD: { type: Number },
     shippingRefCountry: { type: String },
+    videoUrl: { type: String },
     cjData: { type: Schema.Types.Mixed },
   },
   { timestamps: true }
