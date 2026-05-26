@@ -138,7 +138,7 @@ const t = {
       default: 'Worldwide Shipping · Secure Checkout · New Arrivals Every Week',
     },
     hero: {
-      badge: 'Premium Car Accessories · Worldwide Shipping',
+      badge: 'Premium Beauty & Skincare · Worldwide Shipping',
       shopNow: 'Shop Now',
       createAccount: 'Create Free Account',
       shipsWorldwide: 'Ships Worldwide',
