@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { signOut, useSession } from 'next-auth/react'
 import { SessionProvider } from 'next-auth/react'
 import {
-  LayoutDashboard, Package, ShoppingBag, Settings, LogOut, Radio, Menu, X, BarChart2, Users, Download,
+  LayoutDashboard, Package, ShoppingBag, Settings, LogOut, Radio, Menu, X, BarChart2, Users, Download, Star,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
@@ -14,6 +14,7 @@ const navItems = [
   { href: '/admin/cj-import', label: 'CJ Import', icon: Download },
   { href: '/admin/orders', label: 'Orders', icon: ShoppingBag, badgeKey: 'orders' },
   { href: '/admin/customers', label: 'Customers', icon: Users },
+  { href: '/admin/reviews', label: 'Reviews', icon: Star },
   { href: '/admin/reports', label: 'Reports', icon: BarChart2 },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
   { href: '/admin/live', label: 'Live', icon: Radio },
