@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
     if (!searchParams.get('all') || !session) query.active = true
     if (searchParams.get('category')) query.category = searchParams.get('category')
     if (searchParams.get('featured')) query.featured = true
+    if (searchParams.get('onSale')) query.onSale = true
     if (searchParams.get('q')) {
       const escaped = searchParams.get('q')!.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
       query.name = { $regex: escaped, $options: 'i' }

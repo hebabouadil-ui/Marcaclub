@@ -51,6 +51,23 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
+export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions)
+  if (!session) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+  try {
+    await connectDB()
+    const body = await req.json()
+    const allowed = ['featured', 'onSale', 'active']
+    const update: Record<string, unknown> = {}
+    for (const key of allowed) if (body[key] !== undefined) update[key] = body[key]
+    const product = await Product.findByIdAndUpdate(params.id, { $set: update }, { new: true }).lean()
+    if (!product) return NextResponse.json({ message: 'Not found' }, { status: 404 })
+    return NextResponse.json(product)
+  } catch {
+    return NextResponse.json({ message: 'Server error' }, { status: 500 })
+  }
+}
+
 export async function DELETE(_: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })

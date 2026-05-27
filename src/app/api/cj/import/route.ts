@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { pid, name, description, descriptionHtml, videoUrl, price, category, selectedVariants, cjLogisticName, variantPrices, baseVariantPrices, shippingBakedUSD, shippingRefCountry, productWeight } = body
+    const { pid, name, description, descriptionHtml, videoUrl, price, category, selectedVariants, cjLogisticName, variantPrices, baseVariantPrices, shippingBakedUSD, shippingRefCountry, productWeight, featured, onSale } = body
     const variantPricesMap: Record<string, number> | undefined = variantPrices
     const baseVariantPricesMap: Record<string, number> | undefined = baseVariantPrices
 
@@ -105,7 +105,8 @@ export async function POST(req: NextRequest) {
       category,
       sizes,
       stock: totalStock,
-      featured: false,
+      featured: !!featured,
+      onSale: !!onSale,
       active: true,
       cjPid: pid,
       cjLogisticName: cjLogisticName || undefined,

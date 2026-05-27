@@ -14,6 +14,7 @@ export interface IProduct extends Document {
   sizes: Array<{ size: string; stock: number; cjVid?: string; cjSku?: string; variantPrice?: number; baseVariantPrice?: number }>
   stock: number
   featured: boolean
+  onSale: boolean
   active: boolean
   cjPid?: string
   cjLogisticName?: string
@@ -41,6 +42,7 @@ const ProductSchema = new Schema<IProduct>(
     sizes: [{ size: { type: String }, stock: { type: Number, default: 0 }, cjVid: { type: String }, cjSku: { type: String }, variantPrice: { type: Number }, baseVariantPrice: { type: Number } }],
     stock: { type: Number, default: 0 },
     featured: { type: Boolean, default: false },
+    onSale: { type: Boolean, default: false },
     active: { type: Boolean, default: true },
     cjPid: { type: String },
     cjLogisticName: { type: String },

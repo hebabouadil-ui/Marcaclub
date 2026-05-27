@@ -18,6 +18,7 @@ interface Product {
   images: string[]
   sizes: SizeStock[]
   featured: boolean
+  onSale: boolean
   active: boolean
   description: string
   descriptionEn?: string
@@ -28,7 +29,7 @@ type ProductForm = Omit<Product, '_id' | 'stock'>
 
 const EMPTY: ProductForm = {
   name: '', price: 0, originalPrice: undefined, category: 'soins-visage',
-  images: [], sizes: [], featured: false, active: true, description: '', descriptionEn: '', videoUrl: '',
+  images: [], sizes: [], featured: false, onSale: false, active: true, description: '', descriptionEn: '', videoUrl: '',
 }
 const CATEGORIES = ['soins-visage', 'soins-corps', 'soins-cheveux', 'maquillage', 'autres']
 const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '36', '37', '38', '39', '40', '41', '42', '43', 'Unique']
@@ -106,7 +107,7 @@ export default function AdminProductsPage() {
       typeof s === 'string' ? { size: s as string, stock: 0 } : s
     )
     setForm({ name: p.name, price: p.price, originalPrice: p.originalPrice, category: p.category,
-      images: p.images, sizes: normalizedSizes, featured: p.featured, active: p.active,
+      images: p.images, sizes: normalizedSizes, featured: p.featured, onSale: p.onSale, active: p.active,
       description: p.description, descriptionEn: (p as { descriptionEn?: string }).descriptionEn ?? '',
       videoUrl: (p as { videoUrl?: string }).videoUrl ?? '' })
     setModal(true)
@@ -171,15 +172,21 @@ export default function AdminProductsPage() {
     }
   }
 
-  const toggleFeatured = async (p: Product) => {
+  const toggleField = async (p: Product, field: 'featured' | 'onSale' | 'active') => {
     const res = await fetch(`/api/products/${p._id}`, {
-      method: 'PUT',
+      method: 'PATCH',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...p, featured: !p.featured }),
+      body: JSON.stringify({ [field]: !p[field] }),
     })
     if (res.ok) {
-      toast.success(p.featured ? 'Retiré des pièces du moment' : 'Ajouté aux pièces du moment')
+      const msgs: Record<string, [string, string]> = {
+        featured: ['Retiré des pièces du moment', 'Ajouté aux pièces du moment'],
+        onSale: ['Retiré des soldes', 'Ajouté aux soldes'],
+        active: ['Désactivé', 'Activé'],
+      }
+      const [off, on] = msgs[field]
+      toast.success(p[field] ? off : on)
       load()
     }
   }
@@ -243,14 +250,23 @@ export default function AdminProductsPage() {
                     No image
                   </div>
                 )}
-                {/* Featured badge */}
-                <button
-                  onClick={() => toggleFeatured(p)}
-                  title={p.featured ? 'Remove from featured' : 'Add to featured'}
-                  className={`absolute top-2 right-2 p-1.5 rounded-full transition-all ${p.featured ? 'bg-brand-gold text-brand-black' : 'bg-black/50 text-white/40 hover:text-brand-gold'}`}
-                >
-                  <Star size={12} fill={p.featured ? 'currentColor' : 'none'} />
-                </button>
+                {/* Featured + OnSale badges */}
+                <div className="absolute top-2 right-2 flex flex-col gap-1">
+                  <button
+                    onClick={() => toggleField(p, 'featured')}
+                    title={p.featured ? 'Remove from featured' : 'Add to featured'}
+                    className={`p-1.5 rounded-full transition-all ${p.featured ? 'bg-brand-gold text-brand-black' : 'bg-black/50 text-white/40 hover:text-brand-gold'}`}
+                  >
+                    <Star size={12} fill={p.featured ? 'currentColor' : 'none'} />
+                  </button>
+                  <button
+                    onClick={() => toggleField(p, 'onSale')}
+                    title={p.onSale ? 'Remove from sales' : 'Put on sale'}
+                    className={`p-1.5 rounded-full transition-all text-[9px] font-bold leading-none ${p.onSale ? 'bg-red-500 text-white' : 'bg-black/50 text-white/40 hover:text-red-400'}`}
+                  >
+                    %
+                  </button>
+                </div>
                 {!p.active && (
                   <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                     <span className="text-white text-xs tracking-widest uppercase">Inactive</span>
@@ -485,7 +501,7 @@ export default function AdminProductsPage() {
                 </div>
 
                 {/* Flags */}
-                <div className="flex gap-6">
+                <div className="flex gap-6 flex-wrap">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
@@ -494,6 +510,15 @@ export default function AdminProductsPage() {
                       className="accent-brand-gold"
                     />
                     <span className="text-white/60 text-sm">Featured</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={(form as ProductForm).onSale}
+                      onChange={(e) => setForm({ ...form, onSale: e.target.checked })}
+                      className="accent-red-500"
+                    />
+                    <span className="text-white/60 text-sm">En solde</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input

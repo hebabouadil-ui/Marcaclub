@@ -7,6 +7,7 @@ const t = {
   fr: {
     nav: {
       shop: 'Boutique',
+      sales: 'Soldes',
       newArrivals: 'Nouveautés',
       live: 'Lookbook',
       signIn: 'Connexion',
@@ -126,6 +127,7 @@ const t = {
   en: {
     nav: {
       shop: 'Shop',
+      sales: 'Sales',
       newArrivals: 'New Arrivals',
       live: 'Lookbook',
       signIn: 'Sign In',

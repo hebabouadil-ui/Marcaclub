@@ -166,6 +166,8 @@ interface ImportForm {
   marginPct: string        // target margin % (e.g. "60" = 60%)
   variantPrices: Record<string, string>     // sell price in CAD (base only, no shipping)
   baseVariantPrices: Record<string, string> // same — stored separately for storefront
+  featured: boolean
+  onSale: boolean
 }
 
 const COUNTRIES = [
@@ -203,6 +205,7 @@ export default function CJImportPage() {
   const [form, setForm] = useState<ImportForm>({
     name: '', description: '', videoUrl: '', price: '', category: 'soins-visage',
     selectedVariants: [], cjLogisticName: '', marginPct: '60', variantPrices: {}, baseVariantPrices: {},
+    featured: false, onSale: false,
   })
   const [importing, setImporting] = useState(false)
   const [imported, setImported] = useState<Set<string>>(new Set())
@@ -416,8 +419,9 @@ export default function CJImportPage() {
         cjLogisticName: '',
         marginPct: prev.marginPct || '60',
         variantPrices: vPrices,
-        // baseVariantPrices = same as variantPrices (sell price excl. shipping)
         baseVariantPrices: { ...vPrices },
+        featured: prev.featured,
+        onSale: prev.onSale,
       }))
       fetchShipping(detail, shippingCountry)
     } catch {
@@ -463,6 +467,8 @@ export default function CJImportPage() {
           shippingBakedUSD: shippingUSD,
           shippingRefCountry: shippingUSD > 0 ? shippingCountry : undefined,
           productWeight: preview.productWeight ?? 200,
+          featured: form.featured,
+          onSale: form.onSale,
         }),
       })
       const data = await res.json()
@@ -1028,6 +1034,28 @@ export default function CJImportPage() {
                     </div>
                   </div>
                 )}
+
+                {/* Flags */}
+                <div className="flex gap-6">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.featured}
+                      onChange={(e) => setForm((p) => ({ ...p, featured: e.target.checked }))}
+                      className="accent-brand-gold"
+                    />
+                    <span className="text-white/60 text-sm">Featured</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.onSale}
+                      onChange={(e) => setForm((p) => ({ ...p, onSale: e.target.checked }))}
+                      className="accent-red-500"
+                    />
+                    <span className="text-white/60 text-sm">En solde</span>
+                  </label>
+                </div>
 
                 {/* Import button */}
                 <button onClick={handleImport} disabled={importing}

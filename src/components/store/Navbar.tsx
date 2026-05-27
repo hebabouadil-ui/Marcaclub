@@ -128,6 +128,7 @@ export default function Navbar() {
 
   const links = [
     { href: '/products', label: tr.nav.shop },
+    { href: '/sales', label: tr.nav.sales },
     { href: '/#featured', label: tr.nav.newArrivals },
     { href: '/#community', label: tr.nav.live },
   ]
