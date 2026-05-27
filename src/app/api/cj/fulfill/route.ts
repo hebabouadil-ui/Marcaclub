@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/authOptions'
-import { createCJOrder } from '@/lib/utils/cjApi'
+import { createCJOrder, getCJShippingInfo } from '@/lib/utils/cjApi'
 import { connectDB } from '@/lib/db'
 import Order from '@/lib/models/Order'
 import Product from '@/lib/models/Product'
@@ -54,6 +54,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No CJ products found in this order — check products have CJ variants' }, { status: 400 })
   }
 
+  // Determine best logistic method for destination country
+  const destCountry = (order.customer.country || 'MA').toUpperCase()
+  let logisticName: string | undefined
+  try {
+    const shippingData = await getCJShippingInfo({ startCountryCode: 'CN', endCountryCode: destCountry, productWeight: 300, quantity: 1 })
+    const options: Array<{ logisticName: string; logisticPrice: number; agingMax?: number; agingMin?: number }> =
+      (shippingData.result && Array.isArray(shippingData.data)) ? shippingData.data : []
+    if (options.length > 0) {
+      const maxPrice = Math.max(...options.map(o => o.logisticPrice))
+      const maxDays  = Math.max(...options.map(o => o.agingMax ?? o.agingMin ?? 30))
+      const best = options
+        .map(o => ({ ...o, score: (o.logisticPrice / (maxPrice || 1)) * 0.7 + ((o.agingMax ?? o.agingMin ?? 30) / (maxDays || 1)) * 0.3 }))
+        .sort((a, b) => a.score - b.score)[0]
+      logisticName = best.logisticName
+      console.log(`CJ fulfill: selected logistic "${logisticName}" for country ${destCountry}`)
+    }
+  } catch (e) {
+    console.warn('CJ shipping lookup failed, proceeding without logisticName:', e)
+  }
+
   // Split full name into first/last
   const nameParts = order.customer.name.trim().split(' ')
   const firstName = nameParts[0]
@@ -62,6 +82,7 @@ export async function POST(req: NextRequest) {
   try {
     const result = await createCJOrder({
       orderNumber: order.orderNumber,
+      logisticName,
       shippingAddress: {
         firstName,
         lastName,

@@ -130,9 +130,10 @@ export async function createCJOrder(params: {
   products: CJOrderItem[]
   logisticName?: string
 }) {
-  const payload = {
+  const payload: Record<string, unknown> = {
     orderNumber: params.orderNumber,
     fromCountryCode: 'CN',
+    ...(params.logisticName ? { logisticName: params.logisticName } : {}),
     shippingZip: params.shippingAddress.zip,
     shippingCountry: params.shippingAddress.country,
     shippingCountryCode: params.shippingAddress.country,
