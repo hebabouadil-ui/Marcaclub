@@ -38,7 +38,7 @@ const COUNTRY_CURRENCY: Record<string, string> = {
   FR: 'EUR', DE: 'EUR', ES: 'EUR', IT: 'EUR', NL: 'EUR', BE: 'EUR',
   PT: 'EUR', AT: 'EUR', IE: 'EUR', FI: 'EUR', GR: 'EUR',
   CH: 'CHF', JP: 'JPY', SG: 'SGD', AE: 'AED', SA: 'SAR',
-  MA: 'EUR', DZ: 'EUR', TN: 'EUR',  // North Africa → EUR
+  MA: 'EUR', DZ: 'EUR', TN: 'EUR',  // North Africa → EUR (MAD/DZD not in Stripe)
   BR: 'BRL', MX: 'MXN', IN: 'INR',
 }
 
@@ -148,10 +148,9 @@ export function CurrencyProvider({ children, initialCountry }: { children: React
     setCurrencyState(code)
   }, [])
 
-  // User manually picking a currency — persists across sessions
+  // User manually picking a currency — works for current session only
   const setCurrency = useCallback((code: string) => {
     applyCode(code, rates)
-    localStorage.setItem('mc-currency-manual', code)
   }, [applyCode, rates])
 
   useEffect(() => {
@@ -166,18 +165,16 @@ export function CurrencyProvider({ children, initialCountry }: { children: React
         }
       } catch {}
 
-      // 2. Use country from server prop or cookie (already correct from SSR)
+      // 2. Country is already set correctly from initialCountry server prop
       const country = initialCountry || readCountryCookie() || 'CA'
       const detectedCurrency = COUNTRY_CURRENCY[country] ?? 'CAD'
       setGeo({ countryCode: country })
 
-      // 3. Apply currency — manual user choice wins, otherwise always use detected country
-      // Use 'mc-currency-manual' (only set when user explicitly picks) to avoid
-      // stale 'mc-currency' values from old sessions overriding geo-detection
-      const manualChoice = localStorage.getItem('mc-currency-manual')
-      applyCode(manualChoice ?? detectedCurrency, ratesMap)
+      // 3. Always use geo-detected currency — ignore any saved localStorage value
+      // (localStorage overrides caused CAD to stick for non-Canadian visitors)
+      applyCode(detectedCurrency, ratesMap)
 
-      // 4. Fetch real CJ shipping for this country (fallback already showing)
+      // 4. Fetch real CJ shipping for this country
       const realShipping = await fetchBestShippingUSD(country)
       setShippingCostUSD(realShipping)
     }
