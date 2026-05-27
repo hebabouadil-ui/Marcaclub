@@ -510,7 +510,7 @@ export default function CheckoutPage() {
   const router = useRouter()
   const { items, removeItem, updateQuantity, clearCart } = useCartStore()
   const subtotal = cartTotal(items)
-  const { format, currency, symbol, geo } = useCurrency()
+  const { format, currency, symbol, geo, usdToCAD } = useCurrency()
   const { customer, loading: authLoading } = useCustomer()
   const [shippingForm, setShippingForm] = useState<CustomerForm>(emptyForm)
   const [clientSecret, setClientSecret] = useState<string | null>(null)
@@ -524,7 +524,7 @@ export default function CheckoutPage() {
   // Per-country shipping fee in CAD — fetches real CJ rates when country changes
   const [shippingFeeCAD, setShippingFeeCAD] = useState<number>(() => {
     const usd = SHIPPING_BY_COUNTRY_USD['CA'] ?? SHIPPING_DEFAULT_USD
-    return Math.round(usd * 1.37 * 100) / 100
+    return Math.round(usd * 1.38 * 100) / 100
   })
   const [shippingFeeLoading, setShippingFeeLoading] = useState(false)
 
@@ -543,21 +543,20 @@ export default function CheckoutPage() {
           const best = options
             .map(o => ({ ...o, score: (o.logisticPrice / (maxPrice || 1)) * 0.7 + ((o.agingMax ?? o.agingMin ?? 30) / (maxDays || 1)) * 0.3 }))
             .sort((a, b) => a.score - b.score)[0]
-          // logisticPrice is in USD; convert to CAD at ~1.37 for display
-          const usdToCAD = 1.37
+          // logisticPrice is in USD; convert to CAD using live rate
           setShippingFeeCAD(Math.round(best.logisticPrice * usdToCAD * 100) / 100)
         } else {
           // Fallback to static table
           const usd = SHIPPING_BY_COUNTRY_USD[country] ?? SHIPPING_DEFAULT_USD
-          setShippingFeeCAD(Math.round(usd * 1.37 * 100) / 100)
+          setShippingFeeCAD(Math.round(usd * usdToCAD * 100) / 100)
         }
       })
       .catch(() => {
         const usd = SHIPPING_BY_COUNTRY_USD[country] ?? SHIPPING_DEFAULT_USD
-        setShippingFeeCAD(Math.round(usd * 1.37 * 100) / 100)
+        setShippingFeeCAD(Math.round(usd * usdToCAD * 100) / 100)
       })
       .finally(() => setShippingFeeLoading(false))
-  }, [shippingForm.country])
+  }, [shippingForm.country, usdToCAD])
 
   const taxAmount = Math.round(
     taxComponents.reduce((sum, c) => sum + subtotal * c.rate, 0) * 100
