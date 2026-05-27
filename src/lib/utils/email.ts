@@ -36,8 +36,13 @@ function baseHtml(content: string, preheader = '') {
     ${content}
     <!-- Footer -->
     <div style="background:#f9fafb;padding:24px;text-align:center;border-top:1px solid #e5e7eb;">
-      <p style="color:#9ca3af;font-size:12px;margin:0 0 6px;">© ${new Date().getFullYear()} Marcaclub · All rights reserved</p>
-      <p style="color:#9ca3af;font-size:11px;margin:0;">Questions? <a href="mailto:support@marca-club.com" style="color:#6b7280;">support@marca-club.com</a></p>
+      <p style="color:#9ca3af;font-size:12px;margin:0 0 6px;">© ${new Date().getFullYear()} Marcaclub &middot; All rights reserved</p>
+      <p style="color:#9ca3af;font-size:11px;margin:0 0 8px;">Questions? <a href="mailto:support@marca-club.com" style="color:#6b7280;">support@marca-club.com</a></p>
+      <p style="color:#c4c4c4;font-size:10px;margin:0 0 6px;">Marcaclub &middot; marca-club.com</p>
+      <p style="color:#c4c4c4;font-size:10px;margin:0;">
+        You received this email because you placed an order at marca-club.com.<br/>
+        <a href="mailto:unsubscribe@marca-club.com?subject=unsubscribe" style="color:#c4c4c4;">Unsubscribe</a>
+      </p>
     </div>
   </div>
 </body>
