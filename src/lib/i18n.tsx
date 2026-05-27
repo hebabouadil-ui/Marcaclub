@@ -19,6 +19,11 @@ const t = {
     announcement: {
       default: 'Livraison mondiale · Paiement sécurisé · Nouveautés chaque semaine',
     },
+    salesPage: {
+      subtitle: 'Offres limitées',
+      title: 'Soldes',
+      empty: 'Aucune promotion en cours.',
+    },
     hero: {
       badge: 'Beauté & Skincare Premium · Livraison Mondiale',
       shopNow: 'Voir la collection',
@@ -138,6 +143,11 @@ const t = {
     },
     announcement: {
       default: 'Worldwide Shipping · Secure Checkout · New Arrivals Every Week',
+    },
+    salesPage: {
+      subtitle: 'Limited offers',
+      title: 'Sales',
+      empty: 'No active promotions.',
     },
     hero: {
       badge: 'Premium Beauty & Skincare · Worldwide Shipping',
