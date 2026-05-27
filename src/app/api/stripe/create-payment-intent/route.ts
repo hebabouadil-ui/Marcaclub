@@ -39,35 +39,34 @@ export async function POST(req: NextRequest) {
     // usdToCAD for shipping calculation
     const usdToCAD = 1 / (rates['USD'] ?? 0.73)
 
-    // Sum CAD subtotal server-side from DB prices (never trust client prices)
-    // Also collect CJ VIDs for accurate shipping calculation
+    // Sum CAD subtotal + collect CJ VIDs and baked shipping data
     let subtotalCAD = 0
     const cjProducts: Array<{ vid: string; quantity: number }> = []
+    let totalBakedUSD = 0
+    let hasBakedData = false
     for (const item of items) {
       const product = await Product.findById(item.productId).lean() as {
-        price: number
-        cjPid?: string
+        price: number; cjPid?: string; shippingBakedUSD?: number
         sizes?: Array<{ size: string; cjVid?: string }>
       } | null
       if (!product) return NextResponse.json({ error: 'Product not found' }, { status: 400 })
       subtotalCAD += product.price * item.quantity
+      if (product.shippingBakedUSD && product.shippingBakedUSD > 0) {
+        totalBakedUSD += product.shippingBakedUSD * (1 + (item.quantity - 1) * 0.3)
+        hasBakedData = true
+      }
       if (product.cjPid) {
         const sizeEntry = product.sizes?.find(s => s.size === item.size)
         if (sizeEntry?.cjVid) cjProducts.push({ vid: sizeEntry.cjVid, quantity: item.quantity })
       }
     }
 
-    // Shipping: pass all real CJ VIDs+quantities so CJ calculates exact cost for this cart
-    // Falls back to static table if no CJ products or API unavailable
+    // Shipping: Priority 1 = live CJ API, Priority 2 = baked price from import, Priority 3 = static table
     let shippingFeeCAD: number
     const destCountry = String(country).toUpperCase()
     if (cjProducts.length > 0) {
       try {
-        const cjData = await getCJShippingInfo({
-          startCountryCode: 'CN',
-          endCountryCode: destCountry,
-          products: cjProducts,
-        })
+        const cjData = await getCJShippingInfo({ startCountryCode: 'CN', endCountryCode: destCountry, products: cjProducts })
         const options: Array<{ logisticPrice: number; agingMax?: number; agingMin?: number }> =
           (cjData.result && Array.isArray(cjData.data)) ? cjData.data : []
         if (options.length > 0) {
@@ -77,12 +76,18 @@ export async function POST(req: NextRequest) {
             .map(o => ({ ...o, score: (o.logisticPrice / (maxPrice || 1)) * 0.7 + ((o.agingMax ?? o.agingMin ?? 30) / (maxDays || 1)) * 0.3 }))
             .sort((a, b) => a.score - b.score)[0]
           shippingFeeCAD = Math.round(best.logisticPrice * usdToCAD * 100) / 100
+        } else if (hasBakedData) {
+          shippingFeeCAD = Math.round(totalBakedUSD * usdToCAD * 100) / 100
         } else {
           shippingFeeCAD = getShippingFeeCAD(destCountry, usdToCAD)
         }
       } catch {
-        shippingFeeCAD = getShippingFeeCAD(destCountry, usdToCAD)
+        shippingFeeCAD = hasBakedData
+          ? Math.round(totalBakedUSD * usdToCAD * 100) / 100
+          : getShippingFeeCAD(destCountry, usdToCAD)
       }
+    } else if (hasBakedData) {
+      shippingFeeCAD = Math.round(totalBakedUSD * usdToCAD * 100) / 100
     } else {
       shippingFeeCAD = getShippingFeeCAD(destCountry, usdToCAD)
     }
