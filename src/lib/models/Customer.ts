@@ -8,6 +8,8 @@ export interface ICustomer extends Document {
   country?: string
   googleId?: string
   facebookId?: string
+  resetToken?: string
+  resetTokenExpiry?: Date
   createdAt: Date
   updatedAt: Date
 }
@@ -21,6 +23,8 @@ const CustomerSchema = new Schema<ICustomer>(
     country: { type: String },
     googleId: { type: String, sparse: true },
     facebookId: { type: String, sparse: true },
+    resetToken: { type: String },
+    resetTokenExpiry: { type: Date },
   },
   { timestamps: true }
 )
