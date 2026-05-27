@@ -24,16 +24,13 @@ interface Props {
 
 export default function ProductCard({ product }: Props) {
   const [hovered, setHovered] = useState(false)
-  const { format, shippingCostUSD, usdToCAD } = useCurrency()
+  const { format } = useCurrency()
   const { tr } = useLanguage()
 
-  // Add country-specific shipping from context (geo-detected, updates per visitor)
-  const displayPrice = product.cjPid && shippingCostUSD > 0
-    ? product.price + shippingCostUSD * usdToCAD
-    : product.price
-  const originalDisplay = product.originalPrice && product.cjPid && shippingCostUSD > 0
-    ? product.originalPrice + shippingCostUSD * usdToCAD
-    : product.originalPrice
+  // Show base price only — shipping varies per product weight & country
+  // Exact total shown on detail page (Produit / Livraison / Total breakdown)
+  const displayPrice = product.price
+  const originalDisplay = product.originalPrice
 
   const discount = originalDisplay && originalDisplay > displayPrice
     ? Math.round(((originalDisplay - displayPrice) / originalDisplay) * 100)
@@ -119,10 +116,13 @@ export default function ProductCard({ product }: Props) {
         >
           {product.name}
         </Link>
-        <div className="flex items-center gap-2 mt-1.5">
+        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
           <span className="text-brand-black font-semibold text-sm">{format(displayPrice)}</span>
           {originalDisplay && originalDisplay > displayPrice && (
             <span className="text-brand-gray text-xs line-through">{format(originalDisplay)}</span>
+          )}
+          {product.cjPid && (
+            <span className="text-brand-gray text-[10px]">+ livraison</span>
           )}
         </div>
       </div>
