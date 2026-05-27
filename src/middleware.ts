@@ -13,6 +13,11 @@ export function middleware(req: NextRequest) {
 
   const { pathname } = req.nextUrl
 
+  // Forward country as a request header so server components can read it immediately
+  // (response cookies aren't readable by the same request's server components)
+  const requestHeaders = new Headers(req.headers)
+  requestHeaders.set('x-country', country)
+
   const withCountry = (r: NextResponse) => {
     r.cookies.set('mc-country-code', country, { path: '/', maxAge: 3600, sameSite: 'lax' })
     return r
@@ -32,8 +37,8 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(target, 308)
   }
 
-  const res = NextResponse.next()
-  // Set country cookie on every request so it's always current
+  const res = NextResponse.next({ request: { headers: requestHeaders } })
+  // Also set cookie for client-side reads
   res.cookies.set('mc-country-code', country, { path: '/', maxAge: 3600, sameSite: 'lax' })
   return res
 }

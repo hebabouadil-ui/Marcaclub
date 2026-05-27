@@ -7,7 +7,7 @@ import { CustomerProvider } from '@/lib/context/CustomerContext'
 import { LanguageProvider } from '@/lib/i18n'
 import { connectDB } from '@/lib/db'
 import Settings from '@/lib/models/Settings'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 
 async function getSettings() {
   try {
@@ -29,8 +29,12 @@ async function getSettings() {
 
 export default async function StoreLayout({ children }: { children: React.ReactNode }) {
   const settings = await getSettings()
-  // Read country set by middleware from Vercel geo headers — available server-side
-  const initialCountry = cookies().get('mc-country-code')?.value ?? 'CA'
+  // x-country is set by middleware on every request (forwarded to server components)
+  // This is always correct even on first visit — no flash, no async needed
+  const initialCountry =
+    headers().get('x-country') ||
+    cookies().get('mc-country-code')?.value ||
+    'CA'
   const s = settings as {
     instagramUrl: string
     tiktokUrl: string
