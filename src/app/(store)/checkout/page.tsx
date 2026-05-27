@@ -521,11 +521,42 @@ export default function CheckoutPage() {
   const [confirmedPhone, setConfirmedPhone] = useState('')
   const [confirmedShippingFeeCAD, setConfirmedShippingFeeCAD] = useState<number | null>(null)
 
-  // Per-country shipping fee in CAD — updates instantly as customer picks country
-  // 1 USD ≈ 1.37 CAD (approximation for display; server recalculates with live rate)
-  const shippingFeeCAD = useMemo(() => {
-    const usd = SHIPPING_BY_COUNTRY_USD[shippingForm.country] ?? SHIPPING_DEFAULT_USD
+  // Per-country shipping fee in CAD — fetches real CJ rates when country changes
+  const [shippingFeeCAD, setShippingFeeCAD] = useState<number>(() => {
+    const usd = SHIPPING_BY_COUNTRY_USD['CA'] ?? SHIPPING_DEFAULT_USD
     return Math.round(usd * 1.37 * 100) / 100
+  })
+  const [shippingFeeLoading, setShippingFeeLoading] = useState(false)
+
+  useEffect(() => {
+    const country = shippingForm.country || 'CA'
+    setShippingFeeLoading(true)
+    // Fetch real CJ shipping rates; fallback to static table if unavailable
+    fetch(`/api/shipping?country=${country}&weight=300`)
+      .then(r => r.json())
+      .then(data => {
+        const options: Array<{ logisticPrice: number; agingMax?: number; agingMin?: number }> = data?.options ?? []
+        if (options.length > 0) {
+          // Pick cheapest+fastest using same score formula as CurrencyContext
+          const maxPrice = Math.max(...options.map(o => o.logisticPrice))
+          const maxDays  = Math.max(...options.map(o => o.agingMax ?? o.agingMin ?? 30))
+          const best = options
+            .map(o => ({ ...o, score: (o.logisticPrice / (maxPrice || 1)) * 0.7 + ((o.agingMax ?? o.agingMin ?? 30) / (maxDays || 1)) * 0.3 }))
+            .sort((a, b) => a.score - b.score)[0]
+          // logisticPrice is in USD; convert to CAD at ~1.37 for display
+          const usdToCAD = 1.37
+          setShippingFeeCAD(Math.round(best.logisticPrice * usdToCAD * 100) / 100)
+        } else {
+          // Fallback to static table
+          const usd = SHIPPING_BY_COUNTRY_USD[country] ?? SHIPPING_DEFAULT_USD
+          setShippingFeeCAD(Math.round(usd * 1.37 * 100) / 100)
+        }
+      })
+      .catch(() => {
+        const usd = SHIPPING_BY_COUNTRY_USD[country] ?? SHIPPING_DEFAULT_USD
+        setShippingFeeCAD(Math.round(usd * 1.37 * 100) / 100)
+      })
+      .finally(() => setShippingFeeLoading(false))
   }, [shippingForm.country])
 
   const taxAmount = Math.round(
@@ -947,7 +978,7 @@ export default function CheckoutPage() {
                 </div>
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>Shipping</span>
-                  <span>{format(effectiveShippingCAD)}</span>
+                  <span>{shippingFeeLoading && !confirmedShippingFeeCAD ? <span className="text-gray-400 text-xs">Calculating…</span> : format(effectiveShippingCAD)}</span>
                 </div>
                 {taxComponents.length > 0 && taxAmount > 0
                   ? taxComponents.filter(c => c.rate > 0).map((c) => (
