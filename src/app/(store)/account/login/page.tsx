@@ -11,11 +11,15 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [unverified, setUnverified] = useState(false)
+  const [resendLoading, setResendLoading] = useState(false)
+  const [resendSent, setResendSent] = useState(false)
   const { refresh } = useCustomer()
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setUnverified(false)
     setLoading(true)
     try {
       const res = await fetch('/api/auth/customer/login', {
@@ -24,12 +28,26 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       })
       const data = await res.json()
+      if (res.status === 403) { setUnverified(true); return }
       if (!res.ok) { toast.error(data.error ?? 'Identifiants incorrects'); return }
       await refresh()
       toast.success(`Bienvenue, ${data.name} !`)
       router.push('/account/orders')
     } catch { toast.error('Erreur réseau') }
     finally { setLoading(false) }
+  }
+
+  const handleResend = async () => {
+    setResendLoading(true)
+    try {
+      await fetch('/api/auth/customer/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      setResendSent(true)
+    } catch { toast.error('Erreur réseau') }
+    finally { setResendLoading(false) }
   }
 
   return (
@@ -41,6 +59,20 @@ export default function LoginPage() {
           <p className="text-gray-500 text-sm">Accédez à vos commandes et à votre compte</p>
         </div>
         <div className="bg-white border border-gray-200 p-8 shadow-sm rounded-xl">
+          {unverified && (
+            <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800">
+              <p className="font-semibold mb-1">Compte non activé</p>
+              <p className="text-amber-700 text-xs mb-2">Vérifiez votre boîte mail et cliquez sur le lien d&apos;activation.</p>
+              {resendSent ? (
+                <p className="text-green-700 text-xs font-medium">Email renvoyé ! Vérifiez vos spams si besoin.</p>
+              ) : (
+                <button type="button" onClick={handleResend} disabled={resendLoading}
+                  className="text-xs text-amber-900 underline hover:text-amber-700 disabled:opacity-50">
+                  {resendLoading ? 'Envoi…' : 'Renvoyer le lien d\'activation'}
+                </button>
+              )}
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-gray-500 text-[10px] tracking-widest mb-2">EMAIL</label>

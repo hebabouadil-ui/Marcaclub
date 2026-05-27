@@ -23,6 +23,9 @@ export async function POST(req: NextRequest) {
     if (!valid) {
       return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 })
     }
+    if (!customer.emailVerified) {
+      return NextResponse.json({ error: 'Veuillez activer votre compte. Vérifiez votre boîte mail.' }, { status: 403 })
+    }
     const customerId = String(customer._id)
     const token = await new SignJWT({ sub: customerId, email: customer.email, name: customer.name })
       .setProtectedHeader({ alg: 'HS256' })
