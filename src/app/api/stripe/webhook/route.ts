@@ -4,6 +4,8 @@ import { connectDB } from '@/lib/db'
 import Order from '@/lib/models/Order'
 import Product from '@/lib/models/Product'
 import { createCJOrder, getBestCJLogisticName } from '@/lib/utils/cjApi'
+import { sendOrderConfirmationEmail, sendAdminOrderNotification } from '@/lib/utils/email'
+import Settings from '@/lib/models/Settings'
 
 export async function POST(req: NextRequest) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' })
@@ -26,6 +28,22 @@ export async function POST(req: NextRequest) {
       { stripePaymentStatus: 'paid', status: 'confirmed' },
       { new: true }
     )
+
+    // Send confirmation emails now that payment is confirmed
+    if (order) {
+      try {
+        const settingsDoc = await Settings.findOne().lean() as { emailNote?: string } | null
+        const emailNote = settingsDoc?.emailNote
+        const emailTasks = []
+        if (order.customer?.email) {
+          emailTasks.push(sendOrderConfirmationEmail(order, emailNote).catch((err) => console.error('Customer email error:', err)))
+        }
+        emailTasks.push(sendAdminOrderNotification(order).catch((err) => console.error('Admin email error:', err)))
+        await Promise.all(emailTasks)
+      } catch (err) {
+        console.error('Webhook email error:', err)
+      }
+    }
 
     // Auto-forward to CJ Dropshipping if order has CJ products
     if (order && !order.cjOrderId) {
