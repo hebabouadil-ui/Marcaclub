@@ -24,13 +24,16 @@ interface Props {
 
 export default function ProductCard({ product }: Props) {
   const [hovered, setHovered] = useState(false)
-  const { format } = useCurrency()
+  const { format, shippingCostUSD, usdToCAD } = useCurrency()
   const { tr } = useLanguage()
 
-  // Show base product price only — shipping varies by country and is shown
-  // separately on the product detail page (Produit / Livraison / Total breakdown)
-  const displayPrice = product.price
-  const originalDisplay = product.originalPrice
+  // Add country-specific shipping from context (geo-detected, updates per visitor)
+  const displayPrice = product.cjPid && shippingCostUSD > 0
+    ? product.price + shippingCostUSD * usdToCAD
+    : product.price
+  const originalDisplay = product.originalPrice && product.cjPid && shippingCostUSD > 0
+    ? product.originalPrice + shippingCostUSD * usdToCAD
+    : product.originalPrice
 
   const discount = originalDisplay && originalDisplay > displayPrice
     ? Math.round(((originalDisplay - displayPrice) / originalDisplay) * 100)
