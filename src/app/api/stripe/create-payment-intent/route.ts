@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    return NextResponse.json({ clientSecret: paymentIntent.client_secret, amount: amountInCents, taxAmount, shippingFee, subtotal, fxRate, currency: currencyLower })
+    return NextResponse.json({ clientSecret: paymentIntent.client_secret, amount: amountInCents, taxAmount, shippingFee, shippingFeeCAD, subtotal, fxRate, currency: currencyLower })
   } catch (err) {
     console.error('create-payment-intent error:', err)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })

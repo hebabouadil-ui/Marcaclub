@@ -403,12 +403,13 @@ export default function CheckoutPage() {
   const [loadingIntent, setLoadingIntent] = useState(false)
   const [authReturnFromOAuth, setAuthReturnFromOAuth] = useState(false)
   const [taxComponents, setTaxComponents] = useState<TaxComponent[]>([])
-  const [shippingFee, setShippingFee] = useState<number | null>(null)
+  const [shippingFeeCAD, setShippingFeeCAD] = useState<number | null>(null)
 
   const taxAmount = Math.round(
     taxComponents.reduce((sum, c) => sum + subtotal * c.rate, 0) * 100
   ) / 100
-  const total = subtotal + (shippingFee ?? 0) + taxAmount
+  // All amounts in CAD; format() converts to display currency
+  const total = subtotal + (shippingFeeCAD ?? 0) + taxAmount
 
   // Detect return from OAuth redirect (?auth=done)
   useEffect(() => {
@@ -501,7 +502,8 @@ export default function CheckoutPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setClientSecret(data.clientSecret)
-      if (typeof data.shippingFee === 'number') setShippingFee(data.shippingFee)
+      // Store CAD base amount so format() converts correctly with the rest of the CAD totals
+      if (typeof data.shippingFeeCAD === 'number') setShippingFeeCAD(data.shippingFeeCAD)
       setStep('payment')
     } catch { toast.error('Failed to initialize payment. Please try again.') }
     finally { setLoadingIntent(false) }
@@ -762,7 +764,7 @@ export default function CheckoutPage() {
                 </div>
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>Shipping</span>
-                  <span>{shippingFee !== null ? format(shippingFee) : '—'}</span>
+                  <span>{shippingFeeCAD !== null ? format(shippingFeeCAD) : '—'}</span>
                 </div>
                 {taxComponents.length > 0 && taxAmount > 0
                   ? taxComponents.filter(c => c.rate > 0).map((c) => (

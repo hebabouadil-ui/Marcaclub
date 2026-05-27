@@ -132,6 +132,7 @@ export async function createCJOrder(params: {
 }) {
   const payload = {
     orderNumber: params.orderNumber,
+    fromCountryCode: 'CN',
     shippingZip: params.shippingAddress.zip,
     shippingCountry: params.shippingAddress.country,
     shippingCountryCode: params.shippingAddress.country,
