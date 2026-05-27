@@ -33,11 +33,14 @@ export async function POST(req: NextRequest) {
       emailVerificationExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24h
     })
 
-    // Send verification email (non-blocking)
+    // Send verification email
+    if (!process.env.RESEND_API_KEY) {
+      console.error('RESEND_API_KEY is not set — verification email not sent')
+    }
     const baseUrl = process.env.NEXTAUTH_URL || 'https://marca-club.com'
     const verifyUrl = `${baseUrl}/verify-email?token=${verificationToken}`
     const year = new Date().getFullYear()
-    resend.emails.send({
+    const emailResult = await resend.emails.send({
       from: process.env.EMAIL_FROM_NOREPLY || process.env.EMAIL_FROM || 'Marcaclub <noreply@marca-club.com>',
       to: customer.email,
       subject: 'Activez votre compte Marcaclub',
@@ -106,7 +109,12 @@ export async function POST(req: NextRequest) {
   </table>
 </body>
 </html>`,
-    }).catch(err => console.error('Verification email error:', err))
+    })
+    if (emailResult.error) {
+      console.error('Verification email send error:', JSON.stringify(emailResult.error))
+    } else {
+      console.log('Verification email sent, id:', emailResult.data?.id)
+    }
 
     const customerId = String(customer._id)
     const token = await new SignJWT({ sub: customerId, email: customer.email, name: customer.name })
