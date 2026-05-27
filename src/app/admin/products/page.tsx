@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { Plus, Pencil, Trash2, X, Loader2, Upload, Star, Crown, RefreshCw } from 'lucide-react'
 
-interface SizeStock { size: string; stock: number }
+interface SizeStock { size: string; stock: number; cjVid?: string; cjSku?: string }
 
 interface Product {
   _id: string
@@ -23,6 +23,7 @@ interface Product {
   description: string
   descriptionEn?: string
   videoUrl?: string
+  cjPid?: string
 }
 
 type ProductForm = Omit<Product, '_id' | 'stock'>
@@ -277,6 +278,7 @@ export default function AdminProductsPage() {
                 <p className="text-white text-sm font-medium truncate">{p.name}</p>
                 <p className="text-brand-gold text-sm">{p.price.toLocaleString('en-US', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 })}</p>
                 <p className="text-white/40 text-xs">Stock: {p.sizes?.reduce((s, i) => s + i.stock, 0) ?? 0}</p>
+                {p.cjPid && <p className="text-white/25 text-[10px] font-mono truncate">CJ: {p.cjPid}</p>}
                 <div className="flex gap-2 mt-3">
                   <button
                     onClick={() => openEdit(p)}
@@ -457,6 +459,38 @@ export default function AdminProductsPage() {
                     </p>
                   )}
                 </div>
+
+                {/* CJ SKU / VID info — read-only, for matching with CJ supplier */}
+                {editing?.cjPid && (
+                  <div className="border border-white/10 rounded p-3 bg-white/5">
+                    <p className="text-white/40 text-[10px] uppercase tracking-widest mb-2">CJ Dropshipping</p>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-white/40 text-xs">PID:</span>
+                      <code className="text-brand-gold text-xs font-mono select-all">{editing.cjPid}</code>
+                      <button type="button" onClick={() => navigator.clipboard.writeText(editing.cjPid!)}
+                        className="text-white/30 hover:text-white text-[10px] underline">copy</button>
+                    </div>
+                    {editing.sizes.filter(s => s.cjVid || s.cjSku).map(s => (
+                      <div key={s.size} className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs mb-1">
+                        <span className="text-white/60 w-24 truncate">{s.size}</span>
+                        {s.cjSku && (
+                          <span className="flex items-center gap-1">
+                            <span className="text-white/30">SKU:</span>
+                            <code className="text-white/80 font-mono select-all">{s.cjSku}</code>
+                            <button type="button" onClick={() => navigator.clipboard.writeText(s.cjSku!)}
+                              className="text-white/30 hover:text-white text-[10px] underline">copy</button>
+                          </span>
+                        )}
+                        {s.cjVid && (
+                          <span className="flex items-center gap-1">
+                            <span className="text-white/30">VID:</span>
+                            <code className="text-white/60 font-mono text-[10px] select-all">{s.cjVid}</code>
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Images */}
                 <div>
