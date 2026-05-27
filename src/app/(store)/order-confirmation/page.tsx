@@ -104,7 +104,7 @@ function ConfirmationContent() {
             {[
               { label: 'Date', value: date },
               { label: 'Payment', value: paid ? '✓ Paid' : 'Pending', color: paid ? 'text-green-600' : 'text-amber-500' },
-              { label: 'Delivery', value: '7–12 days' },
+              { label: 'Status', value: 'Processing', color: 'text-blue-600' },
             ].map(({ label, value, color }) => (
               <div key={label} className="px-5 py-4 text-center">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">{label}</p>
@@ -205,7 +205,7 @@ function ConfirmationContent() {
               {[
                 { icon: CheckCircle2, color: 'text-green-500 bg-green-50', label: 'Order confirmed', sub: 'Your payment was successful' },
                 { icon: Package, color: 'text-blue-500 bg-blue-50', label: 'Processing', sub: 'We\'re preparing your order for shipment' },
-                { icon: Truck, color: 'text-purple-500 bg-purple-50', label: 'Shipping', sub: 'Delivery in 7–12 business days' },
+                { icon: Truck, color: 'text-purple-500 bg-purple-50', label: 'Shipping', sub: 'Your order will be shipped soon' },
               ].map(({ icon: Icon, color, label, sub }) => (
                 <div key={label} className="flex items-center gap-3">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${color}`}>
