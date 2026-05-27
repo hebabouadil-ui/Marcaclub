@@ -37,6 +37,7 @@ interface Product {
   productWeight?: number
   shippingBakedUSD?: number
   videoUrl?: string
+  onSale?: boolean
 }
 
 interface Review {
@@ -449,7 +450,14 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
           {/* Info panel */}
           <div className="flex flex-col" style={{ minWidth: 0, overflow: 'hidden' }}>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
-              <p className="text-[10px] tracking-[0.3em] text-brand-gold uppercase mb-2">{product.category}</p>
+              <div className="flex items-center gap-2 mb-2">
+                <p className="text-[10px] tracking-[0.3em] text-brand-gold uppercase">{product.category}</p>
+                {product.onSale && (
+                  <span className="bg-red-500 text-white text-[9px] font-bold tracking-widest uppercase px-2 py-0.5">
+                    {lang === 'en' ? 'Sale' : 'Soldes'}
+                  </span>
+                )}
+              </div>
               <h1 className="font-display text-2xl md:text-3xl text-brand-black leading-tight mb-4" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{product.name}</h1>
 
               {/* Price breakdown */}

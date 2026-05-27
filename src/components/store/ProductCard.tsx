@@ -19,6 +19,7 @@ interface Props {
     category: string
     cjPid?: string
     shippingBakedUSD?: number
+    onSale?: boolean
   }
 }
 
@@ -80,6 +81,11 @@ export default function ProductCard({ product }: Props) {
 
           {/* Badges */}
           <div className="absolute top-3 left-3 flex flex-col gap-1 z-10">
+            {product.onSale && (
+              <span className="bg-red-500 text-white text-[9px] font-bold tracking-widest px-2 py-0.5 uppercase">
+                {lang === 'en' ? 'Sale' : 'Soldes'}
+              </span>
+            )}
             {product.stock <= 3 && product.stock > 0 && (
               <span className="bg-brand-black text-brand-beige text-[9px] tracking-widest px-2 py-0.5 uppercase">
                 {tr.productCard.lastItems}

@@ -93,7 +93,7 @@ export default function AdminProductsPage() {
 
   const load = () => {
     setLoading(true)
-    fetch('/api/products', { credentials: 'include' })
+    fetch('/api/products?all=1', { credentials: 'include' })
       .then((r) => r.json())
       .then((data) => { if (Array.isArray(data)) setProducts(data) })
       .finally(() => setLoading(false))
