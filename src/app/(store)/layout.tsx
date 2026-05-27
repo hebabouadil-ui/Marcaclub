@@ -7,6 +7,7 @@ import { CustomerProvider } from '@/lib/context/CustomerContext'
 import { LanguageProvider } from '@/lib/i18n'
 import { connectDB } from '@/lib/db'
 import Settings from '@/lib/models/Settings'
+import { cookies } from 'next/headers'
 
 async function getSettings() {
   try {
@@ -28,6 +29,8 @@ async function getSettings() {
 
 export default async function StoreLayout({ children }: { children: React.ReactNode }) {
   const settings = await getSettings()
+  // Read country set by middleware from Vercel geo headers — available server-side
+  const initialCountry = cookies().get('mc-country-code')?.value ?? 'CA'
   const s = settings as {
     instagramUrl: string
     tiktokUrl: string
@@ -39,7 +42,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
 
   return (
     <LanguageProvider>
-    <CurrencyProvider>
+    <CurrencyProvider initialCountry={initialCountry}>
     <CustomerProvider>
     <div className="min-h-screen flex flex-col">
       {/* Fixed navbar */}

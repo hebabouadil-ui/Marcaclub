@@ -130,15 +130,15 @@ function makeFormatUSD(symbol: string, currency: string, rate: number, usdToCAD:
   return (usd: number) => makeFormat(symbol, currency, rate)(usd * usdToCAD)
 }
 
-export function CurrencyProvider({ children }: { children: React.ReactNode }) {
-  // Read country from middleware cookie synchronously — no async wait needed
-  const cookieCountry = readCountryCookie()
+export function CurrencyProvider({ children, initialCountry }: { children: React.ReactNode; initialCountry?: string }) {
+  // Prefer server-passed initialCountry (no flash), fallback to client cookie read
+  const cookieCountry = initialCountry || readCountryCookie() || 'CA'
   const initialCurrency = COUNTRY_CURRENCY[cookieCountry] ?? 'CAD'
-  const initialShipping = cookieCountry ? getShippingFallback(cookieCountry) : SHIPPING_DEFAULT_USD
+  const initialShipping = getShippingFallback(cookieCountry)
 
   const [currency, setCurrencyState] = useState(initialCurrency)
   const [rate, setRate] = useState(FALLBACK_RATES[initialCurrency] ?? 1)
-  const [geo, setGeo] = useState<GeoInfo | null>(cookieCountry ? { countryCode: cookieCountry } : null)
+  const [geo, setGeo] = useState<GeoInfo | null>({ countryCode: cookieCountry })
   const [rates, setRates] = useState<Record<string, number>>(FALLBACK_RATES)
   const [shippingCostUSD, setShippingCostUSD] = useState(initialShipping)
 
@@ -165,8 +165,8 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
         }
       } catch {}
 
-      // 2. Use country from cookie (set by middleware from Vercel geo headers)
-      const country = readCountryCookie() || 'CA'
+      // 2. Use country from server prop or cookie (already correct from SSR)
+      const country = initialCountry || readCountryCookie() || 'CA'
       const detectedCurrency = COUNTRY_CURRENCY[country] ?? 'CAD'
       setGeo({ countryCode: country })
 
@@ -179,7 +179,8 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
       setShippingCostUSD(realShipping)
     }
     init()
-  }, [applyCode])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [applyCode, initialCountry])
 
   const info = CURRENCIES.find(c => c.code === currency) ?? CURRENCIES[0]
   const usdToCAD = 1 / (rates['USD'] ?? 0.73)
