@@ -10,6 +10,9 @@ export interface ICustomer extends Document {
   facebookId?: string
   resetToken?: string
   resetTokenExpiry?: Date
+  emailVerified: boolean
+  emailVerificationToken?: string
+  emailVerificationExpiry?: Date
   createdAt: Date
   updatedAt: Date
 }
@@ -25,6 +28,9 @@ const CustomerSchema = new Schema<ICustomer>(
     facebookId: { type: String, sparse: true },
     resetToken: { type: String },
     resetTokenExpiry: { type: Date },
+    emailVerified: { type: Boolean, default: false },
+    emailVerificationToken: { type: String },
+    emailVerificationExpiry: { type: Date },
   },
   { timestamps: true }
 )
