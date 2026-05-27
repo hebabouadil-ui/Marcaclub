@@ -10,6 +10,8 @@ import toast from 'react-hot-toast'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { generateFakeReviews, type FakeReview } from '@/lib/utils/fakeReviews'
+import { useCustomer } from '@/lib/context/CustomerContext'
+import CustomerAuthModal from '@/components/store/CustomerAuthModal'
 
 interface SizeEntry {
   size: string
@@ -130,6 +132,14 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
   const [reviews, setReviews] = useState<Review[]>([])
   const [translatedDescription, setTranslatedDescription] = useState<string | null>(null)
   const [translatedDescriptionHtml, setTranslatedDescriptionHtml] = useState<string | null>(null)
+  const { customer } = useCustomer()
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [reviewRating, setReviewRating] = useState(5)
+  const [reviewTitle, setReviewTitle] = useState('')
+  const [reviewBody, setReviewBody] = useState('')
+  const [reviewSubmitting, setReviewSubmitting] = useState(false)
+  const [reviewError, setReviewError] = useState('')
+  const [reviewSubmitted, setReviewSubmitted] = useState(false)
 
   useEffect(() => {
     const fake = generateFakeReviews(product._id, 7)
@@ -800,9 +810,97 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                   </div>
                 ))}
               </div>
+
             </div>
           )
         })()}
+
+        {/* ── Write a review section (always visible) ── */}
+        <div className="mt-12 border-t border-brand-light-gray pt-10">
+          <h3 className="text-sm font-semibold tracking-widest uppercase text-brand-black mb-4">Laisser un avis</h3>
+          {!customer ? (
+            <p className="text-sm text-brand-gray">
+              Acheteurs vérifiés uniquement ·{' '}
+              <button onClick={() => setShowAuthModal(true)} className="text-brand-black underline hover:text-brand-gold transition-colors">
+                Se connecter
+              </button>
+            </p>
+          ) : reviewSubmitted ? (
+            <p className="text-sm text-green-600">Merci pour votre avis !</p>
+          ) : (
+            <form onSubmit={async (e) => {
+              e.preventDefault()
+              setReviewError('')
+              setReviewSubmitting(true)
+              try {
+                const res = await fetch(`/api/reviews/${product._id}`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ author: customer.name, rating: reviewRating, title: reviewTitle, body: reviewBody }),
+                })
+                const data = await res.json()
+                if (res.ok) {
+                  setReviews(prev => [{ ...data, fake: false }, ...prev])
+                  setReviewSubmitted(true)
+                } else if (data.error === 'not_a_buyer') {
+                  setReviewError('Vous devez avoir acheté et reçu ce produit pour laisser un avis.')
+                } else if (data.error === 'already_reviewed') {
+                  setReviewError('Vous avez déjà laissé un avis pour ce produit.')
+                } else {
+                  setReviewError(data.error || 'Erreur')
+                }
+              } catch {
+                setReviewError('Erreur réseau')
+              } finally {
+                setReviewSubmitting(false)
+              }
+            }} className="space-y-4 max-w-lg">
+              <div>
+                <p className="text-xs tracking-widest uppercase text-brand-gray mb-2">Note</p>
+                <div className="flex gap-1">
+                  {[1,2,3,4,5].map(i => (
+                    <button key={i} type="button" onClick={() => setReviewRating(i)}>
+                      <Star size={22} fill={i <= reviewRating ? '#f59e0b' : 'none'} stroke={i <= reviewRating ? '#f59e0b' : '#d1d5db'} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs tracking-widest uppercase text-brand-gray mb-1">Titre (optionnel)</label>
+                <input
+                  type="text"
+                  value={reviewTitle}
+                  onChange={(e) => setReviewTitle(e.target.value)}
+                  placeholder="Super produit !"
+                  className="w-full border border-brand-light-gray px-3 py-2.5 text-sm focus:outline-none focus:border-brand-black transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-xs tracking-widest uppercase text-brand-gray mb-1">Avis *</label>
+                <textarea
+                  value={reviewBody}
+                  onChange={(e) => setReviewBody(e.target.value)}
+                  required
+                  rows={3}
+                  placeholder="Partagez votre expérience avec ce produit..."
+                  className="w-full border border-brand-light-gray px-3 py-2.5 text-sm focus:outline-none focus:border-brand-black transition-colors resize-none"
+                />
+              </div>
+              {reviewError && <p className="text-red-500 text-xs">{reviewError}</p>}
+              <button
+                type="submit"
+                disabled={reviewSubmitting}
+                className="bg-brand-black text-white text-xs tracking-widest uppercase font-bold px-6 py-3 hover:bg-brand-gold hover:text-brand-black disabled:opacity-50 transition-colors"
+              >
+                {reviewSubmitting ? 'Envoi...' : 'Publier mon avis'}
+              </button>
+            </form>
+          )}
+        </div>
+
+        {showAuthModal && (
+          <CustomerAuthModal onClose={() => setShowAuthModal(false)} />
+        )}
       </div>
     </div>
   )
