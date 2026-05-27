@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   await connectDB()
   const body = await req.json()
-  const { productId, author, location, rating, title, body: reviewBody, photo, verified, date } = body
+  const { productId, author, location, rating, title, body: reviewBody, photo, productPhoto, verified, date } = body
   if (!productId || !author || !rating || !reviewBody) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
     title,
     body: reviewBody,
     photo,
+    productPhoto,
     verified: verified !== false,
     date: date ? new Date(date) : new Date(),
   })

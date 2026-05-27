@@ -19,7 +19,7 @@ export default async function SalesPage() {
   return (
     <div>
       <SalesHeader />
-      <ProductsClient products={JSON.parse(JSON.stringify(products))} filters={{}} />
+      <ProductsClient products={JSON.parse(JSON.stringify(products))} filters={{}} hideHeader />
     </div>
   )
 }

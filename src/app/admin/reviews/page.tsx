@@ -12,13 +12,14 @@ interface Review {
   title?: string
   body: string
   photo?: string
+  productPhoto?: string
   verified: boolean
   date: string
 }
 
 const EMPTY = {
   productId: '', author: '', location: '', rating: 5,
-  title: '', body: '', photo: '', verified: true, date: '',
+  title: '', body: '', photo: '', productPhoto: '', verified: true, date: '',
 }
 
 function Stars({ n, set }: { n: number; set?: (v: number) => void }) {
@@ -44,8 +45,10 @@ export default function ReviewsPage() {
   const [form, setForm] = useState({ ...EMPTY })
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [uploadingProduct, setUploadingProduct] = useState(false)
   const [filterProduct, setFilterProduct] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
+  const productFileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     fetch('/api/products?all=true').then(r => r.json()).then(d => setProducts(Array.isArray(d) ? d : d.products ?? []))
@@ -63,6 +66,17 @@ export default function ReviewsPage() {
     const data = await res.json()
     setUploading(false)
     if (data.url) setForm(p => ({ ...p, photo: data.url }))
+    else alert(data.message || 'Upload failed')
+  }
+
+  async function uploadProductPhoto(file: File) {
+    setUploadingProduct(true)
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await fetch('/api/upload', { method: 'POST', body: fd })
+    const data = await res.json()
+    setUploadingProduct(false)
+    if (data.url) setForm(p => ({ ...p, productPhoto: data.url }))
     else alert(data.message || 'Upload failed')
   }
 
@@ -172,6 +186,31 @@ export default function ReviewsPage() {
           </div>
         </div>
 
+        {/* Product photo upload */}
+        <div>
+          <label className="block text-white/40 text-[10px] tracking-widest mb-2">PHOTO PRODUIT (optionnel)</label>
+          <div className="flex items-center gap-3">
+            <input ref={productFileRef} type="file" accept="image/*" className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadProductPhoto(f) }} />
+            <button onClick={() => productFileRef.current?.click()}
+              className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white/70 text-xs px-3 py-2 transition-colors">
+              <Upload size={12} />
+              {uploadingProduct ? 'Upload...' : 'Choisir une photo produit'}
+            </button>
+            {form.productPhoto && (
+              <div className="relative">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={form.productPhoto} alt="" className="w-12 h-12 object-cover rounded" />
+                <button onClick={() => setForm(p => ({ ...p, productPhoto: '' }))}
+                  className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center">
+                  <X size={10} />
+                </button>
+              </div>
+            )}
+            {form.productPhoto && <span className="text-xs text-white/40 truncate max-w-xs">{form.productPhoto}</span>}
+          </div>
+        </div>
+
         <div className="flex items-center gap-3">
           <label className="flex items-center gap-2 text-white/60 text-sm cursor-pointer">
             <input type="checkbox" checked={form.verified} onChange={(e) => setForm(p => ({ ...p, verified: e.target.checked }))}
@@ -205,6 +244,10 @@ export default function ReviewsPage() {
             {r.photo && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={r.photo} alt="" className="w-14 h-14 object-cover rounded flex-shrink-0" />
+            )}
+            {r.productPhoto && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={r.productPhoto} alt="produit" className="w-14 h-14 object-cover rounded flex-shrink-0 border border-white/10" title="Photo produit" />
             )}
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2 mb-1">

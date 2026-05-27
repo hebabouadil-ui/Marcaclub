@@ -22,9 +22,10 @@ interface Props {
     shippingBakedUSD?: number
   }>
   filters: { category?: string; q?: string }
+  hideHeader?: boolean
 }
 
-export default function ProductsClient({ products, filters }: Props) {
+export default function ProductsClient({ products, filters, hideHeader }: Props) {
   const router = useRouter()
   const { tr, lang } = useLanguage()
   const [search, setSearch] = useState(filters.q || '')
@@ -56,15 +57,17 @@ export default function ProductsClient({ products, filters }: Props) {
   return (
     <div>
       {/* Page Header */}
-      <div className="bg-brand-black text-brand-white py-16 md:py-24">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <p className="text-[10px] tracking-[0.3em] text-brand-gold uppercase mb-3">{tr.nav.shop}</p>
-          <h1 className="font-display text-4xl md:text-6xl">{tr.products.title}</h1>
-          <p className="text-brand-white/40 text-sm mt-3 tracking-widest">
-            {tr.products.available(products.length)}
-          </p>
+      {!hideHeader && (
+        <div className="bg-brand-black text-brand-white py-16 md:py-24">
+          <div className="max-w-7xl mx-auto px-4 text-center">
+            <p className="text-[10px] tracking-[0.3em] text-brand-gold uppercase mb-3">{tr.nav.shop}</p>
+            <h1 className="font-display text-4xl md:text-6xl">{tr.products.title}</h1>
+            <p className="text-brand-white/40 text-sm mt-3 tracking-widest">
+              {tr.products.available(products.length)}
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {/* Search & Filter */}
