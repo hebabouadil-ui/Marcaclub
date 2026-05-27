@@ -28,9 +28,10 @@ export async function POST(req: NextRequest) {
 
     await connectDB()
 
-    // Collect CJ VIDs and baked shipping data per product
+    // Collect CJ VIDs and baked shipping data
+    // CJ ships everything in ONE package — never sum individual costs
     const cjProducts: Array<{ vid: string; quantity: number }> = []
-    let totalBakedUSD = 0
+    let maxBakedUSD = 0   // shipping of the heaviest/most expensive product
     let totalWeightG = 0
     let hasBakedData = false
 
@@ -38,13 +39,11 @@ export async function POST(req: NextRequest) {
       const product = await Product.findById(item.productId).lean() as ProductDoc | null
       if (!product) continue
 
-      // Accumulate weight for weight-based fallback
       if (product.productWeight) totalWeightG += product.productWeight * item.quantity
 
-      // Accumulate baked shipping (per unit, scale by quantity)
+      // Use the highest individual shipping cost as the base (CJ packs together)
       if (product.shippingBakedUSD && product.shippingBakedUSD > 0) {
-        // Base cost for 1 unit; each additional unit adds 30% incremental cost
-        totalBakedUSD += product.shippingBakedUSD * (1 + (item.quantity - 1) * 0.3)
+        if (product.shippingBakedUSD > maxBakedUSD) maxBakedUSD = product.shippingBakedUSD
         hasBakedData = true
       }
 
@@ -52,6 +51,10 @@ export async function POST(req: NextRequest) {
       const sizeEntry = product.sizes?.find(s => s.size === item.size)
       if (sizeEntry?.cjVid) cjProducts.push({ vid: sizeEntry.cjVid, quantity: item.quantity })
     }
+
+    // For baked fallback: base = most expensive product shipping + 15% per extra item/unit
+    const totalUnits = items.reduce((s: number, i: { quantity: number }) => s + i.quantity, 0)
+    const bakedUSD = maxBakedUSD * (1 + (totalUnits - 1) * 0.15)
 
     let shippingFeeCAD: number
 
@@ -82,9 +85,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Priority 2: baked shipping stored at import time (scaled by quantity)
-    if (hasBakedData && totalBakedUSD > 0) {
-      shippingFeeCAD = Math.round(totalBakedUSD * usdToCAD * 100) / 100
-      console.log(`[shipping-estimate] Baked: $${totalBakedUSD} USD → CA$${shippingFeeCAD} for ${destCountry}`)
+    if (hasBakedData && bakedUSD > 0) {
+      shippingFeeCAD = Math.round(bakedUSD * usdToCAD * 100) / 100
+      console.log(`[shipping-estimate] Baked: $${bakedUSD} USD → CA$${shippingFeeCAD} for ${destCountry}`)
       return NextResponse.json({ shippingFeeCAD, source: 'baked' })
     }
 

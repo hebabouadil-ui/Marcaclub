@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
       if (!product) return NextResponse.json({ error: 'Product not found' }, { status: 400 })
       subtotalCAD += product.price * item.quantity
       if (product.shippingBakedUSD && product.shippingBakedUSD > 0) {
-        totalBakedUSD += product.shippingBakedUSD * (1 + (item.quantity - 1) * 0.3)
+        if (product.shippingBakedUSD > totalBakedUSD) totalBakedUSD = product.shippingBakedUSD
         hasBakedData = true
       }
       if (product.cjPid) {
@@ -60,6 +60,10 @@ export async function POST(req: NextRequest) {
         if (sizeEntry?.cjVid) cjProducts.push({ vid: sizeEntry.cjVid, quantity: item.quantity })
       }
     }
+
+    // CJ ships everything in one package — baked = max product shipping + 15% per extra unit
+    const totalUnits = items.reduce((s: number, i: { quantity: number }) => s + i.quantity, 0)
+    const bakedUSD = totalBakedUSD * (1 + (totalUnits - 1) * 0.15)
 
     // Shipping: Priority 1 = live CJ API, Priority 2 = baked price from import, Priority 3 = static table
     let shippingFeeCAD: number
@@ -77,17 +81,17 @@ export async function POST(req: NextRequest) {
             .sort((a, b) => a.score - b.score)[0]
           shippingFeeCAD = Math.round(best.logisticPrice * usdToCAD * 100) / 100
         } else if (hasBakedData) {
-          shippingFeeCAD = Math.round(totalBakedUSD * usdToCAD * 100) / 100
+          shippingFeeCAD = Math.round(bakedUSD * usdToCAD * 100) / 100
         } else {
           shippingFeeCAD = getShippingFeeCAD(destCountry, usdToCAD)
         }
       } catch {
         shippingFeeCAD = hasBakedData
-          ? Math.round(totalBakedUSD * usdToCAD * 100) / 100
+          ? Math.round(bakedUSD * usdToCAD * 100) / 100
           : getShippingFeeCAD(destCountry, usdToCAD)
       }
     } else if (hasBakedData) {
-      shippingFeeCAD = Math.round(totalBakedUSD * usdToCAD * 100) / 100
+      shippingFeeCAD = Math.round(bakedUSD * usdToCAD * 100) / 100
     } else {
       shippingFeeCAD = getShippingFeeCAD(destCountry, usdToCAD)
     }
