@@ -526,12 +526,28 @@ export default function CheckoutPage() {
     const usd = SHIPPING_BY_COUNTRY_USD['CA'] ?? SHIPPING_DEFAULT_USD
     return Math.round(usd * 1.38 * 100) / 100
   })
+  const [shippingFeeLoading, setShippingFeeLoading] = useState(false)
 
   useEffect(() => {
+    if (items.length === 0) return
     const country = shippingForm.country || 'CA'
-    const usd = SHIPPING_BY_COUNTRY_USD[country] ?? SHIPPING_DEFAULT_USD
-    setShippingFeeCAD(Math.round(usd * usdToCAD * 100) / 100)
-  }, [shippingForm.country, usdToCAD])
+    setShippingFeeLoading(true)
+    fetch('/api/shipping-estimate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        items: items.map(i => ({ productId: i.productId, size: i.size, quantity: i.quantity })),
+        country,
+      }),
+    })
+      .then(r => r.json())
+      .then(d => { if (typeof d.shippingFeeCAD === 'number') setShippingFeeCAD(d.shippingFeeCAD) })
+      .catch(() => {
+        const usd = SHIPPING_BY_COUNTRY_USD[country] ?? SHIPPING_DEFAULT_USD
+        setShippingFeeCAD(Math.round(usd * usdToCAD * 100) / 100)
+      })
+      .finally(() => setShippingFeeLoading(false))
+  }, [shippingForm.country, items, usdToCAD])
 
   const taxAmount = Math.round(
     taxComponents.reduce((sum, c) => sum + subtotal * c.rate, 0) * 100
@@ -951,7 +967,7 @@ export default function CheckoutPage() {
                 </div>
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>Shipping</span>
-                  <span>{format(effectiveShippingCAD)}</span>
+                  <span>{shippingFeeLoading && !confirmedShippingFeeCAD ? <span className="text-gray-400 text-xs">Calculating…</span> : format(effectiveShippingCAD)}</span>
                 </div>
                 {taxComponents.length > 0 && taxAmount > 0
                   ? taxComponents.filter(c => c.rate > 0).map((c) => (
