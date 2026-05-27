@@ -352,12 +352,31 @@ export default function AdminProductsPage() {
                     <input type="file" accept="video/mp4,video/webm,video/quicktime" className="hidden" onChange={async (e) => {
                       const file = e.target.files?.[0]
                       if (!file) return
-                      const fd = new FormData()
-                      fd.append('file', file)
-                      const res = await fetch('/api/upload-video', { method: 'POST', body: fd })
-                      const data = await res.json()
-                      if (data.url) setForm({ ...form, videoUrl: data.url } as ProductForm)
-                      else alert(data.message || 'Upload failed')
+                      try {
+                        const sigRes = await fetch('/api/cloudinary-signature', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ folder: 'marcaclub/videos', resource_type: 'video' }),
+                          credentials: 'include',
+                        })
+                        const sig = await sigRes.json()
+                        if (!sigRes.ok) { alert(sig.error || 'Signature failed'); return }
+                        const fd = new FormData()
+                        fd.append('file', file)
+                        fd.append('api_key', sig.api_key)
+                        fd.append('timestamp', String(sig.timestamp))
+                        fd.append('signature', sig.signature)
+                        fd.append('folder', sig.folder)
+                        const uploadRes = await fetch(
+                          `https://api.cloudinary.com/v1_1/${sig.cloud_name}/video/upload`,
+                          { method: 'POST', body: fd }
+                        )
+                        const data = await uploadRes.json()
+                        if (data.secure_url) setForm({ ...form, videoUrl: data.secure_url } as ProductForm)
+                        else alert(data.error?.message || 'Upload failed')
+                      } catch (err) {
+                        alert('Upload error: ' + String(err))
+                      }
                     }} />
                   </label>
                   {(form as { videoUrl?: string }).videoUrl && (
