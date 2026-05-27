@@ -160,6 +160,59 @@ export async function createCJOrder(params: {
   return data
 }
 
+// Known-good CJ logistic names per destination country (fallback when API returns nothing)
+// These are the cheapest/standard options confirmed to work on the CJ platform
+const CJ_LOGISTIC_FALLBACK: Record<string, string> = {
+  // North Africa
+  MA: 'CJPacket Ordinary', DZ: 'CJPacket Ordinary', TN: 'CJPacket Ordinary',
+  LY: 'CJPacket Ordinary', EG: 'CJPacket Ordinary',
+  // Middle East
+  AE: 'CJPacket Ordinary', SA: 'CJPacket Ordinary', QA: 'CJPacket Ordinary',
+  KW: 'CJPacket Ordinary', BH: 'CJPacket Ordinary', OM: 'CJPacket Ordinary',
+  JO: 'CJPacket Ordinary',
+  // North America
+  US: 'USPS', CA: 'CJPacket Ordinary', MX: 'CJPacket Ordinary',
+  // Western Europe
+  FR: 'CJPacket EU', DE: 'CJPacket EU', GB: 'CJPacket Ordinary',
+  ES: 'CJPacket EU', IT: 'CJPacket EU', NL: 'CJPacket EU',
+  BE: 'CJPacket EU', PT: 'CJPacket EU', CH: 'CJPacket Ordinary',
+  AT: 'CJPacket EU', IE: 'CJPacket EU', SE: 'CJPacket Ordinary',
+  NO: 'CJPacket Ordinary', DK: 'CJPacket Ordinary',
+  // Oceania
+  AU: 'CJPacket Ordinary', NZ: 'CJPacket Ordinary',
+  // Asia
+  JP: 'CJPacket Ordinary', SG: 'CJPacket Ordinary', IN: 'CJPacket Ordinary',
+  // South America
+  BR: 'CJPacket Ordinary',
+}
+const CJ_LOGISTIC_DEFAULT = 'CJPacket Ordinary'
+
+/**
+ * Fetches available CJ shipping options for a country, picks the cheapest+fastest,
+ * and falls back to a hardcoded known-good logistic name if the API returns nothing.
+ */
+export async function getBestCJLogisticName(destCountry: string, productWeight = 300): Promise<string> {
+  try {
+    const data = await getCJShippingInfo({ startCountryCode: 'CN', endCountryCode: destCountry, productWeight, quantity: 1 })
+    const options: Array<{ logisticName: string; logisticPrice: number; agingMax?: number; agingMin?: number }> =
+      (data.result && Array.isArray(data.data)) ? data.data : []
+    if (options.length > 0) {
+      const maxPrice = Math.max(...options.map(o => o.logisticPrice))
+      const maxDays  = Math.max(...options.map(o => o.agingMax ?? o.agingMin ?? 30))
+      const best = options
+        .map(o => ({ ...o, score: (o.logisticPrice / (maxPrice || 1)) * 0.7 + ((o.agingMax ?? o.agingMin ?? 30) / (maxDays || 1)) * 0.3 }))
+        .sort((a, b) => a.score - b.score)[0]
+      return best.logisticName
+    }
+  } catch (e) {
+    console.warn(`getBestCJLogisticName: API call failed for ${destCountry}:`, e)
+  }
+  // Fallback to known-good hardcoded name
+  const fallback = CJ_LOGISTIC_FALLBACK[destCountry] ?? CJ_LOGISTIC_DEFAULT
+  console.log(`getBestCJLogisticName: using fallback "${fallback}" for ${destCountry}`)
+  return fallback
+}
+
 export async function getCJOrderDetail(cjOrderId: string) {
   const data = await cjFetch(`/shopping/order/getOrderDetail?orderId=${cjOrderId}`)
   return data
