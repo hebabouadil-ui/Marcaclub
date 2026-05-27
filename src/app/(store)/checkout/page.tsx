@@ -403,13 +403,21 @@ export default function CheckoutPage() {
   const [loadingIntent, setLoadingIntent] = useState(false)
   const [authReturnFromOAuth, setAuthReturnFromOAuth] = useState(false)
   const [taxComponents, setTaxComponents] = useState<TaxComponent[]>([])
-  const [shippingFeeCAD, setShippingFeeCAD] = useState<number | null>(null)
+  const [shippingFeeCAD, setShippingFeeCAD] = useState<number>(14.99) // default until settings load
 
   const taxAmount = Math.round(
     taxComponents.reduce((sum, c) => sum + subtotal * c.rate, 0) * 100
   ) / 100
   // All amounts in CAD; format() converts to display currency
-  const total = subtotal + (shippingFeeCAD ?? 0) + taxAmount
+  const total = subtotal + shippingFeeCAD + taxAmount
+
+  // Load shipping fee from settings on mount
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (typeof data?.shippingFeeCAD === 'number') setShippingFeeCAD(data.shippingFeeCAD) })
+      .catch(() => {})
+  }, [])
 
   // Detect return from OAuth redirect (?auth=done)
   useEffect(() => {
@@ -502,7 +510,7 @@ export default function CheckoutPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setClientSecret(data.clientSecret)
-      // Store CAD base amount so format() converts correctly with the rest of the CAD totals
+      // Update with server-confirmed CAD shipping fee (in case settings changed)
       if (typeof data.shippingFeeCAD === 'number') setShippingFeeCAD(data.shippingFeeCAD)
       setStep('payment')
     } catch { toast.error('Failed to initialize payment. Please try again.') }
@@ -764,7 +772,7 @@ export default function CheckoutPage() {
                 </div>
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>Shipping</span>
-                  <span>{shippingFeeCAD !== null ? format(shippingFeeCAD) : '—'}</span>
+                  <span>{format(shippingFeeCAD)}</span>
                 </div>
                 {taxComponents.length > 0 && taxAmount > 0
                   ? taxComponents.filter(c => c.rate > 0).map((c) => (
