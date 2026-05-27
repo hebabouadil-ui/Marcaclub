@@ -446,11 +446,15 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                     <div className="flex items-center gap-2">
                       {originalPrice && originalPrice > displayPrice && (
                         <>
-                          <span className="text-brand-gray line-through text-sm">{format(originalPrice)}</span>
+                          <span className="text-brand-gray line-through text-sm">{format(originalPrice + effectiveShipUSD * usdToCAD)}</span>
                           {discount && <span className="bg-brand-gold text-brand-black text-[10px] font-bold px-1.5 py-0.5">-{discount}%</span>}
                         </>
                       )}
-                      <span className="text-2xl font-bold text-brand-black">{format(displayPrice)}</span>
+                      <span className="text-2xl font-bold text-brand-black">
+                        {shippingLoading
+                          ? <span className="text-base text-brand-gray animate-pulse">...</span>
+                          : format(displayPrice + (effectiveShipUSD > 0 ? effectiveShipUSD * usdToCAD : 0))}
+                      </span>
                     </div>
                   </div>
                   {shipping && (
@@ -492,7 +496,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
               {sizes.length > 0 && (
                 <div className="mb-6">
                   <p className="text-xs tracking-[0.2em] uppercase text-brand-gray mb-3">
-                    Taille — <span className="text-brand-black">{selectedSize || 'Choisir'}</span>
+                    Produit — <span className="text-brand-black">{selectedSize || 'Choisir'}</span>
                   </p>
                   <div className="flex gap-2 flex-wrap">
                     {sizes.map(({ size: s, stock: sStock, variantPrice: vp }) => {
