@@ -10,7 +10,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import {
   ArrowLeft, Loader2, Trash2, Plus, Minus, ShoppingBag,
-  Lock, ChevronRight, Shield, RotateCcw, Truck, Mail, Eye, EyeOff, User,
+  Lock, ChevronRight, Shield, RotateCcw, Mail, Eye, EyeOff, User,
 } from 'lucide-react'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
@@ -496,7 +496,7 @@ function PaymentStep({ clientSecret, customer, items, total, taxAmount, currency
       <button type="submit" disabled={paying || !stripe}
         className="w-full bg-gray-900 text-white font-semibold py-4 text-sm flex items-center justify-center gap-2 hover:bg-gray-800 transition-colors disabled:opacity-50 rounded-lg">
         {paying ? <Loader2 size={16} className="animate-spin" /> : <Lock size={14} />}
-        {paying ? 'Processing payment...' : `Pay ${symbol}${total.toFixed(2)} now`}
+        {paying ? 'Processing payment...' : `Pay ${format(total)} now`}
       </button>
       <div className="flex items-center justify-center gap-4 text-gray-400 text-xs">
         <span className="flex items-center gap-1"><Shield size={11} /> SSL Secured</span>
@@ -937,7 +937,6 @@ export default function CheckoutPage() {
             {/* Trust badges */}
             <div className="grid grid-cols-3 gap-4 mt-6">
               {[
-                { icon: Truck, label: 'Worldwide Shipping', sub: '7–12 business days' },
                 { icon: Shield, label: 'Secure Payment', sub: 'SSL & Stripe encrypted' },
                 { icon: RotateCcw, label: 'Easy Returns', sub: '30-day return policy' },
               ].map(({ icon: Icon, label, sub }) => (
