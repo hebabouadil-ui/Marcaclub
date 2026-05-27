@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { orderId } = await req.json()
+  const { orderId, force } = await req.json()
   if (!orderId) return NextResponse.json({ error: 'orderId required' }, { status: 400 })
 
   await connectDB()
@@ -20,8 +20,14 @@ export async function POST(req: NextRequest) {
   const order = await Order.findById(orderId)
   if (!order) return NextResponse.json({ error: 'Order not found' }, { status: 404 })
 
-  if (order.cjOrderId) {
+  if (order.cjOrderId && !force) {
     return NextResponse.json({ error: 'Already fulfilled with CJ', cjOrderId: order.cjOrderId }, { status: 400 })
+  }
+
+  // Force-reset: clear the old CJ order ID so we can retry
+  if (order.cjOrderId && force) {
+    console.log(`Force-retrying CJ fulfill for order ${order.orderNumber}, clearing old cjOrderId: ${order.cjOrderId}`)
+    order.cjOrderId = undefined
   }
 
   // Build CJ products list — look up cjVid from each product's size entry
@@ -71,7 +77,11 @@ export async function POST(req: NextRequest) {
       console.log(`CJ fulfill: selected logistic "${logisticName}" for country ${destCountry}`)
     }
   } catch (e) {
-    console.warn('CJ shipping lookup failed, proceeding without logisticName:', e)
+    console.warn('CJ shipping lookup failed:', e)
+  }
+
+  if (!logisticName) {
+    return NextResponse.json({ error: `Could not determine shipping method for country "${destCountry}". Check that CJ_API_KEY is set and this country is supported.` }, { status: 400 })
   }
 
   // Split full name into first/last

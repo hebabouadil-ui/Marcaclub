@@ -3,7 +3,7 @@ import Stripe from 'stripe'
 import { connectDB } from '@/lib/db'
 import Order from '@/lib/models/Order'
 import Product from '@/lib/models/Product'
-import { createCJOrder } from '@/lib/utils/cjApi'
+import { createCJOrder, getCJShippingInfo } from '@/lib/utils/cjApi'
 
 export async function POST(req: NextRequest) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' })
@@ -46,29 +46,55 @@ export async function POST(req: NextRequest) {
         }
 
         if (cjProducts.length > 0) {
-          const nameParts = order.customer.name.trim().split(' ')
-          const firstName = nameParts[0]
-          const lastName = nameParts.slice(1).join(' ') || firstName
+          // Fetch real logisticName from CJ API (dynamic, more reliable than stored product value)
+          const destCountry = (order.customer.country || 'MA').toUpperCase()
+          if (!cjLogisticName) {
+            try {
+              const shippingData = await getCJShippingInfo({ startCountryCode: 'CN', endCountryCode: destCountry, productWeight: 300, quantity: 1 })
+              const opts: Array<{ logisticName: string; logisticPrice: number; agingMax?: number; agingMin?: number }> =
+                (shippingData.result && Array.isArray(shippingData.data)) ? shippingData.data : []
+              if (opts.length > 0) {
+                const maxPrice = Math.max(...opts.map(o => o.logisticPrice))
+                const maxDays  = Math.max(...opts.map(o => o.agingMax ?? o.agingMin ?? 30))
+                const best = opts
+                  .map(o => ({ ...o, score: (o.logisticPrice / (maxPrice || 1)) * 0.7 + ((o.agingMax ?? o.agingMin ?? 30) / (maxDays || 1)) * 0.3 }))
+                  .sort((a, b) => a.score - b.score)[0]
+                cjLogisticName = best.logisticName
+              }
+            } catch (e) {
+              console.error('Webhook: failed to fetch CJ logisticName:', e)
+            }
+          }
 
-          const cjRes = await createCJOrder({
-            orderNumber: order.orderNumber,
-            shippingAddress: {
-              firstName,
-              lastName,
-              phone: order.customer.phone,
-              email: order.customer.email ?? '',
-              country: order.customer.country ?? 'US',
-              province: order.customer.state ?? '',
-              city: order.customer.city,
-              address: order.customer.address,
-              zip: order.customer.postalCode ?? '',
-            },
-            products: cjProducts,
-            logisticName: cjLogisticName,
-          })
+          if (!cjLogisticName) {
+            console.error(`Webhook: no logisticName available for country ${destCountry} — skipping auto-fulfill`)
+          } else {
+            const nameParts = order.customer.name.trim().split(' ')
+            const firstName = nameParts[0]
+            const lastName = nameParts.slice(1).join(' ') || firstName
 
-          if (cjRes.result && cjRes.data?.orderId) {
-            await Order.findByIdAndUpdate(order._id, { cjOrderId: cjRes.data.orderId })
+            const cjRes = await createCJOrder({
+              orderNumber: order.orderNumber,
+              shippingAddress: {
+                firstName,
+                lastName,
+                phone: order.customer.phone,
+                email: order.customer.email ?? '',
+                country: order.customer.country ?? 'US',
+                province: order.customer.state ?? '',
+                city: order.customer.city,
+                address: order.customer.address,
+                zip: order.customer.postalCode ?? '',
+              },
+              products: cjProducts,
+              logisticName: cjLogisticName,
+            })
+
+            if (cjRes.result && cjRes.data?.orderId) {
+              await Order.findByIdAndUpdate(order._id, { cjOrderId: cjRes.data.orderId })
+            } else {
+              console.error('Webhook: CJ order creation failed:', cjRes.message, cjRes)
+            }
           }
         }
       } catch (err) {

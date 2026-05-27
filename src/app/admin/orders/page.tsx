@@ -86,14 +86,15 @@ export default function AdminOrdersPage() {
     }
   }
 
-  const fulfillWithCJ = async (order: Order) => {
+  const fulfillWithCJ = async (order: Order, force = false) => {
+    if (force && !confirm(`Reset CJ order "${order.cjOrderId}" and retry? Only do this if the order does NOT exist on CJ.`)) return
     setFulfilling(order._id)
     try {
       const res = await fetch('/api/cj/fulfill', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId: order._id }),
+        body: JSON.stringify({ orderId: order._id, force }),
       })
       const data = await res.json()
       if (res.ok) {
@@ -240,10 +241,18 @@ export default function AdminOrdersPage() {
                     <p className="text-white/40 text-xs uppercase tracking-widest mb-3">CJ Dropshipping</p>
                     {order.cjOrderId ? (
                       <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-xs">
+                        <div className="flex items-center gap-2 text-xs flex-wrap">
                           <Package size={12} className="text-green-400" />
                           <span className="text-green-400 font-semibold">Fulfilled</span>
                           <span className="text-white/40">· CJ Order: {order.cjOrderId}</span>
+                          <button
+                            onClick={() => fulfillWithCJ(order, true)}
+                            disabled={fulfilling === order._id}
+                            className="ml-auto flex items-center gap-1 bg-red-900/40 hover:bg-red-800/60 text-red-300 hover:text-white text-[10px] px-2 py-1 transition-colors"
+                            title="Reset and retry if the CJ order doesn't exist on their dashboard"
+                          >
+                            <RefreshCw size={9} /> Reset & Retry
+                          </button>
                         </div>
                         {tracking[order._id] ? (
                           <div className="flex items-center gap-2 text-xs">
