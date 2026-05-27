@@ -526,36 +526,11 @@ export default function CheckoutPage() {
     const usd = SHIPPING_BY_COUNTRY_USD['CA'] ?? SHIPPING_DEFAULT_USD
     return Math.round(usd * 1.38 * 100) / 100
   })
-  const [shippingFeeLoading, setShippingFeeLoading] = useState(false)
 
   useEffect(() => {
     const country = shippingForm.country || 'CA'
-    setShippingFeeLoading(true)
-    // Fetch real CJ shipping rates; fallback to static table if unavailable
-    fetch(`/api/shipping?country=${country}&weight=300`)
-      .then(r => r.json())
-      .then(data => {
-        const options: Array<{ logisticPrice: number; agingMax?: number; agingMin?: number }> = data?.options ?? []
-        if (options.length > 0) {
-          // Pick cheapest+fastest using same score formula as CurrencyContext
-          const maxPrice = Math.max(...options.map(o => o.logisticPrice))
-          const maxDays  = Math.max(...options.map(o => o.agingMax ?? o.agingMin ?? 30))
-          const best = options
-            .map(o => ({ ...o, score: (o.logisticPrice / (maxPrice || 1)) * 0.7 + ((o.agingMax ?? o.agingMin ?? 30) / (maxDays || 1)) * 0.3 }))
-            .sort((a, b) => a.score - b.score)[0]
-          // logisticPrice is in USD; convert to CAD using live rate
-          setShippingFeeCAD(Math.round(best.logisticPrice * usdToCAD * 100) / 100)
-        } else {
-          // Fallback to static table
-          const usd = SHIPPING_BY_COUNTRY_USD[country] ?? SHIPPING_DEFAULT_USD
-          setShippingFeeCAD(Math.round(usd * usdToCAD * 100) / 100)
-        }
-      })
-      .catch(() => {
-        const usd = SHIPPING_BY_COUNTRY_USD[country] ?? SHIPPING_DEFAULT_USD
-        setShippingFeeCAD(Math.round(usd * usdToCAD * 100) / 100)
-      })
-      .finally(() => setShippingFeeLoading(false))
+    const usd = SHIPPING_BY_COUNTRY_USD[country] ?? SHIPPING_DEFAULT_USD
+    setShippingFeeCAD(Math.round(usd * usdToCAD * 100) / 100)
   }, [shippingForm.country, usdToCAD])
 
   const taxAmount = Math.round(
@@ -976,7 +951,7 @@ export default function CheckoutPage() {
                 </div>
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>Shipping</span>
-                  <span>{shippingFeeLoading && !confirmedShippingFeeCAD ? <span className="text-gray-400 text-xs">Calculating…</span> : format(effectiveShippingCAD)}</span>
+                  <span>{format(effectiveShippingCAD)}</span>
                 </div>
                 {taxComponents.length > 0 && taxAmount > 0
                   ? taxComponents.filter(c => c.rate > 0).map((c) => (

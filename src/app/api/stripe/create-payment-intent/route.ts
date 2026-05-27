@@ -4,7 +4,6 @@ import { connectDB } from '@/lib/db'
 import Product from '@/lib/models/Product'
 import { getCadRates } from '@/lib/utils/getRates'
 import { getShippingFeeCAD } from '@/lib/utils/shippingFee'
-import { getCJShippingInfo } from '@/lib/utils/cjApi'
 
 export const dynamic = 'force-dynamic'
 
@@ -47,24 +46,8 @@ export async function POST(req: NextRequest) {
       subtotalCAD += product.price * item.quantity
     }
 
-    // Per-country shipping fee in CAD — try real CJ rates first, fallback to static table
-    let shippingFeeCAD: number
-    try {
-      const cjData = await getCJShippingInfo({ startCountryCode: 'CN', endCountryCode: String(country).toUpperCase(), productWeight: 300, quantity: 1 })
-      const options: Array<{ logisticPrice: number; agingMax?: number; agingMin?: number }> = (cjData.result && Array.isArray(cjData.data)) ? cjData.data : []
-      if (options.length > 0) {
-        const maxPrice = Math.max(...options.map(o => o.logisticPrice))
-        const maxDays  = Math.max(...options.map(o => o.agingMax ?? o.agingMin ?? 30))
-        const best = options
-          .map(o => ({ ...o, score: (o.logisticPrice / (maxPrice || 1)) * 0.7 + ((o.agingMax ?? o.agingMin ?? 30) / (maxDays || 1)) * 0.3 }))
-          .sort((a, b) => a.score - b.score)[0]
-        shippingFeeCAD = Math.round(best.logisticPrice * usdToCAD * 100) / 100
-      } else {
-        shippingFeeCAD = getShippingFeeCAD(String(country).toUpperCase(), usdToCAD)
-      }
-    } catch {
-      shippingFeeCAD = getShippingFeeCAD(String(country).toUpperCase(), usdToCAD)
-    }
+    // Per-country shipping fee in CAD from static table (consistent with client display)
+    const shippingFeeCAD = getShippingFeeCAD(String(country).toUpperCase(), usdToCAD)
 
     const subtotal = Math.round(subtotalCAD * fxRate * 100) / 100
     const shippingFee = Math.round(shippingFeeCAD * fxRate * 100) / 100
