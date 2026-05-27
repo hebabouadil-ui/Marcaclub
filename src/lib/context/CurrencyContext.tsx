@@ -146,11 +146,12 @@ export function CurrencyProvider({ children, initialCountry }: { children: React
     const r = ratesMap[code] ?? FALLBACK_RATES[code] ?? 1
     setRate(r)
     setCurrencyState(code)
-    localStorage.setItem('mc-currency', code)
   }, [])
 
+  // User manually picking a currency — persists across sessions
   const setCurrency = useCallback((code: string) => {
     applyCode(code, rates)
+    localStorage.setItem('mc-currency-manual', code)
   }, [applyCode, rates])
 
   useEffect(() => {
@@ -170,9 +171,11 @@ export function CurrencyProvider({ children, initialCountry }: { children: React
       const detectedCurrency = COUNTRY_CURRENCY[country] ?? 'CAD'
       setGeo({ countryCode: country })
 
-      // 3. Apply currency — manual override wins
-      const saved = localStorage.getItem('mc-currency')
-      applyCode(saved ?? detectedCurrency, ratesMap)
+      // 3. Apply currency — manual user choice wins, otherwise always use detected country
+      // Use 'mc-currency-manual' (only set when user explicitly picks) to avoid
+      // stale 'mc-currency' values from old sessions overriding geo-detection
+      const manualChoice = localStorage.getItem('mc-currency-manual')
+      applyCode(manualChoice ?? detectedCurrency, ratesMap)
 
       // 4. Fetch real CJ shipping for this country (fallback already showing)
       const realShipping = await fetchBestShippingUSD(country)
