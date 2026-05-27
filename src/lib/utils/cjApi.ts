@@ -85,22 +85,28 @@ export async function getCJProductDetail(pid: string) {
 export async function getCJShippingInfo(params: {
   startCountryCode: string
   endCountryCode: string
-  productWeight: number
-  quantity: number
+  productWeight?: number
+  quantity?: number
   vid?: string
   variantSku?: string
+  products?: Array<{ vid: string; quantity: number }>
 }) {
+  // Build products array: prefer explicit products list (with real VIDs), fallback to single-item
+  const products = params.products && params.products.length > 0
+    ? params.products.map(p => ({ vid: p.vid, quantity: p.quantity }))
+    : [{
+        quantity: params.quantity ?? 1,
+        weight: params.productWeight ?? 300,
+        ...(params.vid ? { vid: params.vid } : {}),
+        ...(params.variantSku ? { variantSku: params.variantSku } : {}),
+      }]
+
   const data = await cjFetch('/logistic/freightCalculate', {
     method: 'POST',
     body: JSON.stringify({
       startCountryCode: params.startCountryCode,
       endCountryCode: params.endCountryCode,
-      products: [{
-        quantity: params.quantity,
-        weight: params.productWeight,
-        ...(params.vid ? { vid: params.vid } : {}),
-        ...(params.variantSku ? { variantSku: params.variantSku } : {}),
-      }],
+      products,
     }),
   })
   return data
