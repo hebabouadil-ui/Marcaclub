@@ -207,9 +207,50 @@ export default function CJImportPage() {
   const [importing, setImporting] = useState(false)
   const [imported, setImported] = useState<Set<string>>(new Set())
 
-  // Single country state: used for both shipping fetch and "Price on website" preview.
-  // Change this country + click Fetch to see the exact price customers in that country will pay.
   const [usdToCAD, setUsdToCAD] = useState(1.38)
+
+  const [videoUploading, setVideoUploading] = useState(false)
+
+  async function uploadVideoToCloudinary(file: File): Promise<string | null> {
+    setVideoUploading(true)
+    const toastId = toast.loading('Uploading video…')
+    try {
+      const sigRes = await fetch('/api/cloudinary-signature', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folder: 'marcaclub/videos', resource_type: 'video' }),
+        credentials: 'include',
+      })
+      const sig = await sigRes.json()
+      if (!sigRes.ok) { toast.error(sig.error || 'Signature failed', { id: toastId }); return null }
+
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('api_key', sig.api_key)
+      fd.append('timestamp', String(sig.timestamp))
+      fd.append('signature', sig.signature)
+      fd.append('folder', sig.folder)
+
+      const uploadRes = await fetch(
+        `https://api.cloudinary.com/v1_1/${sig.cloud_name}/video/upload`,
+        { method: 'POST', body: fd }
+      )
+      const data = await uploadRes.json()
+      if (data.secure_url) {
+        toast.success('Vidéo uploadée !', { id: toastId })
+        return data.secure_url
+      }
+      toast.error(data.error?.message || 'Upload failed', { id: toastId })
+      return null
+    } catch (err) {
+      toast.error('Upload error: ' + String(err), { id: toastId })
+      return null
+    } finally {
+      setVideoUploading(false)
+    }
+  }
+
+
 
   useEffect(() => {
     fetch('/api/rates').then(r => r.json()).then(d => {
@@ -850,42 +891,17 @@ export default function CJImportPage() {
                   <input value={form.videoUrl} onChange={(e) => setForm((p) => ({ ...p, videoUrl: e.target.value }))}
                     placeholder="https://www.tiktok.com/@user/video/123..."
                     className="w-full bg-white/5 border border-white/10 text-white text-sm px-4 py-2.5 focus:outline-none focus:border-brand-gold/50 placeholder-white/20 mb-2" />
-                  <label className="inline-flex items-center gap-2 cursor-pointer bg-white/10 hover:bg-white/20 border border-white/20 text-white/70 text-xs px-3 py-2 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                    Uploader une vidéo
-                    <input type="file" accept="video/mp4,video/webm,video/quicktime" className="hidden" onChange={async (e) => {
+                  <label className={`inline-flex items-center gap-2 cursor-pointer border text-xs px-3 py-2 transition-colors ${videoUploading ? 'bg-white/5 border-white/10 text-white/30 cursor-not-allowed' : 'bg-white/10 hover:bg-white/20 border-white/20 text-white/70'}`}>
+                    {videoUploading
+                      ? <><Loader2 className="w-4 h-4 animate-spin" /> Upload en cours…</>
+                      : <><svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>Uploader une vidéo</>
+                    }
+                    <input type="file" accept="video/mp4,video/webm,video/quicktime" className="hidden" disabled={videoUploading} onChange={async (e) => {
                       const file = e.target.files?.[0]
                       if (!file) return
-                      try {
-                        // Step 1: get signed upload params from server
-                        const sigRes = await fetch('/api/cloudinary-signature', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ folder: 'marcaclub/videos', resource_type: 'video' }),
-                          credentials: 'include',
-                        })
-                        const sig = await sigRes.json()
-                        if (!sigRes.ok) { alert(sig.error || 'Signature failed'); return }
-
-                        // Step 2: upload directly to Cloudinary (bypasses Vercel 4.5MB limit)
-                        const fd = new FormData()
-                        fd.append('file', file)
-                        fd.append('api_key', sig.api_key)
-                        fd.append('timestamp', String(sig.timestamp))
-                        fd.append('signature', sig.signature)
-                        fd.append('folder', sig.folder)
-                        fd.append('resource_type', sig.resource_type)
-
-                        const uploadRes = await fetch(
-                          `https://api.cloudinary.com/v1_1/${sig.cloud_name}/video/upload`,
-                          { method: 'POST', body: fd }
-                        )
-                        const data = await uploadRes.json()
-                        if (data.secure_url) setForm((p) => ({ ...p, videoUrl: data.secure_url }))
-                        else alert(data.error?.message || 'Upload failed')
-                      } catch (err) {
-                        alert('Upload error: ' + String(err))
-                      }
+                      const url = await uploadVideoToCloudinary(file)
+                      if (url) setForm((p) => ({ ...p, videoUrl: url }))
+                      e.target.value = ''
                     }} />
                   </label>
                   {form.videoUrl && <p className="text-xs text-brand-gold mt-1 truncate">{form.videoUrl}</p>}
