@@ -9,6 +9,7 @@ import { generateOrderNumber } from '@/lib/utils/generateOrderNumber'
 import { sendOrderConfirmationEmail, sendAdminOrderNotification } from '@/lib/utils/email'
 import { analyzeOrderRisk } from '@/lib/utils/riskAgent'
 import { getCadRates } from '@/lib/utils/getRates'
+import { getShippingFeeCAD } from '@/lib/utils/shippingFee'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/authOptions'
 
@@ -87,14 +88,19 @@ export async function POST(req: NextRequest) {
 
     // Fetch live FX rate server-side: CAD → orderCurrency
     let fxRate = 1
+    const rates = await getCadRates()
     if (orderCurrency !== 'CAD') {
-      const rates = await getCadRates()
       fxRate = rates[orderCurrency] ?? 1
     }
+    const usdToCAD = 1 / (rates['USD'] ?? 0.73)
 
-    // Read shipping fee from Settings (in CAD), convert to order currency
-    const settingsDoc = await Settings.findOne().lean() as { shippingFeeCAD?: number; emailNote?: string } | null
-    const shippingFee = Math.round((settingsDoc?.shippingFeeCAD ?? 14.99) * fxRate * 100) / 100
+    // Per-country shipping fee in CAD, convert to order currency
+    const destCountry = (body.customer?.country || 'CA').toUpperCase()
+    const shippingFeeCAD = getShippingFeeCAD(destCountry, usdToCAD)
+    const shippingFee = Math.round(shippingFeeCAD * fxRate * 100) / 100
+
+    // Settings needed only for emailNote now
+    const settingsDoc = await Settings.findOne().lean() as { emailNote?: string } | null
 
     // Atomically decrement stock — validate + deduct in one operation per item
     // Build server-trusted item lines from DB (don't trust client price/name/image)

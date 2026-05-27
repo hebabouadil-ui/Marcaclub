@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { connectDB } from '@/lib/db'
 import Product from '@/lib/models/Product'
-import Settings from '@/lib/models/Settings'
 import { getCadRates } from '@/lib/utils/getRates'
+import { getShippingFeeCAD } from '@/lib/utils/shippingFee'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,9 +14,7 @@ export async function POST(req: NextRequest) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' })
   try {
     const body = await req.json()
-    // currency: ISO code the customer selected (e.g. 'usd', 'eur', 'cad')
-    // fxRate: CAD → selected currency conversion rate (server-computed below)
-    const { items, currency = 'usd', taxRate = 0 } = body
+    const { items, currency = 'cad', taxRate = 0, country = 'CA' } = body
 
     if (!Array.isArray(items) || items.length === 0)
       return NextResponse.json({ error: 'No items' }, { status: 400 })
@@ -30,12 +28,15 @@ export async function POST(req: NextRequest) {
 
     await connectDB()
 
-    // Fetch live exchange rates server-side to avoid trusting client-provided rates
+    // Fetch live exchange rates server-side
     let fxRate = 1 // CAD → target currency
+    const rates = await getCadRates()
     if (currencyLower !== 'cad') {
-      const rates = await getCadRates()
       fxRate = rates[currencyLower.toUpperCase()] ?? 1
     }
+
+    // usdToCAD for shipping calculation
+    const usdToCAD = 1 / (rates['USD'] ?? 0.73)
 
     // Sum CAD subtotal server-side from DB prices (never trust client prices)
     let subtotalCAD = 0
@@ -45,9 +46,8 @@ export async function POST(req: NextRequest) {
       subtotalCAD += product.price * item.quantity
     }
 
-    // Read shipping fee from Settings (in CAD)
-    const settings = await Settings.findOne().lean() as { shippingFeeCAD?: number } | null
-    const shippingFeeCAD = settings?.shippingFeeCAD ?? 14.99
+    // Per-country shipping fee in CAD (based on destination country)
+    const shippingFeeCAD = getShippingFeeCAD(String(country).toUpperCase(), usdToCAD)
 
     const subtotal = Math.round(subtotalCAD * fxRate * 100) / 100
     const shippingFee = Math.round(shippingFeeCAD * fxRate * 100) / 100
@@ -69,6 +69,8 @@ export async function POST(req: NextRequest) {
         taxRate: String(clampedRate),
         taxAmount: String(taxAmount),
         shippingFee: String(shippingFee),
+        shippingFeeCAD: String(shippingFeeCAD),
+        country: String(country).toUpperCase(),
         fxRate: String(fxRate),
         displayCurrency: currencyLower.toUpperCase(),
       },

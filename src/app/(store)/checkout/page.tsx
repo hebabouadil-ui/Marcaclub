@@ -1,8 +1,9 @@
 'use client'
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCartStore, cartTotal } from '@/lib/store/cartStore'
 import { useCurrency } from '@/lib/context/CurrencyContext'
+import { SHIPPING_BY_COUNTRY_USD, SHIPPING_DEFAULT_USD } from '@/lib/utils/shippingFee'
 import { useCustomer } from '@/lib/context/CustomerContext'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
@@ -518,21 +519,22 @@ export default function CheckoutPage() {
   const [authReturnFromOAuth, setAuthReturnFromOAuth] = useState(false)
   const [taxComponents, setTaxComponents] = useState<TaxComponent[]>([])
   const [confirmedPhone, setConfirmedPhone] = useState('')
-  const [shippingFeeCAD, setShippingFeeCAD] = useState<number>(14.99) // default until settings load
+  const [confirmedShippingFeeCAD, setConfirmedShippingFeeCAD] = useState<number | null>(null)
+
+  // Per-country shipping fee in CAD — updates instantly as customer picks country
+  // 1 USD ≈ 1.37 CAD (approximation for display; server recalculates with live rate)
+  const shippingFeeCAD = useMemo(() => {
+    const usd = SHIPPING_BY_COUNTRY_USD[shippingForm.country] ?? SHIPPING_DEFAULT_USD
+    return Math.round(usd * 1.37 * 100) / 100
+  }, [shippingForm.country])
 
   const taxAmount = Math.round(
     taxComponents.reduce((sum, c) => sum + subtotal * c.rate, 0) * 100
   ) / 100
+  // Use server-confirmed shipping once available (live FX), fallback to estimated
+  const effectiveShippingCAD = confirmedShippingFeeCAD ?? shippingFeeCAD
   // All amounts in CAD; format() converts to display currency
-  const total = subtotal + shippingFeeCAD + taxAmount
-
-  // Load shipping fee from settings on mount
-  useEffect(() => {
-    fetch('/api/settings')
-      .then(r => r.ok ? r.json() : null)
-      .then(data => { if (typeof data?.shippingFeeCAD === 'number') setShippingFeeCAD(data.shippingFeeCAD) })
-      .catch(() => {})
-  }, [])
+  const total = subtotal + effectiveShippingCAD + taxAmount
 
   // Detect return from OAuth redirect (?auth=done)
   useEffect(() => {
@@ -629,14 +631,15 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           items: items.map((i) => ({ productId: i.productId, size: i.size, quantity: i.quantity })),
           currency: currency.toLowerCase(),
+          country: shippingForm.country,
           taxRate: taxComponents.reduce((s, c) => s + c.rate, 0),
         }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setClientSecret(data.clientSecret)
-      // Update with server-confirmed CAD shipping fee (in case settings changed)
-      if (typeof data.shippingFeeCAD === 'number') setShippingFeeCAD(data.shippingFeeCAD)
+      // Store server-confirmed shipping fee (uses live FX rate)
+      if (typeof data.shippingFeeCAD === 'number') setConfirmedShippingFeeCAD(data.shippingFeeCAD)
       setStep('payment')
     } catch { toast.error('Failed to initialize payment. Please try again.') }
     finally { setLoadingIntent(false) }
@@ -944,7 +947,7 @@ export default function CheckoutPage() {
                 </div>
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>Shipping</span>
-                  <span>{format(shippingFeeCAD)}</span>
+                  <span>{format(effectiveShippingCAD)}</span>
                 </div>
                 {taxComponents.length > 0 && taxAmount > 0
                   ? taxComponents.filter(c => c.rate > 0).map((c) => (
