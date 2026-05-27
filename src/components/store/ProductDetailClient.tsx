@@ -127,6 +127,8 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
   const [shippingLoading, setShippingLoading] = useState(false)
   const [shipCountry, setShipCountry] = useState(detectedCountry || 'CA')
   const [reviews, setReviews] = useState<Review[]>([])
+  const [translatedDescription, setTranslatedDescription] = useState<string | null>(null)
+  const [translatedDescriptionHtml, setTranslatedDescriptionHtml] = useState<string | null>(null)
 
   useEffect(() => {
     const fake = generateFakeReviews(product._id, 7)
@@ -186,6 +188,44 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
       setShippingLoading(false)
     }
   }, [product._id, product.cjPid, product.cjLogisticName, product.productWeight, product.sizes])
+
+  // Auto-translate description when language changes
+  useEffect(() => {
+    setTranslatedDescription(null)
+    setTranslatedDescriptionHtml(null)
+
+    const sourceText = lang === 'en'
+      ? (product.descriptionEn || product.description)
+      : product.description
+
+    // Plain text description
+    if (!product.descriptionHtml && product.description) {
+      if (lang === 'en' && !product.descriptionEn) {
+        fetch('/api/translate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: product.description, targetLang: 'en' }),
+        }).then(r => r.json()).then(d => { if (d.translated) setTranslatedDescription(d.translated) }).catch(() => {})
+      } else if (lang === 'fr' && product.descriptionEn) {
+        fetch('/api/translate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: product.descriptionEn, targetLang: 'fr' }),
+        }).then(r => r.json()).then(d => { if (d.translated) setTranslatedDescription(d.translated) }).catch(() => {})
+      }
+    }
+
+    // HTML description (from CJ importer)
+    if (product.descriptionHtml) {
+      const textToTranslate = lang === 'en' ? product.descriptionHtml : (sourceText ?? product.descriptionHtml)
+      fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: product.descriptionHtml, targetLang: lang }),
+      }).then(r => r.json()).then(d => { if (d.translated) setTranslatedDescriptionHtml(d.translated) }).catch(() => {})
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang, product._id])
 
   // Initial load
   useEffect(() => {
@@ -616,11 +656,12 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                   <div
                     className="cj-description mx-auto"
                     style={{ maxWidth: '860px' }}
-                    dangerouslySetInnerHTML={{ __html: product.descriptionHtml }}
+                    dangerouslySetInnerHTML={{ __html: translatedDescriptionHtml ?? product.descriptionHtml }}
                   />
                 ) : (
                   <p className="text-sm text-brand-gray leading-relaxed max-w-2xl mx-auto">
-                    {lang === 'en' && product.descriptionEn ? product.descriptionEn : product.description}
+                    {translatedDescription
+                      ?? (lang === 'en' && product.descriptionEn ? product.descriptionEn : product.description)}
                   </p>
                 )}
               </div>

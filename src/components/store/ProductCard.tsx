@@ -25,7 +25,7 @@ interface Props {
 export default function ProductCard({ product }: Props) {
   const [hovered, setHovered] = useState(false)
   const { format } = useCurrency()
-  const { tr } = useLanguage()
+  const { tr, lang } = useLanguage()
 
   // Show base price only — shipping varies per product weight & country
   // Exact total shown on detail page (Produit / Livraison / Total breakdown)
@@ -122,7 +122,7 @@ export default function ProductCard({ product }: Props) {
             <span className="text-brand-gray text-xs line-through">{format(originalDisplay)}</span>
           )}
           {product.cjPid && (
-            <span className="text-brand-gray text-[10px]">+ livraison</span>
+            <span className="text-brand-gray text-[10px]">+ {lang === 'en' ? 'Shipping' : 'Livraison'}</span>
           )}
         </div>
       </div>

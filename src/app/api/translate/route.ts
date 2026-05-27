@@ -1,0 +1,45 @@
+import { NextRequest, NextResponse } from 'next/server'
+import Anthropic from '@anthropic-ai/sdk'
+
+export const dynamic = 'force-dynamic'
+
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+
+// Simple in-memory cache to avoid re-translating the same content
+const cache = new Map<string, string>()
+
+export async function POST(req: NextRequest) {
+  try {
+    const { text, targetLang } = await req.json()
+    if (!text || !targetLang) return NextResponse.json({ error: 'Missing text or targetLang' }, { status: 400 })
+
+    const cacheKey = `${targetLang}:${text.slice(0, 100)}`
+    if (cache.has(cacheKey)) return NextResponse.json({ translated: cache.get(cacheKey) })
+
+    const langName = targetLang === 'en' ? 'English' : 'French'
+
+    const msg = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 2048,
+      messages: [{
+        role: 'user',
+        content: `Translate the following product description to ${langName}.
+If it is HTML, keep all HTML tags intact and only translate the text content inside them.
+If it is plain text, just translate it.
+Return ONLY the translated content, nothing else.
+
+${text}`,
+      }],
+    })
+
+    const translated = (msg.content[0] as { type: string; text: string }).text?.trim() ?? text
+    cache.set(cacheKey, translated)
+    // Limit cache size
+    if (cache.size > 200) { const first = cache.keys().next().value; if (first) cache.delete(first) }
+
+    return NextResponse.json({ translated })
+  } catch (err) {
+    console.error('Translate error:', err)
+    return NextResponse.json({ error: 'Translation failed' }, { status: 500 })
+  }
+}
