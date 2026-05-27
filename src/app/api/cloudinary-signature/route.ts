@@ -16,7 +16,9 @@ export async function POST(req: NextRequest) {
   const { folder = 'marcaclub/videos', resource_type = 'video' } = await req.json().catch(() => ({}))
 
   const timestamp = Math.round(Date.now() / 1000)
-  const params = { timestamp, folder, resource_type }
+  // Only sign parameters that are sent in the upload form body
+  // resource_type is part of the URL path, NOT a signed param
+  const params = { timestamp, folder }
 
   const signature = cloudinary.utils.api_sign_request(params, process.env.CLOUDINARY_API_SECRET!)
 
