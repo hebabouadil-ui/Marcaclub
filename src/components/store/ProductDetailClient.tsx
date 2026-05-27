@@ -50,6 +50,7 @@ interface Review {
   title?: string
   body: string
   photo?: string
+  productPhoto?: string
   verified: boolean
   date: string
   fake?: boolean
@@ -805,6 +806,10 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                         </div>
                         {r.title && <p className="font-semibold text-brand-black text-sm mb-1.5">{r.title}</p>}
                         <p className="text-brand-gray text-sm leading-relaxed">{r.body}</p>
+                        {r.productPhoto && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={r.productPhoto} alt="produit" className="mt-3 w-24 h-24 object-cover rounded-lg border border-brand-light-gray" />
+                        )}
                       </div>
                     </div>
                   </div>
