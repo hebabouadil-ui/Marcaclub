@@ -228,10 +228,10 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
   const totalStock = sizes.reduce((s, i) => s + i.stock, 0)
 
   const basePrice = selectedSizeEntry?.variantPrice ?? product.price
+  // displayPrice = admin-set price only (no CJ shipping baked in)
+  // Shipping is charged separately at checkout via shippingFeeCAD in Settings
+  const displayPrice = basePrice
   const effectiveShipUSD = shipping ? shipping.logisticPrice : shippingCostUSD
-  const displayPrice = product.cjPid && effectiveShipUSD > 0
-    ? basePrice + effectiveShipUSD * usdToCAD
-    : basePrice
 
   const originalPrice = product.originalPrice
   const discount = originalPrice && displayPrice < originalPrice

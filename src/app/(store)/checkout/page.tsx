@@ -19,21 +19,135 @@ const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
 // Tax component: a named tax line with its own rate
 interface TaxComponent { label: string; rate: number }
 
+// Phone country codes (dial code + country name)
+const PHONE_CODES = [
+  { dial: '+1',   flag: '🇨🇦', name: 'Canada' },
+  { dial: '+1',   flag: '🇺🇸', name: 'United States' },
+  { dial: '+212', flag: '🇲🇦', name: 'Morocco' },
+  { dial: '+213', flag: '🇩🇿', name: 'Algeria' },
+  { dial: '+216', flag: '🇹🇳', name: 'Tunisia' },
+  { dial: '+33',  flag: '🇫🇷', name: 'France' },
+  { dial: '+44',  flag: '🇬🇧', name: 'United Kingdom' },
+  { dial: '+49',  flag: '🇩🇪', name: 'Germany' },
+  { dial: '+34',  flag: '🇪🇸', name: 'Spain' },
+  { dial: '+39',  flag: '🇮🇹', name: 'Italy' },
+  { dial: '+31',  flag: '🇳🇱', name: 'Netherlands' },
+  { dial: '+32',  flag: '🇧🇪', name: 'Belgium' },
+  { dial: '+41',  flag: '🇨🇭', name: 'Switzerland' },
+  { dial: '+43',  flag: '🇦🇹', name: 'Austria' },
+  { dial: '+46',  flag: '🇸🇪', name: 'Sweden' },
+  { dial: '+47',  flag: '🇳🇴', name: 'Norway' },
+  { dial: '+45',  flag: '🇩🇰', name: 'Denmark' },
+  { dial: '+351', flag: '🇵🇹', name: 'Portugal' },
+  { dial: '+353', flag: '🇮🇪', name: 'Ireland' },
+  { dial: '+61',  flag: '🇦🇺', name: 'Australia' },
+  { dial: '+64',  flag: '🇳🇿', name: 'New Zealand' },
+  { dial: '+81',  flag: '🇯🇵', name: 'Japan' },
+  { dial: '+65',  flag: '🇸🇬', name: 'Singapore' },
+  { dial: '+971', flag: '🇦🇪', name: 'UAE' },
+  { dial: '+966', flag: '🇸🇦', name: 'Saudi Arabia' },
+  { dial: '+55',  flag: '🇧🇷', name: 'Brazil' },
+  { dial: '+52',  flag: '🇲🇽', name: 'Mexico' },
+  { dial: '+91',  flag: '🇮🇳', name: 'India' },
+]
+
+// Map country code → default phone dial code
+const COUNTRY_PHONE_CODE: Record<string, string> = {
+  CA: '+1', US: '+1', MA: '+212', DZ: '+213', TN: '+216',
+  FR: '+33', GB: '+44', DE: '+49', ES: '+34', IT: '+39',
+  NL: '+31', BE: '+32', CH: '+41', AT: '+43', SE: '+46',
+  NO: '+47', DK: '+45', PT: '+351', IE: '+353', AU: '+61',
+  NZ: '+64', JP: '+81', SG: '+65', AE: '+971', SA: '+966',
+  BR: '+55', MX: '+52', IN: '+91',
+}
+
+// Canada provinces with full tax labels
+const CA_PROVINCES = [
+  { code: 'AB', name: 'Alberta',                   taxLabel: 'GST 5%' },
+  { code: 'BC', name: 'British Columbia',           taxLabel: 'GST 5% + PST 7% = 12%' },
+  { code: 'MB', name: 'Manitoba',                   taxLabel: 'GST 5% + PST 7% = 12%' },
+  { code: 'NB', name: 'New Brunswick',              taxLabel: 'HST 15%' },
+  { code: 'NL', name: 'Newfoundland & Labrador',    taxLabel: 'HST 15%' },
+  { code: 'NS', name: 'Nova Scotia',                taxLabel: 'HST 15%' },
+  { code: 'NT', name: 'Northwest Territories',      taxLabel: 'GST 5%' },
+  { code: 'NU', name: 'Nunavut',                    taxLabel: 'GST 5%' },
+  { code: 'ON', name: 'Ontario',                    taxLabel: 'HST 13%' },
+  { code: 'PE', name: 'Prince Edward Island',       taxLabel: 'HST 15%' },
+  { code: 'QC', name: 'Quebec',                     taxLabel: 'TPS 5% + TVQ 9.975% = 14.975%' },
+  { code: 'SK', name: 'Saskatchewan',               taxLabel: 'GST 5% + PST 6% = 11%' },
+  { code: 'YT', name: 'Yukon',                      taxLabel: 'GST 5%' },
+]
+
+// US states with base sales tax rate
+const US_STATES = [
+  { code: 'AL', name: 'Alabama',              taxLabel: '4%' },
+  { code: 'AK', name: 'Alaska',               taxLabel: 'No sales tax' },
+  { code: 'AZ', name: 'Arizona',              taxLabel: '5.6%' },
+  { code: 'AR', name: 'Arkansas',             taxLabel: '6.5%' },
+  { code: 'CA', name: 'California',           taxLabel: '7.25%' },
+  { code: 'CO', name: 'Colorado',             taxLabel: '2.9%' },
+  { code: 'CT', name: 'Connecticut',          taxLabel: '6.35%' },
+  { code: 'DE', name: 'Delaware',             taxLabel: 'No sales tax' },
+  { code: 'FL', name: 'Florida',              taxLabel: '6%' },
+  { code: 'GA', name: 'Georgia',              taxLabel: '4%' },
+  { code: 'HI', name: 'Hawaii',               taxLabel: '4%' },
+  { code: 'ID', name: 'Idaho',                taxLabel: '6%' },
+  { code: 'IL', name: 'Illinois',             taxLabel: '6.25%' },
+  { code: 'IN', name: 'Indiana',              taxLabel: '7%' },
+  { code: 'IA', name: 'Iowa',                 taxLabel: '6%' },
+  { code: 'KS', name: 'Kansas',               taxLabel: '6.5%' },
+  { code: 'KY', name: 'Kentucky',             taxLabel: '6%' },
+  { code: 'LA', name: 'Louisiana',            taxLabel: '4.45%' },
+  { code: 'ME', name: 'Maine',                taxLabel: '5.5%' },
+  { code: 'MD', name: 'Maryland',             taxLabel: '6%' },
+  { code: 'MA', name: 'Massachusetts',        taxLabel: '6.25%' },
+  { code: 'MI', name: 'Michigan',             taxLabel: '6%' },
+  { code: 'MN', name: 'Minnesota',            taxLabel: '6.875%' },
+  { code: 'MS', name: 'Mississippi',          taxLabel: '7%' },
+  { code: 'MO', name: 'Missouri',             taxLabel: '4.225%' },
+  { code: 'MT', name: 'Montana',              taxLabel: 'No sales tax' },
+  { code: 'NE', name: 'Nebraska',             taxLabel: '5.5%' },
+  { code: 'NV', name: 'Nevada',               taxLabel: '6.85%' },
+  { code: 'NH', name: 'New Hampshire',        taxLabel: 'No sales tax' },
+  { code: 'NJ', name: 'New Jersey',           taxLabel: '6.625%' },
+  { code: 'NM', name: 'New Mexico',           taxLabel: '5%' },
+  { code: 'NY', name: 'New York',             taxLabel: '4%' },
+  { code: 'NC', name: 'North Carolina',       taxLabel: '4.75%' },
+  { code: 'ND', name: 'North Dakota',         taxLabel: '5%' },
+  { code: 'OH', name: 'Ohio',                 taxLabel: '5.75%' },
+  { code: 'OK', name: 'Oklahoma',             taxLabel: '4.5%' },
+  { code: 'OR', name: 'Oregon',               taxLabel: 'No sales tax' },
+  { code: 'PA', name: 'Pennsylvania',         taxLabel: '6%' },
+  { code: 'RI', name: 'Rhode Island',         taxLabel: '7%' },
+  { code: 'SC', name: 'South Carolina',       taxLabel: '6%' },
+  { code: 'SD', name: 'South Dakota',         taxLabel: '4.5%' },
+  { code: 'TN', name: 'Tennessee',            taxLabel: '7%' },
+  { code: 'TX', name: 'Texas',                taxLabel: '6.25%' },
+  { code: 'UT', name: 'Utah',                 taxLabel: '4.85%' },
+  { code: 'VT', name: 'Vermont',              taxLabel: '6%' },
+  { code: 'VA', name: 'Virginia',             taxLabel: '4.3%' },
+  { code: 'WA', name: 'Washington',           taxLabel: '6.5%' },
+  { code: 'WV', name: 'West Virginia',        taxLabel: '6%' },
+  { code: 'WI', name: 'Wisconsin',            taxLabel: '5%' },
+  { code: 'WY', name: 'Wyoming',              taxLabel: '4%' },
+  { code: 'DC', name: 'Washington D.C.',      taxLabel: '6%' },
+]
+
 // Canada: province-level breakdown (GST/HST/PST/TVQ)
 const CANADA_PROVINCE_TAX: Record<string, TaxComponent[]> = {
-  AB: [{ label: 'GST 5%',  rate: 0.05 }],
-  BC: [{ label: 'GST 5%',  rate: 0.05 }, { label: 'PST 7%',  rate: 0.07 }],
-  MB: [{ label: 'GST 5%',  rate: 0.05 }, { label: 'PST 7%',  rate: 0.07 }],
-  NB: [{ label: 'HST 15%', rate: 0.15 }],
-  NL: [{ label: 'HST 15%', rate: 0.15 }],
-  NS: [{ label: 'HST 15%', rate: 0.15 }],
-  NT: [{ label: 'GST 5%',  rate: 0.05 }],
-  NU: [{ label: 'GST 5%',  rate: 0.05 }],
-  ON: [{ label: 'HST 13%', rate: 0.13 }],
-  PE: [{ label: 'HST 15%', rate: 0.15 }],
-  QC: [{ label: 'TPS 5%',  rate: 0.05 }, { label: 'TVQ 9.975%', rate: 0.09975 }],
-  SK: [{ label: 'GST 5%',  rate: 0.05 }, { label: 'PST 6%',  rate: 0.06 }],
-  YT: [{ label: 'GST 5%',  rate: 0.05 }],
+  AB: [{ label: 'GST (Federal) 5%',             rate: 0.05 }],
+  BC: [{ label: 'GST (Federal) 5%',             rate: 0.05 }, { label: 'PST (Provincial) 7%',     rate: 0.07 }],
+  MB: [{ label: 'GST (Federal) 5%',             rate: 0.05 }, { label: 'PST (Provincial) 7%',     rate: 0.07 }],
+  NB: [{ label: 'HST (Federal + Provincial) 15%', rate: 0.15 }],
+  NL: [{ label: 'HST (Federal + Provincial) 15%', rate: 0.15 }],
+  NS: [{ label: 'HST (Federal + Provincial) 15%', rate: 0.15 }],
+  NT: [{ label: 'GST (Federal) 5%',             rate: 0.05 }],
+  NU: [{ label: 'GST (Federal) 5%',             rate: 0.05 }],
+  ON: [{ label: 'HST (Federal + Provincial) 13%', rate: 0.13 }],
+  PE: [{ label: 'HST (Federal + Provincial) 15%', rate: 0.15 }],
+  QC: [{ label: 'TPS (Federal) 5%',             rate: 0.05 }, { label: 'TVQ (Provincial) 9.975%', rate: 0.09975 }],
+  SK: [{ label: 'GST (Federal) 5%',             rate: 0.05 }, { label: 'PST (Provincial) 6%',     rate: 0.06 }],
+  YT: [{ label: 'GST (Federal) 5%',             rate: 0.05 }],
 }
 
 // US: state-level sales tax (state base rate)
@@ -147,11 +261,11 @@ const COUNTRIES = [
 ]
 
 interface CustomerForm {
-  name: string; email: string; phone: string; address: string
+  name: string; email: string; phoneCode: string; phone: string; address: string
   city: string; state: string; postalCode: string; country: string
 }
 const emptyForm: CustomerForm = {
-  name: '', email: '', phone: '', address: '', city: '', state: '', postalCode: '', country: 'US',
+  name: '', email: '', phoneCode: '+1', phone: '', address: '', city: '', state: '', postalCode: '', country: 'US',
 }
 
 // Google icon SVG
@@ -403,6 +517,7 @@ export default function CheckoutPage() {
   const [loadingIntent, setLoadingIntent] = useState(false)
   const [authReturnFromOAuth, setAuthReturnFromOAuth] = useState(false)
   const [taxComponents, setTaxComponents] = useState<TaxComponent[]>([])
+  const [confirmedPhone, setConfirmedPhone] = useState('')
   const [shippingFeeCAD, setShippingFeeCAD] = useState<number>(14.99) // default until settings load
 
   const taxAmount = Math.round(
@@ -448,7 +563,8 @@ export default function CheckoutPage() {
     if (geo) {
       const countryCode = COUNTRIES.find(c => c.code === geo.countryCode) ? geo.countryCode : 'US'
       const stateCode = geo.region || ''
-      setShippingForm(prev => ({ ...prev, country: countryCode, state: prev.state || stateCode }))
+      const dialCode = COUNTRY_PHONE_CODE[countryCode] ?? '+1'
+      setShippingForm(prev => ({ ...prev, country: countryCode, state: prev.state || stateCode, phoneCode: prev.phoneCode === '+1' ? dialCode : prev.phoneCode }))
       setTaxComponents(resolveTaxComponents(countryCode, stateCode))
     }
   }, [geo])
@@ -469,6 +585,12 @@ export default function CheckoutPage() {
     const value = e.target.value
     setShippingForm((prev) => {
       const next = { ...prev, [key]: value }
+      // Auto-update phone code when country changes
+      if (key === 'country') {
+        next.phoneCode = COUNTRY_PHONE_CODE[value] ?? prev.phoneCode
+        // Reset state/province when country changes
+        next.state = ''
+      }
       const country = key === 'country' ? value : prev.country
       const state  = key === 'state'   ? value : prev.state
       setTaxComponents(resolveTaxComponents(country, state))
@@ -496,6 +618,9 @@ export default function CheckoutPage() {
       toast.error('Please fill in all required fields')
       return
     }
+    // Combine phone code + number for submission
+    const fullPhone = `${shippingForm.phoneCode} ${shippingForm.phone.replace(/^\+\d[\d\s-]*\s*/, '').trim()}`
+    setConfirmedPhone(fullPhone)
     setLoadingIntent(true)
     try {
       const res = await fetch('/api/stripe/create-payment-intent', {
@@ -625,20 +750,43 @@ export default function CheckoutPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1.5">Full name *</label>
-                      <input value={shippingForm.name} onChange={set('name')} required placeholder="John Doe"
+                      <input value={shippingForm.name} onChange={set('name')} required placeholder="Jane Doe"
                         className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1.5">Email *</label>
-                      <input value={shippingForm.email} onChange={set('email')} type="email" required placeholder="john@example.com"
+                      <input value={shippingForm.email} onChange={set('email')} type="email" required placeholder="jane@example.com"
                         className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" />
                     </div>
                   </div>
+
+                  {/* Country first — drives phone code + province dropdown */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1.5">Country *</label>
+                    <select value={shippingForm.country} onChange={set('country')}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent bg-white">
+                      {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
+                    </select>
+                  </div>
+
+                  {/* Phone with country code selector */}
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1.5">Phone *</label>
-                    <input value={shippingForm.phone} onChange={set('phone')} type="tel" required placeholder="+1 (555) 000-0000"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" />
+                    <div className="flex gap-2">
+                      <select value={shippingForm.phoneCode} onChange={set('phoneCode')}
+                        className="w-32 border border-gray-300 rounded-lg px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent bg-white">
+                        {PHONE_CODES.map((c) => (
+                          <option key={`${c.name}-${c.dial}`} value={c.dial}>
+                            {c.flag} {c.dial}
+                          </option>
+                        ))}
+                      </select>
+                      <input value={shippingForm.phone} onChange={set('phone')} type="tel" required
+                        placeholder={shippingForm.country === 'CA' || shippingForm.country === 'US' ? '514 555 0123' : shippingForm.country === 'MA' ? '6 12 34 56 78' : '6 12 34 56 78'}
+                        className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" />
+                    </div>
                   </div>
+
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1.5">Street address *</label>
                     <input value={shippingForm.address} onChange={set('address')} required placeholder="123 Main St, Apt 4B"
@@ -647,38 +795,62 @@ export default function CheckoutPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1.5">City *</label>
-                      <input value={shippingForm.city} onChange={set('city')} required placeholder="Montreal"
+                      <input value={shippingForm.city} onChange={set('city')} required
+                        placeholder={shippingForm.country === 'CA' ? 'Montreal' : shippingForm.country === 'US' ? 'New York' : 'City'}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1.5">State / Province</label>
-                      <input value={shippingForm.state} onChange={set('state')} placeholder="QC"
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" />
+                      {/* Province dropdown for Canada, State dropdown for US, text for others */}
+                      {shippingForm.country === 'CA' ? (
+                        <>
+                          <label className="block text-xs font-medium text-gray-600 mb-1.5">Province *</label>
+                          <select value={shippingForm.state} onChange={set('state')} required
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent bg-white">
+                            <option value="">Select province</option>
+                            {CA_PROVINCES.map(p => (
+                              <option key={p.code} value={p.code}>{p.name} — {p.taxLabel}</option>
+                            ))}
+                          </select>
+                        </>
+                      ) : shippingForm.country === 'US' ? (
+                        <>
+                          <label className="block text-xs font-medium text-gray-600 mb-1.5">State *</label>
+                          <select value={shippingForm.state} onChange={set('state')} required
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent bg-white">
+                            <option value="">Select state</option>
+                            {US_STATES.map(s => (
+                              <option key={s.code} value={s.code}>{s.name} — {s.taxLabel}</option>
+                            ))}
+                          </select>
+                        </>
+                      ) : (
+                        <>
+                          <label className="block text-xs font-medium text-gray-600 mb-1.5">Region / Province</label>
+                          <input value={shippingForm.state} onChange={set('state')} placeholder="Region"
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" />
+                        </>
+                      )}
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1.5">Postal code *</label>
-                      <input value={shippingForm.postalCode} onChange={set('postalCode')} required placeholder="H3A 1A1"
+                      <input value={shippingForm.postalCode} onChange={set('postalCode')} required
+                        placeholder={shippingForm.country === 'CA' ? 'H3A 1A1' : shippingForm.country === 'US' ? '10001' : shippingForm.country === 'MA' ? '20000' : 'Postal code'}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" />
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1.5">Country *</label>
-                    <select value={shippingForm.country} onChange={set('country')}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent bg-white">
-                      {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
-                    </select>
-                  </div>
+
                   {/* Live tax preview — shows per-component breakdown */}
                   {taxComponents.length > 0 && taxAmount > 0 && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 space-y-1.5">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 space-y-1.5">
+                      <p className="text-xs font-semibold text-blue-700 uppercase tracking-wider mb-2">Tax Breakdown</p>
                       {taxComponents.filter(c => c.rate > 0).map((c) => (
                         <div key={c.label} className="flex justify-between text-sm">
-                          <span className="text-amber-800 font-medium">{c.label}</span>
-                          <span className="font-bold text-amber-900">{format(Math.round(subtotal * c.rate * 100) / 100)}</span>
+                          <span className="text-blue-800">{c.label}</span>
+                          <span className="font-semibold text-blue-900">{format(Math.round(subtotal * c.rate * 100) / 100)}</span>
                         </div>
                       ))}
                       {taxComponents.filter(c => c.rate > 0).length > 1 && (
-                        <div className="flex justify-between text-xs text-amber-700 border-t border-amber-200 pt-1.5 mt-1">
+                        <div className="flex justify-between text-xs text-blue-700 border-t border-blue-200 pt-1.5 mt-1">
                           <span>Total tax</span>
                           <span className="font-bold">{format(taxAmount)}</span>
                         </div>
@@ -717,7 +889,7 @@ export default function CheckoutPage() {
                 }}>
                   <PaymentStep
                     clientSecret={clientSecret}
-                    customer={shippingForm}
+                    customer={{ ...shippingForm, phone: confirmedPhone || `${shippingForm.phoneCode} ${shippingForm.phone}` }}
                     items={items.map((i) => ({ productId: i.productId, size: i.size, quantity: i.quantity }))}
                     total={total}
                     taxAmount={taxAmount}
