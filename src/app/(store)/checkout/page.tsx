@@ -305,7 +305,7 @@ function AuthStep({
     setLoading(true)
     try {
       if (mode === 'signin') {
-        const res = await fetch('/api/customer/login', {
+        const res = await fetch('/api/auth/customer/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: form.email, password: form.password }),
@@ -318,7 +318,7 @@ function AuthStep({
       } else {
         if (!form.name) { toast.error('Please enter your name'); return }
         if (form.password.length < 8) { toast.error('Password must be at least 8 characters'); return }
-        const res = await fetch('/api/customer/register', {
+        const res = await fetch('/api/auth/customer/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: form.name, email: form.email, password: form.password }),

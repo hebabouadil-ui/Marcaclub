@@ -1,9 +1,7 @@
 'use client'
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Loader2, User, Mail, Lock, Phone, Globe, Eye, EyeOff } from 'lucide-react'
-import { useCustomer } from '@/lib/context/CustomerContext'
 import toast from 'react-hot-toast'
 
 function GoogleIcon() {
@@ -28,28 +26,25 @@ export default function RegisterPage() {
   const [form, setForm] = useState({ name: '', email: '', password: '', phone: '', country: '' })
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
-  const { refresh } = useCustomer()
-  const router = useRouter()
+  const [registered, setRegistered] = useState(false)
 
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm(p => ({ ...p, [k]: e.target.value }))
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (form.password.length < 8) { toast.error('Password must be at least 8 characters'); return }
+    if (form.password.length < 8) { toast.error('Le mot de passe doit contenir au moins 8 caractères'); return }
     setLoading(true)
     try {
-      const res = await fetch('/api/customer/register', {
+      const res = await fetch('/api/auth/customer/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       })
       const data = await res.json()
-      if (!res.ok) { toast.error(data.error ?? 'Registration failed'); return }
-      await refresh()
-      toast.success('Account created! Welcome to Marcaclub.')
-      router.push('/account/orders')
-    } catch { toast.error('Something went wrong') }
+      if (!res.ok) { toast.error(data.error ?? 'Erreur lors de la création du compte'); return }
+      setRegistered(true)
+    } catch { toast.error('Erreur réseau') }
     finally { setLoading(false) }
   }
 
@@ -57,12 +52,41 @@ export default function RegisterPage() {
   const inputCls = "w-full bg-white border border-gray-300 text-gray-900 text-sm pl-9 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent placeholder:text-gray-400 rounded-lg"
   const iconCls = "absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
 
+  if (registered) {
+    return (
+      <div className="min-h-[calc(100vh-200px)] bg-gray-50 flex items-center justify-center px-4 py-16">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <Link href="/" className="text-brand-gold text-xs tracking-[0.4em] uppercase font-semibold">Marcaclub</Link>
+          </div>
+          <div className="bg-white border border-gray-200 p-8 shadow-sm rounded-xl text-center space-y-4">
+            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+              <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h2 className="font-bold text-gray-900 text-xl">Compte créé !</h2>
+            <p className="text-gray-500 text-sm leading-relaxed">
+              Un email d&apos;activation a été envoyé à <strong className="text-gray-900">{form.email}</strong>.<br />
+              Cliquez sur le lien dans l&apos;email pour activer votre compte.<br />
+              <span className="text-xs text-gray-400 mt-1 inline-block">Pensez à vérifier vos spams.</span>
+            </p>
+            <Link href="/account/login"
+              className="inline-block mt-2 bg-brand-black text-white font-bold py-3 px-8 text-sm tracking-widest uppercase hover:bg-brand-gold hover:text-brand-black transition-colors rounded-lg">
+              Aller à la connexion
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-[calc(100vh-200px)] bg-gray-50 flex items-center justify-center px-4 py-16">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="font-display text-3xl font-bold text-gray-900 tracking-widest uppercase mb-2">Create Account</h1>
-          <p className="text-gray-500 text-sm">Track orders, save preferences, faster checkout</p>
+          <h1 className="font-display text-3xl font-bold text-gray-900 tracking-widest uppercase mb-2">Créer un compte</h1>
+          <p className="text-gray-500 text-sm">Suivez vos commandes, accédez à votre espace</p>
         </div>
         <div className="bg-white border border-gray-200 p-8 shadow-sm rounded-xl">
           {/* Social sign-up */}
