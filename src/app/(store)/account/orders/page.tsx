@@ -8,13 +8,21 @@ import { Package, Truck, CheckCircle2, XCircle, Clock, ChevronDown, ChevronUp, S
 
 interface OrderItem { name: string; price: number; quantity: number; size: string; image?: string }
 interface Order {
-  _id: string; orderNumber: string; total: number; currency: string
+  _id: string; orderNumber: string; total: number; currency: string; currencySymbol?: string
   status: string; createdAt: string; items: OrderItem[]
   stripePaymentStatus?: string; cjTrackingNumber?: string
 }
 interface TrackingData {
   orderNumber: string; status: string; cjTrackingNumber: string | null
   trackingUrl: string | null; estimatedDays: string; cjStatus: string | null
+}
+
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  eur: '€', usd: '$', cad: 'CA$', gbp: '£', mad: 'MAD ', aed: 'AED ', sar: 'SAR ',
+}
+function fmtOrder(order: Order, amount: number) {
+  const sym = order.currencySymbol ?? CURRENCY_SYMBOLS[order.currency?.toLowerCase()] ?? (order.currency?.toUpperCase() + ' ')
+  return `${sym}${amount.toFixed(2)}`
 }
 
 const STATUS_ICON: Record<string, React.ReactNode> = {
@@ -224,8 +232,8 @@ export default function MyOrdersPage() {
                     )}
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <p className="font-bold text-gray-900">${order.total.toFixed(2)}</p>
-                    <p className="text-gray-400 text-[10px]">USD</p>
+                    <p className="font-bold text-gray-900">{fmtOrder(order, order.total)}</p>
+                    <p className="text-gray-400 text-[10px]">{order.currency?.toUpperCase()}</p>
                   </div>
                   <button onClick={() => setExpanded(expanded === order._id ? null : order._id)}
                     className="text-gray-400 hover:text-gray-700 transition-colors flex-shrink-0">
@@ -254,12 +262,12 @@ export default function MyOrdersPage() {
                           <p className="text-gray-900 text-sm font-medium truncate">{item.name}</p>
                           <p className="text-gray-400 text-xs">Size: {item.size} · Qty: {item.quantity}</p>
                         </div>
-                        <p className="text-gray-900 text-sm font-semibold">${(item.price * item.quantity).toFixed(2)}</p>
+                        <p className="text-gray-900 text-sm font-semibold">{fmtOrder(order, item.price * item.quantity)}</p>
                       </div>
                     ))}
                     <div className="border-t border-gray-100 pt-3 flex justify-between text-sm">
                       <span className="text-gray-500">Total Paid</span>
-                      <span className="font-bold text-gray-900">${order.total.toFixed(2)} USD</span>
+                      <span className="font-bold text-gray-900">{fmtOrder(order, order.total)}</span>
                     </div>
                   </div>
                 )}

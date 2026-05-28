@@ -11,7 +11,7 @@ export async function GET() {
 
   await connectDB()
   const orders = await Order.find({ 'customer.email': session.email })
-    .select('orderNumber total currency status createdAt items customer stripePaymentStatus cjTrackingNumber')
+    .select('orderNumber total currency currencySymbol status createdAt items customer stripePaymentStatus cjTrackingNumber')
     .sort({ createdAt: -1 })
     .lean()
 
