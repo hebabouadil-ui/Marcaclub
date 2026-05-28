@@ -21,6 +21,7 @@ export default function CartPage() {
   const [continueHref, setContinueHref] = useState('/products')
   const [country, setCountry] = useState<string>('')
   const [shippingFee, setShippingFee] = useState<number | null>(null)
+  const [shippingDays, setShippingDays] = useState<{ min: number; max: number } | null>(null)
   const [shippingLoading, setShippingLoading] = useState(false)
 
   // Derive "continue shopping" href from cart items or localStorage
@@ -58,6 +59,8 @@ export default function CartPage() {
       if (res.ok) {
         const data = await res.json()
         setShippingFee(typeof data.shippingFeeCAD === 'number' ? data.shippingFeeCAD : null)
+        if (data.agingMin && data.agingMax) setShippingDays({ min: data.agingMin, max: data.agingMax })
+        else setShippingDays(null)
       }
     } catch {
       // leave shippingFee null — will show "Calculé au checkout"
@@ -224,13 +227,20 @@ export default function CartPage() {
                   </div>
 
                   {/* Shipping */}
-                  <div className="flex justify-between text-sm items-center">
-                    <span className="text-brand-gray flex items-center gap-1.5">
-                      <Truck size={13} className="text-brand-gold" />
-                      Livraison
-                      {country && <span className="text-[10px] text-brand-light-gray uppercase">({country})</span>}
-                    </span>
-                    <span className="font-semibold">
+                  <div className="flex justify-between text-sm items-start gap-2">
+                    <div>
+                      <span className="text-brand-gray flex items-center gap-1.5">
+                        <Truck size={13} className="text-brand-gold flex-shrink-0" />
+                        Livraison
+                        {country && <span className="text-[10px] text-brand-light-gray uppercase">({country})</span>}
+                      </span>
+                      {shippingDays && (
+                        <p className="text-[10px] text-brand-gray mt-0.5 ml-[18px]">
+                          {shippingDays.min}–{shippingDays.max} jours ouvrés
+                        </p>
+                      )}
+                    </div>
+                    <span className="font-semibold flex-shrink-0">
                       {shippingLoading ? (
                         <Loader2 size={14} className="animate-spin text-brand-gray" />
                       ) : shippingFee !== null ? (

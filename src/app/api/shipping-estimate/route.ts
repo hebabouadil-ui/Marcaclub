@@ -9,18 +9,45 @@ export const dynamic = 'force-dynamic'
 
 interface ProductDoc {
   cjPid?: string
+  cjLogisticName?: string
   productWeight?: number
   shippingBakedUSD?: number
   shippingRefCountry?: string
   sizes?: Array<{ size: string; cjVid?: string }>
 }
 
-function pickBestOption(options: Array<{ logisticPrice: number; agingMax?: number; agingMin?: number }>) {
+interface ShippingOption {
+  logisticName?: string
+  logisticPrice: number
+  agingMax?: number
+  agingMin?: number
+  [key: string]: unknown
+}
+
+function pickBestOption(options: ShippingOption[], preferredLogistic?: string): ShippingOption {
+  if (preferredLogistic) {
+    const preferred = options.find(o => o.logisticName === preferredLogistic)
+    if (preferred) return preferred
+  }
   const maxPrice = Math.max(...options.map(o => o.logisticPrice))
   const maxDays  = Math.max(...options.map(o => o.agingMax ?? o.agingMin ?? 30))
   return options
     .map(o => ({ ...o, score: (o.logisticPrice / (maxPrice || 1)) * 0.7 + ((o.agingMax ?? o.agingMin ?? 30) / (maxDays || 1)) * 0.3 }))
-    .sort((a, b) => a.score - b.score)[0]
+    .sort((a, b) => (a as { score: number }).score - (b as { score: number }).score)[0]
+}
+
+function parseAging(opt: ShippingOption): { agingMin: number; agingMax: number } {
+  let agingMin = opt.agingMin ?? 0
+  let agingMax = opt.agingMax ?? 0
+  if (!agingMin || !agingMax) {
+    const s = (opt as Record<string, unknown>).logisticAging ?? (opt as Record<string, unknown>).aging ?? ''
+    if (s) {
+      const p = String(s).split('-')
+      agingMin = parseInt(p[0]) || 0
+      agingMax = parseInt(p[1] ?? p[0]) || 0
+    }
+  }
+  return { agingMin, agingMax }
 }
 
 export async function POST(req: NextRequest) {
@@ -36,13 +63,12 @@ export async function POST(req: NextRequest) {
 
     await connectDB()
 
-    // Collect CJ VIDs, baked shipping data, and total weight
-    // CJ ships everything in ONE package — never sum individual costs
     const cjProducts: Array<{ vid: string; quantity: number; weight?: number }> = []
     let maxBakedUSD = 0
     let totalWeightG = 0
     let hasBakedData = false
     let hasCjPid = false
+    let preferredLogistic: string | undefined
 
     for (const item of items) {
       const product = await Product.findById(item.productId).lean() as ProductDoc | null
@@ -54,6 +80,9 @@ export async function POST(req: NextRequest) {
         if (product.shippingBakedUSD > maxBakedUSD) maxBakedUSD = product.shippingBakedUSD
         hasBakedData = true
       }
+
+      // Use the preferred logistic from the first CJ product
+      if (product.cjLogisticName && !preferredLogistic) preferredLogistic = product.cjLogisticName
 
       if (!product.cjPid) continue
       hasCjPid = true
@@ -70,21 +99,19 @@ export async function POST(req: NextRequest) {
     if (cjProducts.length > 0) {
       try {
         const cjData = await getCJShippingInfo({ startCountryCode: 'CN', endCountryCode: destCountry, products: cjProducts })
-        const options: Array<{ logisticPrice: number; agingMax?: number; agingMin?: number }> =
-          (cjData.result && Array.isArray(cjData.data)) ? cjData.data : []
+        const options: ShippingOption[] = (cjData.result && Array.isArray(cjData.data)) ? cjData.data : []
         if (options.length > 0) {
-          const best = pickBestOption(options)
+          const best = pickBestOption(options, preferredLogistic)
+          const { agingMin, agingMax } = parseAging(best)
           shippingFeeCAD = Math.round(best.logisticPrice * usdToCAD * 100) / 100
-          console.log(`[shipping-estimate] CJ VID API: $${best.logisticPrice} USD → CA$${shippingFeeCAD} for ${destCountry}`)
-          return NextResponse.json({ shippingFeeCAD, source: 'cj-api' })
+          return NextResponse.json({ shippingFeeCAD, agingMin, agingMax, logisticName: best.logisticName, source: 'cj-api' })
         }
-        console.warn(`[shipping-estimate] CJ VID API returned empty for ${destCountry}, trying weight fallback`)
       } catch (err) {
         console.warn('[shipping-estimate] CJ VID API failed:', err)
       }
     }
 
-    // Priority 1b: CJ API with total weight (fallback when VID call returns empty or no VIDs stored)
+    // Priority 1b: CJ API with total weight
     if (hasCjPid && totalWeightG > 0) {
       try {
         const cjData = await getCJShippingInfo({
@@ -93,39 +120,35 @@ export async function POST(req: NextRequest) {
           productWeight: totalWeightG,
           quantity: totalUnits,
         })
-        const options: Array<{ logisticPrice: number; agingMax?: number; agingMin?: number }> =
-          (cjData.result && Array.isArray(cjData.data)) ? cjData.data : []
+        const options: ShippingOption[] = (cjData.result && Array.isArray(cjData.data)) ? cjData.data : []
         if (options.length > 0) {
-          const best = pickBestOption(options)
+          const best = pickBestOption(options, preferredLogistic)
+          const { agingMin, agingMax } = parseAging(best)
           shippingFeeCAD = Math.round(best.logisticPrice * usdToCAD * 100) / 100
-          console.log(`[shipping-estimate] CJ weight API: $${best.logisticPrice} USD → CA$${shippingFeeCAD} for ${destCountry}`)
-          return NextResponse.json({ shippingFeeCAD, source: 'cj-api-weight' })
+          return NextResponse.json({ shippingFeeCAD, agingMin, agingMax, logisticName: best.logisticName, source: 'cj-api-weight' })
         }
       } catch (err) {
         console.warn('[shipping-estimate] CJ weight API failed:', err)
       }
     }
 
-    // Priority 2: baked shipping stored at import time (scaled by extra units)
+    // Priority 2: baked shipping
     if (hasBakedData && bakedUSD > 0) {
       shippingFeeCAD = Math.round(bakedUSD * usdToCAD * 100) / 100
-      console.log(`[shipping-estimate] Baked: $${bakedUSD} USD → CA$${shippingFeeCAD} for ${destCountry}`)
       return NextResponse.json({ shippingFeeCAD, source: 'baked' })
     }
 
-    // Priority 3: weight-based estimate using productWeight
+    // Priority 3: weight-based estimate
     if (totalWeightG > 0) {
       const baseWeight = 300
       const weightMultiplier = Math.max(1, totalWeightG / baseWeight)
       const baseCAD = getShippingFeeCAD(destCountry, usdToCAD)
       shippingFeeCAD = Math.round(baseCAD * weightMultiplier * 100) / 100
-      console.log(`[shipping-estimate] Weight-based: ${totalWeightG}g × ${weightMultiplier.toFixed(2)} → CA$${shippingFeeCAD} for ${destCountry}`)
       return NextResponse.json({ shippingFeeCAD, source: 'weight' })
     }
 
     // Priority 4: static table fallback
     shippingFeeCAD = getShippingFeeCAD(destCountry, usdToCAD)
-    console.log(`[shipping-estimate] Static table: CA$${shippingFeeCAD} for ${destCountry}`)
     return NextResponse.json({ shippingFeeCAD, source: 'static' })
 
   } catch (err) {
