@@ -1,6 +1,6 @@
 'use client'
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Loader2, ArrowRight, Eye, EyeOff } from 'lucide-react'
 import { useCustomer } from '@/lib/context/CustomerContext'
@@ -17,7 +17,7 @@ function GoogleIcon() {
   )
 }
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPass, setShowPass] = useState(false)
@@ -27,6 +27,8 @@ export default function LoginPage() {
   const [resendSent, setResendSent] = useState(false)
   const { refresh } = useCustomer()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const oauthError = searchParams.get('error')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -71,6 +73,12 @@ export default function LoginPage() {
           <p className="text-gray-500 text-sm">Accédez à vos commandes et à votre compte</p>
         </div>
         <div className="bg-white border border-gray-200 p-8 shadow-sm rounded-xl">
+          {oauthError && (
+            <div className="mb-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-800">
+              <p className="font-semibold mb-0.5">Google sign-in failed</p>
+              <p className="text-red-600 text-xs font-mono">{oauthError}</p>
+            </div>
+          )}
           {unverified && (
             <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800">
               <p className="font-semibold mb-1">Compte non activé</p>
@@ -134,5 +142,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   )
 }

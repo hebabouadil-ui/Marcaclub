@@ -10,11 +10,22 @@ export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
   const code = searchParams.get('code')
   const state = searchParams.get('state')
-  const base = (process.env.SITE_URL ?? 'https://marca-club.com').replace(/\/$/, '')
+  const googleError = searchParams.get('error')
+
+  // Google rejected the auth (user cancelled, etc.)
+  if (googleError) {
+    console.error('Google OAuth denied:', googleError)
+    return NextResponse.redirect(new URL('/account/login?error=oauth_denied', req.url))
+  }
 
   if (!code) {
     return NextResponse.redirect(new URL('/account/login?error=oauth_denied', req.url))
   }
+
+  // Derive the redirect_uri from the actual request URL so it always matches
+  // what was sent in the initial auth request (both use req.url-based origin)
+  const reqOrigin = new URL(req.url).origin
+  const redirectUri = `${reqOrigin}/api/customer/auth/google/callback`
 
   try {
     // Exchange code for access token
@@ -25,12 +36,16 @@ export async function GET(req: NextRequest) {
         code,
         client_id: process.env.GOOGLE_CLIENT_ID!,
         client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-        redirect_uri: `${base}/api/customer/auth/google/callback`,
+        redirect_uri: redirectUri,
         grant_type: 'authorization_code',
       }),
     })
     const tokens = await tokenRes.json()
-    if (!tokens.access_token) throw new Error('No access token from Google')
+    if (!tokens.access_token) {
+      console.error('Google token exchange failed:', JSON.stringify(tokens))
+      const msg = tokens.error_description ?? tokens.error ?? 'token_failed'
+      return NextResponse.redirect(new URL(`/account/login?error=${encodeURIComponent(msg)}`, req.url))
+    }
 
     // Get user profile
     const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
@@ -39,7 +54,7 @@ export async function GET(req: NextRequest) {
     const gUser = await userRes.json()
     if (!gUser.email) throw new Error('No email from Google')
 
-    // Find or create customer — Google-verified accounts are always email-verified
+    // Find or create customer — Google-verified so emailVerified = true
     await connectDB()
     let customer = await Customer.findOne({ email: gUser.email.toLowerCase() })
     if (!customer) {
@@ -59,7 +74,6 @@ export async function GET(req: NextRequest) {
     }
 
     const token = await signCustomerToken({ id: String(customer._id), email: customer.email, name: customer.name })
-    // Use req.url as base so the redirect goes to the correct domain regardless of SITE_URL
     const returnTo = state || '/'
     const redirectUrl = returnTo.startsWith('http') ? returnTo : new URL(returnTo, req.url).toString()
     const res = NextResponse.redirect(redirectUrl)

@@ -8,12 +8,13 @@ export async function GET(req: NextRequest) {
   }
 
   const returnTo = req.nextUrl.searchParams.get('returnTo') ?? '/'
-  // Pass returnTo as raw state — URLSearchParams will encode it once
-  const base = (process.env.SITE_URL ?? 'https://marca-club.com').replace(/\/$/, '')
+  // Use the actual request origin so redirect_uri always matches the registered one
+  const origin = new URL(req.url).origin
+  const redirectUri = `${origin}/api/customer/auth/google/callback`
 
   const params = new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID,
-    redirect_uri: `${base}/api/customer/auth/google/callback`,
+    redirect_uri: redirectUri,
     response_type: 'code',
     scope: 'openid email profile',
     state: returnTo,
