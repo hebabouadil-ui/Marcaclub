@@ -41,12 +41,12 @@ export async function POST(req: NextRequest) {
 
     // Sum CAD subtotal + collect CJ VIDs and baked shipping data
     let subtotalCAD = 0
-    const cjProducts: Array<{ vid: string; quantity: number }> = []
+    const cjProducts: Array<{ vid: string; quantity: number; weight?: number }> = []
     let totalBakedUSD = 0
     let hasBakedData = false
     for (const item of items) {
       const product = await Product.findById(item.productId).lean() as {
-        price: number; cjPid?: string; shippingBakedUSD?: number
+        price: number; cjPid?: string; shippingBakedUSD?: number; productWeight?: number
         sizes?: Array<{ size: string; cjVid?: string }>
       } | null
       if (!product) return NextResponse.json({ error: 'Product not found' }, { status: 400 })
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
       }
       if (product.cjPid) {
         const sizeEntry = product.sizes?.find(s => s.size === item.size)
-        if (sizeEntry?.cjVid) cjProducts.push({ vid: sizeEntry.cjVid, quantity: item.quantity })
+        if (sizeEntry?.cjVid) cjProducts.push({ vid: sizeEntry.cjVid, quantity: item.quantity, weight: product.productWeight })
       }
     }
 

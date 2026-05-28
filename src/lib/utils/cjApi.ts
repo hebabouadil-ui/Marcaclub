@@ -89,11 +89,11 @@ export async function getCJShippingInfo(params: {
   quantity?: number
   vid?: string
   variantSku?: string
-  products?: Array<{ vid: string; quantity: number }>
+  products?: Array<{ vid: string; quantity: number; weight?: number }>
 }) {
   // Build products array: prefer explicit products list (with real VIDs), fallback to single-item
   const products = params.products && params.products.length > 0
-    ? params.products.map(p => ({ vid: p.vid, quantity: p.quantity }))
+    ? params.products.map(p => ({ vid: p.vid, quantity: p.quantity, ...(p.weight ? { weight: p.weight } : {}) }))
     : [{
         quantity: params.quantity ?? 1,
         weight: params.productWeight ?? 300,

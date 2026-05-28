@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
 
     // Collect CJ VIDs and baked shipping data
     // CJ ships everything in ONE package — never sum individual costs
-    const cjProducts: Array<{ vid: string; quantity: number }> = []
+    const cjProducts: Array<{ vid: string; quantity: number; weight?: number }> = []
     let maxBakedUSD = 0   // shipping of the heaviest/most expensive product
     let totalWeightG = 0
     let hasBakedData = false
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
 
       if (!product.cjPid) continue
       const sizeEntry = product.sizes?.find(s => s.size === item.size)
-      if (sizeEntry?.cjVid) cjProducts.push({ vid: sizeEntry.cjVid, quantity: item.quantity })
+      if (sizeEntry?.cjVid) cjProducts.push({ vid: sizeEntry.cjVid, quantity: item.quantity, weight: product.productWeight })
     }
 
     // For baked fallback: base = most expensive product shipping + 15% per extra item/unit
@@ -93,12 +93,12 @@ export async function POST(req: NextRequest) {
 
     // Priority 3: weight-based estimate using productWeight
     if (totalWeightG > 0) {
-      const baseUSD = getShippingFeeCAD(destCountry, 1) // get USD equivalent
       const baseWeight = 300 // grams baseline
       const weightMultiplier = Math.max(1, totalWeightG / baseWeight)
-      const weightedUSD = (getShippingFeeCAD(destCountry, 1) * weightMultiplier)
-      shippingFeeCAD = Math.round(weightedUSD * usdToCAD * 100) / 100
-      console.log(`[shipping-estimate] Weight-based: ${totalWeightG}g → CA$${shippingFeeCAD} for ${destCountry}`)
+      // getShippingFeeCAD already returns CAD — no extra conversion needed
+      const baseCAD = getShippingFeeCAD(destCountry, usdToCAD)
+      shippingFeeCAD = Math.round(baseCAD * weightMultiplier * 100) / 100
+      console.log(`[shipping-estimate] Weight-based: ${totalWeightG}g × ${weightMultiplier.toFixed(2)} → CA$${shippingFeeCAD} for ${destCountry}`)
       return NextResponse.json({ shippingFeeCAD, source: 'weight' })
     }
 
