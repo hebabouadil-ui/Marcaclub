@@ -10,7 +10,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import {
   ArrowLeft, Loader2, Trash2, Plus, Minus, ShoppingBag,
-  Lock, ChevronRight, Shield, RotateCcw, Mail, Eye, EyeOff, User,
+  Lock, ChevronRight, ChevronDown, Shield, RotateCcw, Mail, Eye, EyeOff, User,
 } from 'lucide-react'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
@@ -520,6 +520,7 @@ export default function CheckoutPage() {
   const [taxComponents, setTaxComponents] = useState<TaxComponent[]>([])
   const [confirmedPhone, setConfirmedPhone] = useState('')
   const [confirmedShippingFeeCAD, setConfirmedShippingFeeCAD] = useState<number | null>(null)
+  const [mobileOrderOpen, setMobileOrderOpen] = useState(false)
 
   // Per-country shipping fee in CAD — fetches real CJ rates when country changes
   const [shippingFeeCAD, setShippingFeeCAD] = useState<number>(() => {
@@ -706,6 +707,65 @@ export default function CheckoutPage() {
           </div>
         </div>
       </div>
+
+      {/* Mobile order summary toggle — visible only below lg */}
+      {step !== 'cart' && (
+        <div className="lg:hidden border-b border-gray-200 bg-gray-50">
+          <button
+            type="button"
+            onClick={() => setMobileOrderOpen(o => !o)}
+            className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-700"
+          >
+            <span className="flex items-center gap-2 text-brand-gold font-semibold">
+              <ShoppingBag size={15} />
+              {mobileOrderOpen ? 'Hide order summary' : 'Show order summary'}
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="font-bold text-gray-900">{format(total)}</span>
+              <ChevronDown size={16} className={`transition-transform ${mobileOrderOpen ? 'rotate-180' : ''}`} />
+            </span>
+          </button>
+          {mobileOrderOpen && (
+            <div className="px-4 pb-4 space-y-2 border-t border-gray-200 pt-3">
+              {items.map((item) => (
+                <div key={`${item.productId}-${item.size}`} className="flex gap-3 items-center">
+                  {item.image && (
+                    <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                      <Image src={item.image} alt={item.name} fill className="object-cover" />
+                      <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-gray-500 text-white text-[9px] rounded-full flex items-center justify-center font-bold">{item.quantity}</span>
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-800 font-medium truncate">{item.name}</p>
+                    <p className="text-xs text-gray-400">Size: {item.size}</p>
+                  </div>
+                  <p className="text-sm font-semibold text-gray-900 flex-shrink-0">{format(item.price * item.quantity)}</p>
+                </div>
+              ))}
+              <div className="border-t border-gray-200 pt-3 space-y-1.5 mt-2">
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>Subtotal</span><span>{format(subtotal)}</span>
+                </div>
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>Shipping</span>
+                  <span>{shippingFeeLoading && !confirmedShippingFeeCAD
+                    ? <span className="text-gray-400 text-xs animate-pulse">Calculating…</span>
+                    : format(effectiveShippingCAD)}</span>
+                </div>
+                {taxComponents.filter(c => c.rate > 0).map(c => (
+                  <div key={c.label} className="flex justify-between text-sm text-gray-600">
+                    <span>{c.label}</span>
+                    <span>{format(Math.round(subtotal * c.rate * 100) / 100)}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between font-bold text-gray-900 pt-2 border-t border-gray-100">
+                  <span>Total</span><span>{format(total)}</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-8">

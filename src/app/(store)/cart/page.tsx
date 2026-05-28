@@ -137,7 +137,7 @@ export default function CartPage() {
             {tr.cart.checkout}
           </Link>
 
-          <Link href="/products"
+          <Link href="/"
             style={{
               display: 'block', textAlign: 'center', marginTop: '12px',
               fontSize: '11px', letterSpacing: '0.15em', textTransform: 'uppercase',
