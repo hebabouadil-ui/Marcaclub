@@ -61,7 +61,9 @@ export default function ProductsClient({ products, filters, hideHeader }: Props)
         <div className="bg-brand-black text-brand-white py-16 md:py-24">
           <div className="max-w-7xl mx-auto px-4 text-center">
             <p className="text-[10px] tracking-[0.3em] text-brand-gold uppercase mb-3">{tr.nav.shop}</p>
-            <h1 className="font-display text-4xl md:text-6xl">{tr.products.title}</h1>
+            <h1 className="font-display text-4xl md:text-6xl">
+              {filters.category ? (CATEGORY_LABELS[filters.category] ?? filters.category) : tr.products.title}
+            </h1>
             <p className="text-brand-white/40 text-sm mt-3 tracking-widest">
               {tr.products.available(products.length)}
             </p>

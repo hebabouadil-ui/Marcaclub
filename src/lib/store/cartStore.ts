@@ -10,6 +10,7 @@ export interface CartItem {
   size: string
   image: string
   stock: number
+  category?: string
 }
 
 interface CartStore {

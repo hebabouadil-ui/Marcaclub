@@ -20,9 +20,15 @@ export default function CartPage() {
   const { tr } = useLanguage()
   const [continueHref, setContinueHref] = useState('/products')
   useEffect(() => {
-    const cat = localStorage.getItem('mc-last-category')
-    if (cat) setContinueHref(`/products?category=${encodeURIComponent(cat)}`)
-  }, [])
+    // Prefer category from cart items (most reliable), fall back to last-browsed localStorage
+    const cartCat = items[0]?.category
+    if (cartCat) {
+      setContinueHref(`/products?category=${encodeURIComponent(cartCat)}`)
+    } else {
+      const stored = localStorage.getItem('mc-last-category')
+      if (stored) setContinueHref(`/products?category=${encodeURIComponent(stored)}`)
+    }
+  }, [items])
 
   if (items.length === 0) {
     return (

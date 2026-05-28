@@ -314,6 +314,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
       size: selectedSize,
       image: images[0] || '',
       stock: selectedStock,
+      category: product.category,
     })
     setAdded(true)
   }
@@ -330,6 +331,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
         size: selectedSize,
         image: images[0] || '',
         stock: selectedStock,
+        category: product.category,
       })
     }
     router.push('/checkout')
