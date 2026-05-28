@@ -676,7 +676,7 @@ export default function CheckoutPage() {
       <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-4">
         <ShoppingBag size={48} className="text-gray-200" />
         <p className="text-gray-400 text-sm">Your cart is empty</p>
-        <Link href="/products" className="bg-gray-900 text-white px-6 py-3 text-sm hover:bg-gray-700 transition-colors rounded-lg">
+        <Link href="/" className="bg-gray-900 text-white px-6 py-3 text-sm hover:bg-gray-700 transition-colors rounded-lg">
           Start shopping
         </Link>
       </div>
@@ -716,7 +716,7 @@ export default function CheckoutPage() {
               <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
                 <div className="flex items-center justify-between mb-4 sm:mb-6">
                   <h2 className="font-semibold text-gray-900">Your Cart ({items.length} {items.length === 1 ? 'item' : 'items'})</h2>
-                  <Link href="/products" className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1"><ArrowLeft size={12} /> Continue shopping</Link>
+                  <Link href="/" className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1"><ArrowLeft size={12} /> Continue shopping</Link>
                 </div>
                 <div className="divide-y divide-gray-100">
                   {items.map((item) => (
@@ -743,8 +743,30 @@ export default function CheckoutPage() {
                     </div>
                   ))}
                 </div>
+
+                {/* Order summary — visible before proceeding to checkout */}
+                <div className="mt-4 border-t border-gray-100 pt-4 space-y-2">
+                  <div className="flex justify-between text-sm text-gray-500">
+                    <span>Subtotal</span><span>{format(subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm text-gray-500">
+                    <span>Shipping</span>
+                    <span>{shippingFeeLoading ? <span className="text-gray-400 text-xs">Calculating…</span> : format(shippingFeeCAD)}</span>
+                  </div>
+                  {taxComponents.length > 0 && taxAmount > 0 && taxComponents.filter(c => c.rate > 0).map(c => (
+                    <div key={c.label} className="flex justify-between text-sm text-gray-500">
+                      <span>{c.label}</span>
+                      <span>{format(Math.round(subtotal * c.rate * 100) / 100)}</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between font-bold text-gray-900 text-base pt-2 border-t border-gray-100">
+                    <span>Total</span><span>{format(total)}</span>
+                  </div>
+                  <p className="text-[10px] text-gray-400 text-center pt-1">Shipping estimated based on your location · final amount confirmed at payment</p>
+                </div>
+
                 <button onClick={handleProceedFromCart}
-                  className="w-full mt-6 bg-gray-900 text-white py-4 font-semibold rounded-lg hover:bg-gray-800 transition-colors flex items-center justify-center gap-2">
+                  className="w-full mt-4 bg-gray-900 text-white py-4 font-semibold rounded-lg hover:bg-gray-800 transition-colors flex items-center justify-center gap-2">
                   Proceed to Checkout <ChevronRight size={16} />
                 </button>
               </div>
