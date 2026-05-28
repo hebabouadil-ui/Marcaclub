@@ -172,7 +172,7 @@ export default function MyOrdersPage() {
   const [tracking, setTracking] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!authLoading && !customer) { router.push('/account/login'); return }
+    if (!authLoading && !customer) { setLoading(false); router.push('/account/login'); return }
     if (customer) {
       fetch('/api/customer/orders')
         .then(r => r.json())

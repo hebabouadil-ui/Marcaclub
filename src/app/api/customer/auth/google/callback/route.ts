@@ -80,8 +80,9 @@ export async function GET(req: NextRequest) {
       .setProtectedHeader({ alg: 'HS256' })
       .setExpirationTime('30d')
       .sign(SECRET)
-    const returnTo = state || '/'
-    const redirectUrl = returnTo.startsWith('http') ? returnTo : `${siteOrigin}${returnTo}`
+    // Only allow same-origin redirects to prevent open-redirect attacks via the state param
+    const returnTo = (state && state.startsWith('/') && !state.startsWith('//')) ? state : '/'
+    const redirectUrl = `${siteOrigin}${returnTo}`
     const res = NextResponse.redirect(redirectUrl)
     res.cookies.set('mc-customer', token, {
       httpOnly: true,

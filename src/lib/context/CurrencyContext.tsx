@@ -186,7 +186,7 @@ export function CurrencyProvider({ children, initialCountry }: { children: React
   }, [applyCode, initialCountry])
 
   const info = CURRENCIES.find(c => c.code === currency) ?? CURRENCIES[0]
-  const usdToCAD = 1 / (rates['USD'] ?? 0.73)
+  const usdToCAD = 1 / (rates['USD'] || 0.73)
 
   return (
     <Ctx.Provider value={{

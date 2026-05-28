@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     }
 
     // usdToCAD for shipping calculation
-    const usdToCAD = 1 / (rates['USD'] ?? 0.73)
+    const usdToCAD = 1 / (rates['USD'] || 0.73)
 
     // Sum CAD subtotal + collect CJ VIDs and baked shipping data
     let subtotalCAD = 0

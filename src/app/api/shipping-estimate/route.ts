@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     }
 
     const rates = await getCadRates()
-    const usdToCAD = 1 / (rates['USD'] ?? 0.73)
+    const usdToCAD = 1 / (rates['USD'] || 0.73)
     const destCountry = String(country).toUpperCase()
 
     await connectDB()

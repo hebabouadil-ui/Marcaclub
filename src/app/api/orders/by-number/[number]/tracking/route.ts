@@ -27,11 +27,9 @@ export async function GET(_: NextRequest, { params }: { params: { number: string
           cjStatus = d.orderStatus || d.status
           if (tUrl) trackingUrl = tUrl
           if (trackNum && trackNum !== order.cjTrackingNumber) {
+            // Only update tracking number — never overwrite admin-set status from a polling GET
+            await Order.findByIdAndUpdate(order._id, { cjTrackingNumber: trackNum })
             order.cjTrackingNumber = trackNum
-            if (order.status !== 'shipped' && order.status !== 'delivered') {
-              order.status = 'shipped'
-            }
-            await order.save()
           }
         }
       } catch (cjErr) {

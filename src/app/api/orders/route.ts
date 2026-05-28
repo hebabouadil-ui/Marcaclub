@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
     if (orderCurrency !== 'CAD') {
       fxRate = rates[orderCurrency] ?? 1
     }
-    const usdToCAD = 1 / (rates['USD'] ?? 0.73)
+    const usdToCAD = 1 / (rates['USD'] || 0.73)
 
     // Use client-confirmed shipping fee (from payment intent) or fall back to static table
     const destCountry = (body.customer?.country || 'CA').toUpperCase()
