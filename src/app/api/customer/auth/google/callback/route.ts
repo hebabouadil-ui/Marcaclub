@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
+import { SignJWT } from 'jose'
 import { connectDB } from '@/lib/db'
 import Customer from '@/lib/models/Customer'
-import { signCustomerToken, CUSTOMER_COOKIE } from '@/lib/utils/customerAuth'
+
+const SECRET = new TextEncoder().encode(process.env.NEXTAUTH_SECRET!)
 
 export const dynamic = 'force-dynamic'
 
@@ -73,11 +75,15 @@ export async function GET(req: NextRequest) {
       if (changed) await customer.save()
     }
 
-    const token = await signCustomerToken({ id: String(customer._id), email: customer.email, name: customer.name })
+    const customerId = String(customer._id)
+    const token = await new SignJWT({ sub: customerId, email: customer.email, name: customer.name })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setExpirationTime('30d')
+      .sign(SECRET)
     const returnTo = state || '/'
     const redirectUrl = returnTo.startsWith('http') ? returnTo : `${siteOrigin}${returnTo}`
     const res = NextResponse.redirect(redirectUrl)
-    res.cookies.set(CUSTOMER_COOKIE, token, {
+    res.cookies.set('mc-customer', token, {
       httpOnly: true,
       secure: true,
       sameSite: 'lax',
