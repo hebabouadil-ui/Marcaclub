@@ -148,9 +148,10 @@ export function CurrencyProvider({ children, initialCountry }: { children: React
     setCurrencyState(code)
   }, [])
 
-  // User manually picking a currency — works for current session only
+  // User manually picking a currency — persists across page loads via localStorage
   const setCurrency = useCallback((code: string) => {
     applyCode(code, rates)
+    try { localStorage.setItem('mc-currency', code) } catch {}
   }, [applyCode, rates])
 
   useEffect(() => {
@@ -170,9 +171,11 @@ export function CurrencyProvider({ children, initialCountry }: { children: React
       const detectedCurrency = COUNTRY_CURRENCY[country] ?? 'CAD'
       setGeo({ countryCode: country })
 
-      // 3. Always use geo-detected currency — ignore any saved localStorage value
-      // (localStorage overrides caused CAD to stick for non-Canadian visitors)
-      applyCode(detectedCurrency, ratesMap)
+      // 3. Use saved manual selection if present, otherwise fall back to geo-detected currency
+      let savedCurrency: string | null = null
+      try { savedCurrency = localStorage.getItem('mc-currency') } catch {}
+      const activeCurrency = savedCurrency ?? detectedCurrency
+      applyCode(activeCurrency, ratesMap)
 
       // 4. Fetch real CJ shipping for this country
       const realShipping = await fetchBestShippingUSD(country)
