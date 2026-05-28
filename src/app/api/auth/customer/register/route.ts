@@ -110,6 +110,7 @@ export async function POST(req: NextRequest) {
 </body>
 </html>`,
     })
+    const emailSent = !emailResult.error
     if (emailResult.error) {
       console.error('Verification email send error:', JSON.stringify(emailResult.error))
     } else {
@@ -121,7 +122,7 @@ export async function POST(req: NextRequest) {
       .setProtectedHeader({ alg: 'HS256' })
       .setExpirationTime('7d')
       .sign(SECRET)
-    const res = NextResponse.json({ _id: customerId, email: customer.email, name: customer.name })
+    const res = NextResponse.json({ _id: customerId, email: customer.email, name: customer.name, emailSent })
     res.cookies.set('mc-customer', token, {
       httpOnly: true,
       sameSite: 'lax',

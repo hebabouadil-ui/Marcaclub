@@ -27,6 +27,7 @@ export default function RegisterPage() {
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
   const [registered, setRegistered] = useState(false)
+  const [emailSent, setEmailSent] = useState(true)
 
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm(p => ({ ...p, [k]: e.target.value }))
@@ -43,6 +44,7 @@ export default function RegisterPage() {
       })
       const data = await res.json()
       if (!res.ok) { toast.error(data.error ?? 'Erreur lors de la création du compte'); return }
+      setEmailSent(data.emailSent !== false)
       setRegistered(true)
     } catch { toast.error('Erreur réseau') }
     finally { setLoading(false) }
@@ -66,11 +68,18 @@ export default function RegisterPage() {
               </svg>
             </div>
             <h2 className="font-bold text-gray-900 text-xl">Compte créé !</h2>
-            <p className="text-gray-500 text-sm leading-relaxed">
-              Un email d&apos;activation a été envoyé à <strong className="text-gray-900">{form.email}</strong>.<br />
-              Cliquez sur le lien dans l&apos;email pour activer votre compte.<br />
-              <span className="text-xs text-gray-400 mt-1 inline-block">Pensez à vérifier vos spams.</span>
-            </p>
+            {emailSent ? (
+              <p className="text-gray-500 text-sm leading-relaxed">
+                Un email d&apos;activation a été envoyé à <strong className="text-gray-900">{form.email}</strong>.<br />
+                Cliquez sur le lien dans l&apos;email pour activer votre compte.<br />
+                <span className="text-xs text-gray-400 mt-1 inline-block">Pensez à vérifier vos spams.</span>
+              </p>
+            ) : (
+              <p className="text-gray-500 text-sm leading-relaxed">
+                Votre compte a été créé mais nous n&apos;avons pas pu envoyer l&apos;email d&apos;activation à <strong className="text-gray-900">{form.email}</strong>.<br />
+                <span className="text-orange-600 font-medium">Utilisez le lien &quot;Renvoyer l&apos;email&quot; depuis la page de connexion, ou contactez le support.</span>
+              </p>
+            )}
             <Link href="/account/login"
               className="inline-block mt-2 bg-brand-black text-white font-bold py-3 px-8 text-sm tracking-widest uppercase hover:bg-brand-gold hover:text-brand-black transition-colors rounded-lg">
               Aller à la connexion
