@@ -622,7 +622,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                         className="w-full flex items-center justify-center gap-2 py-3 text-xs tracking-[0.2em] uppercase font-semibold bg-brand-gold text-brand-black hover:bg-brand-black hover:text-brand-white transition-all duration-300">
                         <ShoppingCart size={15} /> Commander maintenant
                       </button>
-                      <button onClick={() => router.push('/')}
+                      <button onClick={() => router.push(product.category ? `/products?category=${encodeURIComponent(product.category)}` : '/products')}
                         className="w-full flex items-center justify-center gap-2 py-2 text-xs tracking-[0.2em] uppercase border border-brand-light-gray text-brand-gray hover:border-brand-black hover:text-brand-black transition-all duration-300">
                         <ArrowRight size={12} /> Continuer mes achats
                       </button>

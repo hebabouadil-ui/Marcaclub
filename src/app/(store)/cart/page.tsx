@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react'
 import { useCartStore, cartTotal } from '@/lib/store/cartStore'
 import { useCurrency } from '@/lib/context/CurrencyContext'
 import { useLanguage } from '@/lib/i18n'
-import { Trash2, ShoppingBag, ArrowRight } from 'lucide-react'
+import { Trash2, ShoppingBag, ArrowRight, Truck, ShieldCheck, RotateCcw, ChevronDown } from 'lucide-react'
 
 function shortSize(s: string) {
   if (s.length <= 25) return s
@@ -14,13 +14,21 @@ function shortSize(s: string) {
   return last.replace(/^\s*\d+\s*/, '').trim() || s.slice(-20)
 }
 
+const SHIPPING_OPTIONS = [
+  { label: 'Standard (7–12 jours)', value: 0, note: 'Gratuit' },
+  { label: 'Express (3–5 jours)', value: 9.99, note: '9,99 €' },
+]
+
 export default function CartPage() {
   const { items, removeItem, updateQuantity } = useCartStore()
   const { format } = useCurrency()
   const { tr } = useLanguage()
   const [continueHref, setContinueHref] = useState('/products')
+  const [shipping, setShipping] = useState(0)
+  const [promoCode, setPromoCode] = useState('')
+  const [promoApplied, setPromoApplied] = useState(false)
+
   useEffect(() => {
-    // Prefer category from cart items (most reliable), fall back to last-browsed localStorage
     const cartCat = items[0]?.category
     if (cartCat) {
       setContinueHref(`/products?category=${encodeURIComponent(cartCat)}`)
@@ -29,6 +37,10 @@ export default function CartPage() {
       if (stored) setContinueHref(`/products?category=${encodeURIComponent(stored)}`)
     }
   }, [items])
+
+  const subtotal = cartTotal(items)
+  const discount = promoApplied ? subtotal * 0.1 : 0
+  const total = subtotal + shipping - discount
 
   if (items.length === 0) {
     return (
@@ -45,118 +57,205 @@ export default function CartPage() {
   }
 
   return (
-    <div style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
-      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '24px 16px' }}>
-        <h1 className="font-display text-2xl text-brand-black mb-6">{tr.cart.title}</h1>
+    <div className="min-h-screen bg-[#faf8f5]">
+      {/* Header */}
+      <div className="bg-brand-black text-brand-white py-10 md:py-14">
+        <div className="max-w-7xl mx-auto px-4">
+          <p className="text-[10px] tracking-[0.3em] text-brand-gold uppercase mb-2">{tr.nav.shop}</p>
+          <h1 className="font-display text-3xl md:text-5xl">{tr.cart.title}</h1>
+          <p className="text-white/40 text-xs mt-2 tracking-widest">{items.length} article{items.length > 1 ? 's' : ''}</p>
+        </div>
+      </div>
 
-        {/* Cart items */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
-          <AnimatePresence>
-            {items.map((item) => (
-              <motion.div
-                key={`${item.productId}-${item.size}`}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                style={{
-                  display: 'flex', gap: '12px', alignItems: 'flex-start',
-                  border: '1px solid #e8e2d9', background: '#fff', padding: '12px',
-                  width: '100%', boxSizing: 'border-box'
-                }}
-              >
-                {/* Image */}
-                <div style={{ width: '72px', height: '72px', flexShrink: 0, background: '#fff', border: '1px solid #e8e2d9', overflow: 'hidden', position: 'relative' }}>
-                  {item.image ? (
-                    <Image src={item.image} alt={item.name} fill
-                      style={{ objectFit: 'contain' }}
-                      unoptimized={!item.image.includes('cloudinary.com')}
-                      sizes="72px" />
-                  ) : (
-                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span style={{ fontSize: '8px', color: '#999', textTransform: 'uppercase' }}>MC</span>
+      <div className="max-w-7xl mx-auto px-4 py-8 md:py-12">
+        <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 items-start">
+
+          {/* LEFT — Items */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between mb-5">
+              <span className="text-[10px] tracking-[0.25em] text-brand-gray uppercase">Vos articles</span>
+              <Link href={continueHref} className="flex items-center gap-1 text-[10px] tracking-widest uppercase text-brand-gray hover:text-brand-black transition-colors">
+                <ArrowRight size={11} /> Continuer mes achats
+              </Link>
+            </div>
+
+            <AnimatePresence>
+              {items.map((item) => (
+                <motion.div
+                  key={`${item.productId}-${item.size}`}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, x: -20, transition: { duration: 0.2 } }}
+                  className="flex gap-4 bg-white border border-brand-light-gray p-4 mb-3"
+                >
+                  {/* Image */}
+                  <Link href={`/products/${item.productId}`} className="w-24 h-24 flex-shrink-0 bg-[#f5f0ea] border border-brand-light-gray overflow-hidden relative block">
+                    {item.image ? (
+                      <Image src={item.image} alt={item.name} fill
+                        style={{ objectFit: 'contain' }}
+                        unoptimized={!item.image.includes('cloudinary.com')}
+                        sizes="96px" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="text-[8px] text-brand-gray uppercase tracking-widest">MC</span>
+                      </div>
+                    )}
+                  </Link>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0 flex flex-col justify-between">
+                    <div>
+                      <p className="text-sm font-medium leading-snug line-clamp-2">{item.name}</p>
+                      <p className="text-[11px] text-brand-gray mt-1 uppercase tracking-wider">{tr.cart.size}: {shortSize(item.size)}</p>
+                      {item.category && (
+                        <p className="text-[10px] text-brand-gold uppercase tracking-widest mt-0.5">{item.category}</p>
+                      )}
                     </div>
-                  )}
+
+                    <div className="flex items-center justify-between mt-3">
+                      {/* Qty stepper */}
+                      <div className="flex items-center border border-brand-light-gray">
+                        <button
+                          onClick={() => updateQuantity(item.productId, item.size, item.quantity - 1)}
+                          className="w-8 h-8 flex items-center justify-center text-brand-gray hover:text-brand-black hover:bg-brand-light-gray transition-colors text-base"
+                          aria-label="Diminuer la quantité">
+                          −
+                        </button>
+                        <span className="w-8 h-8 flex items-center justify-center text-sm font-medium">{item.quantity}</span>
+                        <button
+                          onClick={() => updateQuantity(item.productId, item.size, Math.min(item.quantity + 1, item.stock))}
+                          className="w-8 h-8 flex items-center justify-center text-brand-gray hover:text-brand-black hover:bg-brand-light-gray transition-colors text-base"
+                          aria-label="Augmenter la quantité">
+                          +
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <span className="text-base font-bold">{format(item.price * item.quantity)}</span>
+                        <button
+                          onClick={() => removeItem(item.productId, item.size)}
+                          className="text-brand-light-gray hover:text-red-400 transition-colors p-1"
+                          aria-label="Supprimer l'article">
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+
+            {/* Trust badges */}
+            <div className="mt-6 grid grid-cols-3 gap-3">
+              {[
+                { icon: Truck, label: 'Livraison 7–12 j' },
+                { icon: ShieldCheck, label: 'Paiement sécurisé' },
+                { icon: RotateCcw, label: 'Retours faciles' },
+              ].map(({ icon: Icon, label }) => (
+                <div key={label} className="flex flex-col items-center gap-1.5 border border-brand-light-gray py-3 bg-white">
+                  <Icon size={16} className="text-brand-gold" strokeWidth={1.5} />
+                  <span className="text-[9px] tracking-widest uppercase text-brand-gray text-center">{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* RIGHT — Order summary */}
+          <div className="w-full lg:w-[380px] flex-shrink-0 sticky top-24">
+            <div className="bg-white border border-brand-light-gray">
+              {/* Header */}
+              <div className="bg-brand-black text-brand-white px-5 py-4">
+                <p className="text-[10px] tracking-[0.25em] uppercase text-white/50 mb-1">Récapitulatif</p>
+                <p className="text-lg font-display">Votre commande</p>
+              </div>
+
+              <div className="px-5 py-5 space-y-4">
+                {/* Line items */}
+                <div className="space-y-2.5">
+                  {items.map((item) => (
+                    <div key={`${item.productId}-${item.size}`} className="flex justify-between gap-3 text-sm">
+                      <span className="text-brand-gray truncate flex-1">{item.name} <span className="text-brand-light-gray">×{item.quantity}</span></span>
+                      <span className="font-semibold flex-shrink-0">{format(item.price * item.quantity)}</span>
+                    </div>
+                  ))}
                 </div>
 
-                {/* Info — takes remaining width, never overflows */}
-                <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-                  <p style={{ fontSize: '13px', fontWeight: 500, lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                    {item.name}
-                  </p>
-                  <p style={{ fontSize: '11px', color: '#888', marginTop: '4px', textTransform: 'uppercase', letterSpacing: '0.1em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {tr.cart.size}: {shortSize(item.size)}
-                  </p>
-                  <p style={{ fontSize: '14px', fontWeight: 700, marginTop: '6px' }}>{format(item.price)}</p>
+                <div className="border-t border-brand-light-gray pt-4 space-y-2.5">
+                  {/* Subtotal */}
+                  <div className="flex justify-between text-sm">
+                    <span className="text-brand-gray">Sous-total</span>
+                    <span className="font-semibold">{format(subtotal)}</span>
+                  </div>
 
-                  {/* Qty + delete */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #e8e2d9' }}>
-                      <button onClick={() => updateQuantity(item.productId, item.size, item.quantity - 1)}
-                        style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', cursor: 'pointer', background: 'none', border: 'none' }}>
-                        −
-                      </button>
-                      <span style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>
-                        {item.quantity}
-                      </span>
-                      <button onClick={() => updateQuantity(item.productId, item.size, Math.min(item.quantity + 1, item.stock))}
-                        style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', cursor: 'pointer', background: 'none', border: 'none' }}>
-                        +
-                      </button>
+                  {/* Shipping selector */}
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-brand-gray">Livraison</span>
+                    <div className="relative">
+                      <select
+                        value={shipping}
+                        onChange={(e) => setShipping(Number(e.target.value))}
+                        className="appearance-none bg-[#f5f0ea] border border-brand-light-gray text-xs px-3 py-1.5 pr-7 focus:outline-none focus:border-brand-black cursor-pointer"
+                      >
+                        {SHIPPING_OPTIONS.map((o) => (
+                          <option key={o.label} value={o.value}>{o.note} — {o.label}</option>
+                        ))}
+                      </select>
+                      <ChevronDown size={11} className="absolute right-2 top-1/2 -translate-y-1/2 text-brand-gray pointer-events-none" />
                     </div>
-                    <button onClick={() => removeItem(item.productId, item.size)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#aaa', padding: '4px' }}>
-                      <Trash2 size={16} />
-                    </button>
+                  </div>
+
+                  {/* Promo code */}
+                  <div>
+                    {!promoApplied ? (
+                      <div className="flex gap-2 mt-1">
+                        <input
+                          type="text"
+                          value={promoCode}
+                          onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                          placeholder="Code promo"
+                          className="flex-1 border border-brand-light-gray px-3 py-1.5 text-xs focus:outline-none focus:border-brand-black bg-transparent"
+                        />
+                        <button
+                          onClick={() => { if (promoCode === 'MARCA10') setPromoApplied(true) }}
+                          className="px-3 py-1.5 text-[10px] tracking-widest uppercase bg-brand-black text-white hover:bg-brand-gold hover:text-brand-black transition-colors"
+                        >
+                          OK
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between items-center text-sm text-green-600">
+                        <span>Code MARCA10 appliqué</span>
+                        <span className="font-semibold">−{format(discount)}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
 
-        {/* Summary */}
-        <div style={{ background: '#f5f0ea', padding: '20px', width: '100%', boxSizing: 'border-box' }}>
-          <p style={{ fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase', color: '#888', marginBottom: '16px' }}>
-            {tr.cart.summary}
-          </p>
+                {/* Total */}
+                <div className="border-t-2 border-brand-black pt-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[11px] tracking-[0.2em] uppercase font-semibold">Total</span>
+                    <span className="text-2xl font-display font-bold">{format(total)}</span>
+                  </div>
+                  {shipping === 0 && (
+                    <p className="text-[10px] text-green-600 mt-1 tracking-wide">✓ Livraison gratuite incluse</p>
+                  )}
+                  <p className="text-[10px] text-brand-gray mt-1">TVA incluse</p>
+                </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
-            {items.map((item) => (
-              <div key={`${item.productId}-${item.size}`} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', fontSize: '13px' }}>
-                <span style={{ color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                  {item.name} ×{item.quantity}
-                </span>
-                <span style={{ fontWeight: 600, flexShrink: 0 }}>{format(item.price * item.quantity)}</span>
+                {/* CTA */}
+                <Link href="/checkout"
+                  className="block w-full text-center bg-brand-black text-white py-4 text-[11px] tracking-[0.25em] uppercase font-bold hover:bg-brand-gold hover:text-brand-black transition-all duration-300">
+                  {tr.cart.checkout} →
+                </Link>
+
+                <p className="text-center text-[10px] text-brand-gray tracking-wide">
+                  🔒 Paiement 100% sécurisé
+                </p>
               </div>
-            ))}
-          </div>
-
-          <div style={{ borderTop: '1px solid #ddd6cc', paddingTop: '16px', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '11px', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#888' }}>{tr.cart.total}</span>
-              <span style={{ fontSize: '18px', fontWeight: 700 }}>{format(cartTotal(items))}</span>
             </div>
-            <p style={{ fontSize: '11px', color: '#aaa', marginTop: '4px' }}>{tr.cart.shipping}</p>
           </div>
 
-          <Link href="/checkout"
-            style={{
-              display: 'block', width: '100%', boxSizing: 'border-box',
-              textAlign: 'center', background: '#0a0a0a', color: '#fff',
-              padding: '16px', fontSize: '11px', letterSpacing: '0.2em',
-              textTransform: 'uppercase', fontWeight: 700, textDecoration: 'none'
-            }}>
-            {tr.cart.checkout}
-          </Link>
-
-          <Link href={continueHref}
-            style={{
-              display: 'block', textAlign: 'center', marginTop: '12px',
-              fontSize: '11px', letterSpacing: '0.15em', textTransform: 'uppercase',
-              color: '#888', textDecoration: 'none'
-            }}>
-            {tr.cart.continueShopping}
-          </Link>
         </div>
       </div>
     </div>
