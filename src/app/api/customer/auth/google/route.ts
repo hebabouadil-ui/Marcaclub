@@ -2,17 +2,20 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
+// Derive the redirect URI from NEXTAUTH_URL (already set in Vercel) so it's
+// always deterministic and never affected by proxy headers.
+function getRedirectUri() {
+  const base = (process.env.NEXTAUTH_URL ?? '').replace(/\/$/, '')
+  return `${base}/api/customer/auth/google/callback`
+}
+
 export async function GET(req: NextRequest) {
   if (!process.env.GOOGLE_CLIENT_ID) {
     return NextResponse.redirect(new URL('/account/login?error=not_configured', req.url))
   }
 
   const returnTo = req.nextUrl.searchParams.get('returnTo') ?? '/'
-
-  // x-forwarded-host is the public hostname on Vercel; host may be internal
-  const host = req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? req.nextUrl.host
-  const proto = req.headers.get('x-forwarded-proto') ?? 'https'
-  const redirectUri = `${proto}://${host}/api/customer/auth/google/callback`
+  const redirectUri = getRedirectUri()
 
   const params = new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID,

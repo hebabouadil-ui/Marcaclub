@@ -6,6 +6,11 @@ import { signCustomerToken, CUSTOMER_COOKIE } from '@/lib/utils/customerAuth'
 
 export const dynamic = 'force-dynamic'
 
+function getRedirectUri() {
+  const base = (process.env.NEXTAUTH_URL ?? '').replace(/\/$/, '')
+  return `${base}/api/customer/auth/google/callback`
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
   const code = searchParams.get('code')
@@ -21,11 +26,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL('/account/login?error=oauth_denied', req.url))
   }
 
-  // x-forwarded-host is the public hostname on Vercel; host may be internal
-  const host = req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? req.nextUrl.host
-  const proto = req.headers.get('x-forwarded-proto') ?? 'https'
-  const redirectUri = `${proto}://${host}/api/customer/auth/google/callback`
-
+  const redirectUri = getRedirectUri()
   console.log('[google-callback] redirect_uri:', redirectUri)
 
   try {
@@ -72,8 +73,9 @@ export async function GET(req: NextRequest) {
     }
 
     const token = await signCustomerToken({ id: String(customer._id), email: customer.email, name: customer.name })
+    const siteUrl = (process.env.NEXTAUTH_URL ?? '').replace(/\/$/, '')
     const returnTo = state || '/'
-    const redirectUrl = returnTo.startsWith('http') ? returnTo : `${proto}://${host}${returnTo}`
+    const redirectUrl = returnTo.startsWith('http') ? returnTo : `${siteUrl}${returnTo}`
     const res = NextResponse.redirect(redirectUrl)
     res.cookies.set(CUSTOMER_COOKIE, token, {
       httpOnly: true,
