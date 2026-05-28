@@ -94,10 +94,13 @@ export async function POST(req: NextRequest) {
     }
     const usdToCAD = 1 / (rates['USD'] ?? 0.73)
 
-    // Per-country shipping fee in CAD, convert to order currency
+    // Use shipping fee from payment intent when available (includes live CJ API rate);
+    // fall back to static table for COD orders where it wasn't pre-calculated
+    const clientShippingFee = typeof body.shippingFee === 'number' && body.shippingFee >= 0 ? body.shippingFee : null
     const destCountry = (body.customer?.country || 'CA').toUpperCase()
-    const shippingFeeCAD = getShippingFeeCAD(destCountry, usdToCAD)
-    const shippingFee = Math.round(shippingFeeCAD * fxRate * 100) / 100
+    const shippingFee = clientShippingFee !== null
+      ? clientShippingFee
+      : Math.round(getShippingFeeCAD(destCountry, usdToCAD) * fxRate * 100) / 100
 
     // Settings needed only for emailNote now
     const settingsDoc = await Settings.findOne().lean() as { emailNote?: string } | null

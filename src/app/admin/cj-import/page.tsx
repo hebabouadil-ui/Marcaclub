@@ -1017,7 +1017,7 @@ export default function CJImportPage() {
                                 value={sellCAD || ''}
                                 onChange={(e) => {
                                   // User types in CAD directly
-                                  const cadVal = String(Math.round(Number(e.target.value)))
+                                  const cadVal = String(Math.round(Number(e.target.value) * 100) / 100)
                                   const newVP = { ...form.variantPrices, [v.vid]: cadVal }
                                   const selectedPrices = form.selectedVariants.map((vid) => Number(newVP[vid] || 0)).filter((n) => n > 0)
                                   const minP = selectedPrices.length > 0 ? String(Math.min(...selectedPrices)) : form.price

@@ -92,12 +92,15 @@ export default function HighRiskPage() {
   }
 
   const blockIP = async (ip: string, orderNumber: string) => {
-    await fetch('/api/blocked-ips', {
-      method: 'POST', credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ip, reason: `Blocked — order ${orderNumber} (HIGH RISK)`, orderNumbers: [orderNumber] }),
-    })
-    toast.success(`IP ${ip} blocked`)
+    try {
+      const res = await fetch('/api/blocked-ips', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ip, reason: `Blocked — order ${orderNumber} (HIGH RISK)`, orderNumbers: [orderNumber] }),
+      })
+      if (res.ok) toast.success(`IP ${ip} blocked`)
+      else toast.error('Failed to block IP')
+    } catch { toast.error('Failed to block IP') }
   }
 
   const clearFlag = async (id: string) => {

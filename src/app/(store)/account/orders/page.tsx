@@ -160,15 +160,17 @@ export default function MyOrdersPage() {
   const router = useRouter()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState(false)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [tracking, setTracking] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!authLoading && !customer) { router.push('/account/login'); return }
+    if (!authLoading && !customer) { setLoading(false); router.push('/account/login'); return }
     if (customer) {
       fetch('/api/customer/orders')
-        .then(r => r.json())
+        .then(r => { if (!r.ok) throw new Error('fetch failed'); return r.json() })
         .then(data => { if (Array.isArray(data)) setOrders(data) })
+        .catch(() => setFetchError(true))
         .finally(() => setLoading(false))
     }
   }, [customer, authLoading, router])
@@ -192,7 +194,11 @@ export default function MyOrdersPage() {
           <p className="text-gray-400 text-sm mt-1">{orders.length} order{orders.length !== 1 ? 's' : ''} total</p>
         </div>
 
-        {orders.length === 0 ? (
+        {fetchError ? (
+          <div className="bg-white border border-gray-200 text-center py-16 shadow-sm">
+            <p className="text-gray-500 text-sm">Unable to load orders. Please refresh the page.</p>
+          </div>
+        ) : orders.length === 0 ? (
           <div className="bg-white border border-gray-200 text-center py-16 shadow-sm">
             <Package size={40} className="mx-auto text-gray-300 mb-4" />
             <p className="text-gray-500 text-sm mb-6">No orders yet</p>
