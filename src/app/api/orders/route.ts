@@ -368,14 +368,17 @@ export async function POST(req: NextRequest) {
 
     const emailNote = settingsDoc?.emailNote
 
-    // Send confirmation emails immediately for all orders.
-    // For Stripe orders the webhook may also fire, but Order.findOneAndUpdate is idempotent.
-    const emailPromises = []
-    if (body.customer?.email) {
-      emailPromises.push(sendOrderConfirmationEmail(order, emailNote).catch((err) => console.error('Customer email error:', err)))
+    // For Stripe orders, emails are sent by the webhook after payment_intent.succeeded
+    // so we only know payment actually succeeded at that point. Non-Stripe (COD) orders
+    // send immediately since there is no webhook confirmation step.
+    if (!stripePaymentIntentId) {
+      const emailPromises = []
+      if (body.customer?.email) {
+        emailPromises.push(sendOrderConfirmationEmail(order, emailNote).catch((err) => console.error('Customer email error:', err)))
+      }
+      emailPromises.push(sendAdminOrderNotification(order).catch((err) => console.error('Admin email error:', JSON.stringify(err))))
+      await Promise.all(emailPromises)
     }
-    emailPromises.push(sendAdminOrderNotification(order).catch((err) => console.error('Admin email error:', JSON.stringify(err))))
-    await Promise.all(emailPromises)
 
     return NextResponse.json({ orderNumber, orderId: order._id }, { status: 201 })
   } catch (err) {
