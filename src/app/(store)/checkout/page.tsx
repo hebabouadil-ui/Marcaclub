@@ -439,12 +439,13 @@ function AuthStep({
   )
 }
 
-function PaymentStep({ clientSecret, customer, items, total, taxAmount, currency, symbol, onSuccess }: {
+function PaymentStep({ clientSecret, customer, items, total, taxAmount, shippingFee, currency, symbol, onSuccess }: {
   clientSecret: string
   customer: CustomerForm
   items: { productId: string; size: string; quantity: number }[]
   total: number
   taxAmount: number
+  shippingFee: number
   currency: string
   symbol: string
   onSuccess: (orderNumber: string) => void
@@ -465,7 +466,7 @@ function PaymentStep({ clientSecret, customer, items, total, taxAmount, currency
     const orderRes = await fetch('/api/orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ customer, items, stripeClientSecret: clientSecret, taxAmount, currency, currencySymbol: symbol }),
+      body: JSON.stringify({ customer, items, stripeClientSecret: clientSecret, taxAmount, shippingFee, currency, currencySymbol: symbol }),
     })
     const orderData = await orderRes.json()
     if (!orderRes.ok) { toast.error(orderData.message ?? 'Failed to create order'); setPaying(false); return }
@@ -520,6 +521,7 @@ export default function CheckoutPage() {
   const [taxComponents, setTaxComponents] = useState<TaxComponent[]>([])
   const [confirmedPhone, setConfirmedPhone] = useState('')
   const [confirmedShippingFeeCAD, setConfirmedShippingFeeCAD] = useState<number | null>(null)
+  const [confirmedShippingFee, setConfirmedShippingFee] = useState<number | null>(null)
   const [mobileOrderOpen, setMobileOrderOpen] = useState(false)
 
   // Per-country shipping fee in CAD — fetches real CJ rates when country changes
@@ -669,6 +671,7 @@ export default function CheckoutPage() {
       setClientSecret(data.clientSecret)
       // Store server-confirmed shipping fee (uses live FX rate)
       if (typeof data.shippingFeeCAD === 'number') setConfirmedShippingFeeCAD(data.shippingFeeCAD)
+      if (typeof data.shippingFee === 'number') setConfirmedShippingFee(data.shippingFee)
       setStep('payment')
     } catch { toast.error('Failed to initialize payment. Please try again.') }
     finally { setLoadingIntent(false) }
@@ -1036,6 +1039,7 @@ export default function CheckoutPage() {
                     items={items.map((i) => ({ productId: i.productId, size: i.size, quantity: i.quantity }))}
                     total={total}
                     taxAmount={taxAmount}
+                    shippingFee={confirmedShippingFee ?? effectiveShippingCAD}
                     currency={currency}
                     symbol={symbol}
                     onSuccess={handleSuccess}

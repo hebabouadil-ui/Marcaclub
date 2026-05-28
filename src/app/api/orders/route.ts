@@ -83,8 +83,9 @@ export async function POST(req: NextRequest) {
     type OrderItem = { productId: string; size: string; quantity: number; name?: string }
     const items = body.items as OrderItem[]
 
-    // Accept tax amount passed from the client (validated against payment intent metadata)
+    // Accept tax and shipping amounts from the client (calculated at payment intent creation)
     const clientTaxAmount = typeof body.taxAmount === 'number' && body.taxAmount >= 0 ? body.taxAmount : 0
+    const clientShippingFee = typeof body.shippingFee === 'number' && body.shippingFee >= 0 ? body.shippingFee : null
 
     // Fetch live FX rate server-side: CAD → orderCurrency
     let fxRate = 1
@@ -94,10 +95,11 @@ export async function POST(req: NextRequest) {
     }
     const usdToCAD = 1 / (rates['USD'] ?? 0.73)
 
-    // Per-country shipping fee in CAD, convert to order currency
+    // Use client-confirmed shipping fee (from payment intent) or fall back to static table
     const destCountry = (body.customer?.country || 'CA').toUpperCase()
-    const shippingFeeCAD = getShippingFeeCAD(destCountry, usdToCAD)
-    const shippingFee = Math.round(shippingFeeCAD * fxRate * 100) / 100
+    const shippingFee = clientShippingFee !== null
+      ? clientShippingFee
+      : Math.round(getShippingFeeCAD(destCountry, usdToCAD) * fxRate * 100) / 100
 
     // Settings needed only for emailNote now
     const settingsDoc = await Settings.findOne().lean() as { emailNote?: string } | null
@@ -366,16 +368,14 @@ export async function POST(req: NextRequest) {
 
     const emailNote = settingsDoc?.emailNote
 
-    // For Stripe orders, emails are sent by the webhook after payment_intent.succeeded.
-    // Only send immediately for COD / non-Stripe orders.
-    if (!stripePaymentIntentId) {
-      const emailPromises = []
-      if (body.customer?.email) {
-        emailPromises.push(sendOrderConfirmationEmail(order, emailNote).catch((err) => console.error('Customer email error:', err)))
-      }
-      emailPromises.push(sendAdminOrderNotification(order).catch((err) => console.error('Admin email error:', JSON.stringify(err))))
-      await Promise.all(emailPromises)
+    // Send confirmation emails immediately for all orders.
+    // For Stripe orders the webhook may also fire, but Order.findOneAndUpdate is idempotent.
+    const emailPromises = []
+    if (body.customer?.email) {
+      emailPromises.push(sendOrderConfirmationEmail(order, emailNote).catch((err) => console.error('Customer email error:', err)))
     }
+    emailPromises.push(sendAdminOrderNotification(order).catch((err) => console.error('Admin email error:', JSON.stringify(err))))
+    await Promise.all(emailPromises)
 
     return NextResponse.json({ orderNumber, orderId: order._id }, { status: 201 })
   } catch (err) {
