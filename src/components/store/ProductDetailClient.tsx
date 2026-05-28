@@ -461,7 +461,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
           {/* Info panel */}
           <div className="flex flex-col" style={{ minWidth: 0, overflow: 'hidden' }}>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-1.5">
                 <p className="text-[10px] tracking-[0.3em] text-brand-gold uppercase">{product.category}</p>
                 {product.onSale && (
                   <span className="bg-red-500 text-white text-[9px] font-bold tracking-widest uppercase px-2 py-0.5">
@@ -469,11 +469,11 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                   </span>
                 )}
               </div>
-              <h1 className="font-display text-2xl md:text-3xl text-brand-black leading-tight mb-4" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{product.name}</h1>
+              <h1 className="font-display text-2xl md:text-3xl text-brand-black leading-tight mb-3" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{product.name}</h1>
 
               {/* Price breakdown */}
               {product.cjPid ? (
-                <div className="mb-6 space-y-1.5">
+                <div className="mb-4 space-y-1.5">
                   <div className="flex items-baseline justify-between">
                     <span className="text-xs text-brand-gray tracking-widest uppercase">Produit</span>
                     <span className="text-base font-semibold text-brand-black">{format(basePrice)}</span>
@@ -500,7 +500,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                           : '—'}
                     </span>
                   </div>
-                  <div className="flex items-baseline justify-between pt-2 border-t border-brand-light-gray">
+                  <div className="flex items-baseline justify-between pt-1.5 border-t border-brand-light-gray">
                     <span className="text-xs text-brand-black font-semibold tracking-widest uppercase">Total</span>
                     <div className="flex items-center gap-2">
                       {originalPrice && originalPrice > displayPrice && (
@@ -523,7 +523,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                   )}
                 </div>
               ) : (
-                <div className="flex items-center gap-3 mb-6">
+                <div className="flex items-center gap-3 mb-4">
                   <span className="text-2xl font-bold text-brand-black">{format(displayPrice)}</span>
                   {originalPrice && originalPrice > displayPrice && (
                     <>
@@ -535,7 +535,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
               )}
 
               {/* Stock status */}
-              <div className="mb-6">
+              <div className="mb-3">
                 {totalStock === 0 ? (
                   <span className="text-sm text-brand-gray tracking-widest uppercase">Épuisé</span>
                 ) : selectedSize ? (
@@ -553,8 +553,8 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
 
               {/* Sizes */}
               {sizes.length > 0 && (
-                <div className="mb-6">
-                  <p className="text-xs tracking-[0.2em] uppercase text-brand-gray mb-3">
+                <div className="mb-4">
+                  <p className="text-xs tracking-[0.2em] uppercase text-brand-gray mb-2">
                     Produit — <span className="text-brand-black">{selectedSize || 'Choisir'}</span>
                   </p>
                   <div className="flex gap-2 flex-wrap">
@@ -588,48 +588,44 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                 </div>
               )}
 
-              {/* Quantity */}
-              <div className="mb-7">
-                <p className="text-xs tracking-[0.2em] uppercase text-brand-gray mb-3">Quantité</p>
-                <div className="flex items-center border border-brand-light-gray w-fit">
-                  <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-10 h-10 flex items-center justify-center text-brand-gray hover:text-brand-black hover:bg-brand-light-gray transition-colors">−</button>
-                  <span className="w-10 h-10 flex items-center justify-center text-sm font-medium">{qty}</span>
-                  <button onClick={() => setQty((q) => selectedSize ? Math.min(selectedStock, q + 1) : q + 1)} className="w-10 h-10 flex items-center justify-center text-brand-gray hover:text-brand-black hover:bg-brand-light-gray transition-colors">+</button>
+              {/* Quantity + CTA inline row */}
+              <div className="flex items-stretch gap-3 mb-4">
+                <div className="flex items-center border border-brand-light-gray flex-shrink-0">
+                  <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-9 h-9 flex items-center justify-center text-brand-gray hover:text-brand-black hover:bg-brand-light-gray transition-colors text-lg">−</button>
+                  <span className="w-9 h-9 flex items-center justify-center text-sm font-medium">{qty}</span>
+                  <button onClick={() => setQty((q) => selectedSize ? Math.min(selectedStock, q + 1) : q + 1)} className="w-9 h-9 flex items-center justify-center text-brand-gray hover:text-brand-black hover:bg-brand-light-gray transition-colors text-lg">+</button>
                 </div>
+                {totalStock === 0 ? (
+                  <button disabled className="flex-1 flex items-center justify-center gap-2 py-3 text-xs tracking-[0.2em] uppercase font-semibold bg-brand-light-gray text-brand-gray cursor-not-allowed">
+                    <ShoppingBag size={15} /> Épuisé
+                  </button>
+                ) : !added ? (
+                  <button
+                    onClick={handleAddToCart}
+                    disabled={!!selectedSize && selectedStock === 0}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 text-xs tracking-[0.2em] uppercase font-semibold transition-all duration-300 bg-brand-black text-brand-white hover:bg-brand-gold hover:text-brand-black disabled:bg-brand-light-gray disabled:text-brand-gray disabled:cursor-not-allowed"
+                  >
+                    <ShoppingBag size={15} /> Ajouter au panier
+                  </button>
+                ) : (
+                  <AnimatePresence mode="wait">
+                    <motion.div key="added-state" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="flex-1 flex flex-col gap-2">
+                      <button onClick={handleGoToCheckout}
+                        className="w-full flex items-center justify-center gap-2 py-3 text-xs tracking-[0.2em] uppercase font-semibold bg-brand-gold text-brand-black hover:bg-brand-black hover:text-brand-white transition-all duration-300">
+                        <ShoppingCart size={15} /> Commander maintenant
+                      </button>
+                      <button onClick={() => router.push('/')}
+                        className="w-full flex items-center justify-center gap-2 py-2 text-xs tracking-[0.2em] uppercase border border-brand-light-gray text-brand-gray hover:border-brand-black hover:text-brand-black transition-all duration-300">
+                        <ArrowRight size={12} /> Continuer mes achats
+                      </button>
+                    </motion.div>
+                  </AnimatePresence>
+                )}
               </div>
-
-              {/* CTA buttons */}
-              {totalStock === 0 ? (
-                <button disabled className="w-full flex items-center justify-center gap-3 py-4 text-sm tracking-[0.2em] uppercase font-semibold bg-brand-light-gray text-brand-gray cursor-not-allowed">
-                  <ShoppingBag size={18} /> Épuisé
-                </button>
-              ) : !added ? (
-                <button
-                  onClick={handleAddToCart}
-                  disabled={!!selectedSize && selectedStock === 0}
-                  className="w-full flex items-center justify-center gap-3 py-4 text-sm tracking-[0.2em] uppercase font-semibold transition-all duration-300 bg-brand-black text-brand-white hover:bg-brand-gold hover:text-brand-black disabled:bg-brand-light-gray disabled:text-brand-gray disabled:cursor-not-allowed"
-                >
-                  <ShoppingBag size={18} />
-                  Ajouter au panier
-                </button>
-              ) : (
-                <AnimatePresence mode="wait">
-                  <motion.div key="added-state" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-3">
-                    <button onClick={handleGoToCheckout}
-                      className="w-full flex items-center justify-center gap-3 py-4 text-sm tracking-[0.2em] uppercase font-semibold bg-brand-gold text-brand-black hover:bg-brand-black hover:text-brand-white transition-all duration-300">
-                      <ShoppingCart size={18} /> Commander maintenant
-                    </button>
-                    <button onClick={() => router.push('/')}
-                      className="w-full flex items-center justify-center gap-3 py-3 text-xs tracking-[0.2em] uppercase border border-brand-light-gray text-brand-gray hover:border-brand-black hover:text-brand-black transition-all duration-300">
-                      <ArrowRight size={14} /> Continuer mes achats
-                    </button>
-                  </motion.div>
-                </AnimatePresence>
-              )}
 
               {/* Secure payment note for non-CJ products */}
               {!product.cjPid && (
-                <div className="mt-4 border border-brand-light-gray px-4 py-3">
+                <div className="border border-brand-light-gray px-4 py-2.5">
                   <p className="text-xs text-brand-gray">✓ Paiement sécurisé · Livraison 7–15 jours ouvrés</p>
                 </div>
               )}
