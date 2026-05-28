@@ -143,6 +143,12 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
   const [reviewSubmitted, setReviewSubmitted] = useState(false)
 
   useEffect(() => {
+    if (product.category) {
+      localStorage.setItem('mc-last-category', product.category)
+    }
+  }, [product.category])
+
+  useEffect(() => {
     const fake = generateFakeReviews(product._id, 7)
     fetch(`/api/reviews/${product._id}`)
       .then(r => r.json())

@@ -2,6 +2,7 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useState, useEffect } from 'react'
 import { useCartStore, cartTotal } from '@/lib/store/cartStore'
 import { useCurrency } from '@/lib/context/CurrencyContext'
 import { useLanguage } from '@/lib/i18n'
@@ -17,6 +18,11 @@ export default function CartPage() {
   const { items, removeItem, updateQuantity } = useCartStore()
   const { format } = useCurrency()
   const { tr } = useLanguage()
+  const [continueHref, setContinueHref] = useState('/products')
+  useEffect(() => {
+    const cat = localStorage.getItem('mc-last-category')
+    if (cat) setContinueHref(`/products?category=${encodeURIComponent(cat)}`)
+  }, [])
 
   if (items.length === 0) {
     return (
@@ -137,7 +143,7 @@ export default function CartPage() {
             {tr.cart.checkout}
           </Link>
 
-          <Link href="/"
+          <Link href={continueHref}
             style={{
               display: 'block', textAlign: 'center', marginTop: '12px',
               fontSize: '11px', letterSpacing: '0.15em', textTransform: 'uppercase',
