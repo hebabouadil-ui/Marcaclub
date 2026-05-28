@@ -15,7 +15,7 @@ export default function HomeCategories() {
   const { tr, lang } = useLanguage()
 
   return (
-    <section className="py-16 md:py-24 bg-brand-white">
+    <section className="pt-16 md:pt-24 pb-8 md:pb-12 bg-brand-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -23,7 +23,7 @@ export default function HomeCategories() {
           viewport={{ once: true }}
           className="text-center mb-12"
         >
-          <p className="text-[10px] tracking-[0.3em] text-brand-gold uppercase mb-2">{tr.categories.explore}</p>
+          <p className="text-[10px] tracking-[0.3em] text-brand-gold uppercase mb-3">{tr.categories.explore}</p>
           <h2 className="font-display text-3xl md:text-4xl text-brand-black">{tr.categories.title}</h2>
           <p className="text-brand-gray text-sm mt-3 max-w-sm mx-auto">
             {lang === 'fr' ? 'Beauté & skincare — sélection premium livrée partout' : 'Beauty & skincare — premium selection delivered worldwide'}

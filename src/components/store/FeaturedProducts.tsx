@@ -24,7 +24,7 @@ interface Props {
 export default function FeaturedProducts({ products }: Props) {
   const { tr } = useLanguage()
   return (
-    <section id="featured" className="py-16 md:py-24 bg-brand-white">
+    <section id="featured" className="pt-12 md:pt-16 pb-16 md:pb-24 bg-brand-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -33,7 +33,7 @@ export default function FeaturedProducts({ products }: Props) {
           className="flex items-end justify-between mb-10 md:mb-14"
         >
           <div>
-            <p className="text-[10px] tracking-[0.3em] text-brand-gold uppercase mb-2">{tr.featured.label}</p>
+            <p className="text-[10px] tracking-[0.3em] text-brand-gold uppercase mb-3">{tr.featured.label}</p>
             <h2 className="font-display text-3xl md:text-4xl text-brand-black">{tr.featured.title}</h2>
           </div>
           <Link
