@@ -20,7 +20,7 @@ export default function HomeHero({ title, subtitle, titleEn, subtitleEn }: Props
       {/* Glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-brand-gold/5 blur-3xl pointer-events-none" />
 
-      <div className="relative z-10 text-center px-4 max-w-5xl mx-auto py-16">
+      <div className="relative z-10 text-center px-4 max-w-5xl mx-auto pt-16 pb-28">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
           className="inline-flex items-center gap-2 border border-brand-gold/20 bg-brand-gold/5 text-brand-gold text-[10px] tracking-[0.3em] uppercase px-4 py-2 rounded-full mb-8">
           <Globe size={10} /> {tr.hero.badge}
