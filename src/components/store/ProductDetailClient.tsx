@@ -124,11 +124,11 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
   const [activeTab, setActiveTab] = useState<'description' | 'video'>(hasDescription ? 'description' : 'video')
   const addItem = useCartStore((s) => s.addItem)
   const router = useRouter()
-  const { format, shippingCostUSD, usdToCAD } = useCurrency()
+  const { format, usdToCAD } = useCurrency()
   const { tr, lang } = useLanguage()
 
   const [shipping, setShipping] = useState<ShippingOption | null>(null)
-  const [shippingLoading, setShippingLoading] = useState(false)
+  const [shippingLoading, setShippingLoading] = useState(!!product.cjPid)
   const [shipCountry, setShipCountry] = useState(detectedCountry || 'CA')
   const [reviews, setReviews] = useState<Review[]>([])
   const [translatedDescription, setTranslatedDescription] = useState<string | null>(null)
@@ -281,8 +281,8 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
   // displayPrice = admin-set price only (no CJ shipping baked in)
   // Shipping is charged separately at checkout via shippingFeeCAD in Settings
   const displayPrice = basePrice
-  // shipping.logisticPrice is already in CAD (from /api/shipping-estimate) — convert back to USD for display math
-  const effectiveShipUSD = shipping ? shipping.logisticPrice / usdToCAD : shippingCostUSD
+  // shipping.logisticPrice is already in CAD (from /api/shipping-estimate) — convert to USD for display math
+  const effectiveShipUSD = shipping ? shipping.logisticPrice / usdToCAD : 0
 
   const originalPrice = product.originalPrice
   const discount = originalPrice && displayPrice < originalPrice

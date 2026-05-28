@@ -12,7 +12,7 @@ export default function HomeHero({ title, subtitle, titleEn, subtitleEn }: Props
   const displaySubtitle = lang === 'en' && subtitleEn ? subtitleEn : subtitle
 
   return (
-    <section className="relative bg-brand-black flex items-center justify-center overflow-hidden min-h-[85svh] md:min-h-[75svh]">
+    <section className="relative bg-brand-black flex items-center justify-center overflow-hidden min-h-[100svh] md:min-h-[75svh]">
       {/* Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a0a] via-[#111] to-[#0a0a0a]" />
       <div className="absolute inset-0 opacity-[0.04]"
@@ -20,10 +20,10 @@ export default function HomeHero({ title, subtitle, titleEn, subtitleEn }: Props
       {/* Glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] md:w-[600px] md:h-[600px] rounded-full bg-brand-gold/5 blur-3xl pointer-events-none" />
 
-      <div className="relative z-10 text-center px-5 max-w-4xl mx-auto py-16 md:py-20 pb-20 md:pb-24">
+      <div className="relative z-10 text-center px-5 max-w-4xl mx-auto pt-4 pb-20 md:py-20 md:pb-24">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className="inline-flex items-center gap-2 border border-brand-gold/20 bg-brand-gold/5 text-brand-gold text-[9px] md:text-[10px] tracking-[0.25em] md:tracking-[0.3em] uppercase px-3 md:px-4 py-1.5 md:py-2 rounded-full mb-6 md:mb-8">
-          <Globe size={9} /> {tr.hero.badge}
+          className="inline-flex items-center gap-2 border border-brand-gold/20 bg-brand-gold/5 text-brand-gold text-[9px] md:text-[10px] tracking-[0.2em] uppercase px-3 md:px-4 py-1.5 md:py-2 rounded-full mb-5 md:mb-8 max-w-[280px] sm:max-w-none text-center leading-relaxed">
+          <Globe size={9} className="flex-shrink-0" /> {tr.hero.badge}
         </motion.div>
 
         <motion.h1 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.1 }}
