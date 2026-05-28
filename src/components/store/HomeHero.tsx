@@ -67,10 +67,10 @@ export default function HomeHero({ title, subtitle, titleEn, subtitleEn }: Props
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }}
         className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
         <span className="text-white/20 text-[9px] tracking-[0.3em] uppercase">Scroll</span>
-        <div className="w-px h-10 bg-white/10 overflow-hidden relative">
+        <div className="w-px h-10 bg-white/10 relative" style={{ overflow: 'hidden', isolation: 'isolate' }}>
           <motion.div
             className="absolute top-0 left-0 w-full bg-brand-gold"
-            animate={{ y: ['-100%', '200%'] }}
+            animate={{ y: ['0%', '160%'] }}
             transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
             style={{ height: '40%' }}
           />

@@ -21,7 +21,7 @@ export default function HomeCategories() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-12"
+          className="text-center mb-8"
         >
           <p className="text-[10px] tracking-[0.3em] text-brand-gold uppercase mb-3">{tr.categories.explore}</p>
           <h2 className="font-display text-3xl md:text-4xl text-brand-black">{tr.categories.title}</h2>
