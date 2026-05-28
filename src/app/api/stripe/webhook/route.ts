@@ -10,7 +10,8 @@ import Settings from '@/lib/models/Settings'
 export async function POST(req: NextRequest) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' })
   const body = await req.text()
-  const sig = req.headers.get('stripe-signature')!
+  const sig = req.headers.get('stripe-signature')
+  if (!sig) return NextResponse.json({ error: 'Missing signature' }, { status: 400 })
 
   let event: Stripe.Event
   try {
@@ -89,8 +90,9 @@ export async function POST(req: NextRequest) {
             logisticName: resolvedLogistic,
           })
 
-          if (cjRes.result && cjRes.data?.orderId) {
-            await Order.findByIdAndUpdate(order._id, { cjOrderId: cjRes.data.orderId })
+          const cjOrderId = cjRes.data?.orderId ?? cjRes.data?.cjOrderId
+          if (cjRes.result && cjOrderId) {
+            await Order.findByIdAndUpdate(order._id, { cjOrderId })
           } else {
             console.error('Webhook: CJ order creation failed:', cjRes.message, cjRes)
           }

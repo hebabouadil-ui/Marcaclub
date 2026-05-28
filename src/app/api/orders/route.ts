@@ -120,11 +120,11 @@ export async function POST(req: NextRequest) {
       )
 
       if (!updated) {
-        // Roll back previously decremented items
+        // Roll back previously decremented items (both size-level and top-level stock)
         for (const done of decremented) {
           await Product.findOneAndUpdate(
             { _id: done.productId, 'sizes.size': done.size },
-            { $inc: { 'sizes.$[el].stock': done.quantity } },
+            { $inc: { 'sizes.$[el].stock': done.quantity, stock: done.quantity } },
             { arrayFilters: [{ 'el.size': done.size }] }
           )
         }

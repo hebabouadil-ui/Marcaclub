@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     const verifyUrl = `${baseUrl}/verify-email?token=${token}`
     const year = new Date().getFullYear()
 
-    resend.emails.send({
+    await resend.emails.send({
       from: process.env.EMAIL_FROM_NOREPLY || process.env.EMAIL_FROM || 'Marcaclub <noreply@marca-club.com>',
       to: customer.email,
       subject: 'Activez votre compte Marcaclub',
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
   </table>
 </body>
 </html>`,
-    }).catch(err => console.error('Resend verification email error:', err))
+    })
 
     return NextResponse.json({ ok: true })
   } catch (err) {
