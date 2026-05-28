@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(normalized)
   } catch (err) {
     console.error('GET /api/products error:', err)
-    return NextResponse.json({ message: String(err) }, { status: 500 })
+    return NextResponse.json({ message: 'Server error' }, { status: 500 })
   }
 }
 
@@ -53,6 +53,7 @@ export async function POST(req: NextRequest) {
     const product = await Product.create({ ...body, slug, stock: totalStock })
     return NextResponse.json(product, { status: 201 })
   } catch (err) {
-    return NextResponse.json({ message: String(err) }, { status: 500 })
+    console.error('POST /api/products error:', err)
+    return NextResponse.json({ message: 'Server error' }, { status: 500 })
   }
 }

@@ -158,13 +158,14 @@ export default function Navbar() {
             <div className="flex items-center gap-4 flex-shrink-0">
               <button
                 onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')}
+                aria-label={lang === 'fr' ? 'Switch to English' : 'Passer en français'}
                 className="hidden md:flex items-center gap-1 text-[10px] tracking-widest text-white/50 hover:text-brand-gold transition-colors border border-white/10 hover:border-brand-gold/40 px-2 py-1"
               >
                 {lang === 'fr' ? 'EN' : 'FR'}
               </button>
               <CurrencySwitcher />
               <AccountMenu />
-              <Link href="/cart" className="relative">
+              <Link href="/cart" className="relative" aria-label={`Panier${cartCount > 0 ? ` (${cartCount})` : ''}`}>
                 <ShoppingBag size={20} className="text-brand-white hover:text-brand-gold transition-colors" />
                 <AnimatePresence>
                   {cartCount > 0 && (
@@ -176,7 +177,7 @@ export default function Navbar() {
                   )}
                 </AnimatePresence>
               </Link>
-              <button onClick={() => setMenuOpen(!menuOpen)} className="md:hidden text-brand-white hover:text-brand-gold transition-colors p-1">
+              <button onClick={() => setMenuOpen(!menuOpen)} aria-label={menuOpen ? 'Fermer le menu' : 'Ouvrir le menu'} className="md:hidden text-brand-white hover:text-brand-gold transition-colors p-1">
                 {menuOpen ? <X size={22} /> : <Menu size={22} />}
               </button>
             </div>

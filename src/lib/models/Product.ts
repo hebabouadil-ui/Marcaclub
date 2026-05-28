@@ -59,5 +59,11 @@ const ProductSchema = new Schema<IProduct>(
   { timestamps: true }
 )
 
+// Indexes for common query patterns
+ProductSchema.index({ category: 1, active: 1 })
+ProductSchema.index({ featured: 1, active: 1 })
+ProductSchema.index({ onSale: 1, active: 1 })
+ProductSchema.index({ name: 'text' })  // text index enables fast $regex search on name
+
 export default mongoose.models.Product ||
   mongoose.model<IProduct>('Product', ProductSchema)

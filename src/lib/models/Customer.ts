@@ -3,7 +3,7 @@ import mongoose, { Schema, Document } from 'mongoose'
 export interface ICustomer extends Document {
   name: string
   email: string
-  passwordHash: string
+  passwordHash?: string
   phone?: string
   country?: string
   googleId?: string
@@ -21,7 +21,7 @@ const CustomerSchema = new Schema<ICustomer>(
   {
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    passwordHash: { type: String, required: true },
+    passwordHash: { type: String },
     phone: { type: String },
     country: { type: String },
     googleId: { type: String, sparse: true },

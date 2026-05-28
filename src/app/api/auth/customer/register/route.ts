@@ -5,12 +5,17 @@ import crypto from 'crypto'
 import { Resend } from 'resend'
 import { connectDB } from '@/lib/db'
 import Customer from '@/lib/models/Customer'
+import { rateLimit } from '@/lib/utils/rateLimit'
 
 export const dynamic = 'force-dynamic'
 
 const SECRET = new TextEncoder().encode(process.env.NEXTAUTH_SECRET!)
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+  if (!rateLimit(`register:${ip}`, 5, 60_000)) {
+    return NextResponse.json({ error: 'Trop de tentatives. Réessayez dans une minute.' }, { status: 429 })
+  }
   const resend = new Resend(process.env.RESEND_API_KEY)
   try {
     const { email, name, password } = await req.json()

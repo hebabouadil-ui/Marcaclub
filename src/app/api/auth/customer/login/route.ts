@@ -3,12 +3,17 @@ import bcrypt from 'bcryptjs'
 import { SignJWT } from 'jose'
 import { connectDB } from '@/lib/db'
 import Customer from '@/lib/models/Customer'
+import { rateLimit } from '@/lib/utils/rateLimit'
 
 export const dynamic = 'force-dynamic'
 
 const SECRET = new TextEncoder().encode(process.env.NEXTAUTH_SECRET!)
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+  if (!rateLimit(`login:${ip}`, 10, 60_000)) {
+    return NextResponse.json({ error: 'Trop de tentatives. Réessayez dans une minute.' }, { status: 429 })
+  }
   try {
     const { email, password } = await req.json()
     if (!email || !password) {

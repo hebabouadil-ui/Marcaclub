@@ -14,9 +14,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   try {
     await connectDB()
-    const products = await Product.find({}, '_id updatedAt').lean()
+    const products = await Product.find({ active: true }, 'slug updatedAt').lean()
     const productRoutes: MetadataRoute.Sitemap = products.map((p) => ({
-      url: `${base}/products/${p._id}`,
+      url: `${base}/products/${(p as { slug?: string }).slug ?? (p as { _id: unknown })._id}`,
       lastModified: (p as { updatedAt?: Date }).updatedAt ?? new Date(),
       changeFrequency: 'weekly',
       priority: 0.6,

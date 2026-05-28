@@ -72,14 +72,26 @@ export async function POST(req: NextRequest, { params }: { params: { productId: 
   if (!rating || !body) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
+  if (typeof body !== 'string' || body.length > 2000) {
+    return NextResponse.json({ error: 'Review body invalid' }, { status: 400 })
+  }
+  if (title && (typeof title !== 'string' || title.length > 200)) {
+    return NextResponse.json({ error: 'Title invalid' }, { status: 400 })
+  }
+  const ratingNum = Number(rating)
+  if (!Number.isInteger(ratingNum) || ratingNum < 1 || ratingNum > 5) {
+    return NextResponse.json({ error: 'Rating must be 1–5' }, { status: 400 })
+  }
+  // Strip HTML tags to prevent stored XSS
+  const stripHtml = (s: string) => s.replace(/<[^>]*>/g, '').trim()
 
   const review = await Review.create({
     productId,
     customerId: customer.id,
-    author: author || customer.name,
-    rating: Number(rating),
-    title,
-    body,
+    author: stripHtml(author || customer.name).slice(0, 100),
+    rating: ratingNum,
+    title: title ? stripHtml(title) : undefined,
+    body: stripHtml(body),
     verified: true,
     date: new Date(),
   })
