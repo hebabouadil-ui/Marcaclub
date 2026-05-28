@@ -2,6 +2,7 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useCartStore, cartTotal } from '@/lib/store/cartStore'
 import { useCurrency } from '@/lib/context/CurrencyContext'
 import { useLanguage } from '@/lib/i18n'
@@ -17,6 +18,7 @@ export default function CartPage() {
   const { items, removeItem, updateQuantity } = useCartStore()
   const { format } = useCurrency()
   const { tr } = useLanguage()
+  const router = useRouter()
 
   if (items.length === 0) {
     return (
@@ -137,14 +139,14 @@ export default function CartPage() {
             {tr.cart.checkout}
           </Link>
 
-          <Link href="/"
+          <button onClick={() => router.back()}
             style={{
-              display: 'block', textAlign: 'center', marginTop: '12px',
+              display: 'block', width: '100%', textAlign: 'center', marginTop: '12px',
               fontSize: '11px', letterSpacing: '0.15em', textTransform: 'uppercase',
-              color: '#888', textDecoration: 'none'
+              color: '#888', background: 'none', border: 'none', cursor: 'pointer'
             }}>
             {tr.cart.continueShopping}
-          </Link>
+          </button>
         </div>
       </div>
     </div>
