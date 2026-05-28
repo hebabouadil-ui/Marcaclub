@@ -39,7 +39,7 @@ export default function CartPage() {
   useEffect(() => {
     fetch('/api/geo')
       .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.country) setCountry(d.country) })
+      .then(d => { if (d?.countryCode) setCountry(d.countryCode) })
       .catch(() => {})
   }, [])
 
