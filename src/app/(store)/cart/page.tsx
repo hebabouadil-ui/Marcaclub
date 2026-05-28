@@ -2,11 +2,11 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useCartStore, cartTotal } from '@/lib/store/cartStore'
 import { useCurrency } from '@/lib/context/CurrencyContext'
 import { useLanguage } from '@/lib/i18n'
-import { Trash2, ShoppingBag, ArrowRight, Truck, ShieldCheck, RotateCcw, ChevronDown } from 'lucide-react'
+import { Trash2, ShoppingBag, ArrowRight, Truck, ShieldCheck, RotateCcw, Loader2 } from 'lucide-react'
 
 function shortSize(s: string) {
   if (s.length <= 25) return s
@@ -14,20 +14,16 @@ function shortSize(s: string) {
   return last.replace(/^\s*\d+\s*/, '').trim() || s.slice(-20)
 }
 
-const SHIPPING_OPTIONS = [
-  { label: 'Standard (7–12 jours)', value: 0, note: 'Gratuit' },
-  { label: 'Express (3–5 jours)', value: 9.99, note: '9,99 €' },
-]
-
 export default function CartPage() {
   const { items, removeItem, updateQuantity } = useCartStore()
   const { format } = useCurrency()
   const { tr } = useLanguage()
   const [continueHref, setContinueHref] = useState('/products')
-  const [shipping, setShipping] = useState(0)
-  const [promoCode, setPromoCode] = useState('')
-  const [promoApplied, setPromoApplied] = useState(false)
+  const [country, setCountry] = useState<string>('')
+  const [shippingFee, setShippingFee] = useState<number | null>(null)
+  const [shippingLoading, setShippingLoading] = useState(false)
 
+  // Derive "continue shopping" href from cart items or localStorage
   useEffect(() => {
     const cartCat = items[0]?.category
     if (cartCat) {
@@ -38,9 +34,44 @@ export default function CartPage() {
     }
   }, [items])
 
+  // Detect country via geo API
+  useEffect(() => {
+    fetch('/api/geo')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.country) setCountry(d.country) })
+      .catch(() => {})
+  }, [])
+
+  // Fetch real shipping estimate whenever items or country changes
+  const fetchShipping = useCallback(async () => {
+    if (items.length === 0) { setShippingFee(null); return }
+    setShippingLoading(true)
+    try {
+      const res = await fetch('/api/shipping-estimate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: items.map(i => ({ productId: i.productId, size: i.size, quantity: i.quantity })),
+          country: country || 'CA',
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setShippingFee(typeof data.shippingFeeCAD === 'number' ? data.shippingFeeCAD : null)
+      }
+    } catch {
+      // leave shippingFee null — will show "Calculé au checkout"
+    } finally {
+      setShippingLoading(false)
+    }
+  }, [items, country])
+
+  useEffect(() => {
+    fetchShipping()
+  }, [fetchShipping])
+
   const subtotal = cartTotal(items)
-  const discount = promoApplied ? subtotal * 0.1 : 0
-  const total = subtotal + shipping - discount
+  const total = subtotal + (shippingFee ?? 0)
 
   if (items.length === 0) {
     return (
@@ -148,7 +179,7 @@ export default function CartPage() {
             {/* Trust badges */}
             <div className="mt-6 grid grid-cols-3 gap-3">
               {[
-                { icon: Truck, label: 'Livraison 7–12 j' },
+                { icon: Truck, label: 'Livraison internationale' },
                 { icon: ShieldCheck, label: 'Paiement sécurisé' },
                 { icon: RotateCcw, label: 'Retours faciles' },
               ].map(({ icon: Icon, label }) => (
@@ -161,7 +192,7 @@ export default function CartPage() {
           </div>
 
           {/* RIGHT — Order summary */}
-          <div className="w-full lg:w-[380px] flex-shrink-0 sticky top-24">
+          <div className="w-full lg:w-[380px] flex-shrink-0 lg:sticky lg:top-24">
             <div className="bg-white border border-brand-light-gray">
               {/* Header */}
               <div className="bg-brand-black text-brand-white px-5 py-4">
@@ -174,73 +205,52 @@ export default function CartPage() {
                 <div className="space-y-2.5">
                   {items.map((item) => (
                     <div key={`${item.productId}-${item.size}`} className="flex justify-between gap-3 text-sm">
-                      <span className="text-brand-gray truncate flex-1">{item.name} <span className="text-brand-light-gray">×{item.quantity}</span></span>
+                      <span className="text-brand-gray truncate flex-1 leading-snug">
+                        {item.name}
+                        <span className="text-brand-light-gray"> ×{item.quantity}</span>
+                      </span>
                       <span className="font-semibold flex-shrink-0">{format(item.price * item.quantity)}</span>
                     </div>
                   ))}
                 </div>
 
-                <div className="border-t border-brand-light-gray pt-4 space-y-2.5">
+                <div className="border-t border-brand-light-gray pt-4 space-y-3">
                   {/* Subtotal */}
                   <div className="flex justify-between text-sm">
                     <span className="text-brand-gray">Sous-total</span>
                     <span className="font-semibold">{format(subtotal)}</span>
                   </div>
 
-                  {/* Shipping selector */}
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-brand-gray">Livraison</span>
-                    <div className="relative">
-                      <select
-                        value={shipping}
-                        onChange={(e) => setShipping(Number(e.target.value))}
-                        className="appearance-none bg-[#f5f0ea] border border-brand-light-gray text-xs px-3 py-1.5 pr-7 focus:outline-none focus:border-brand-black cursor-pointer"
-                      >
-                        {SHIPPING_OPTIONS.map((o) => (
-                          <option key={o.label} value={o.value}>{o.note} — {o.label}</option>
-                        ))}
-                      </select>
-                      <ChevronDown size={11} className="absolute right-2 top-1/2 -translate-y-1/2 text-brand-gray pointer-events-none" />
-                    </div>
-                  </div>
-
-                  {/* Promo code */}
-                  <div>
-                    {!promoApplied ? (
-                      <div className="flex gap-2 mt-1">
-                        <input
-                          type="text"
-                          value={promoCode}
-                          onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                          placeholder="Code promo"
-                          className="flex-1 border border-brand-light-gray px-3 py-1.5 text-xs focus:outline-none focus:border-brand-black bg-transparent"
-                        />
-                        <button
-                          onClick={() => { if (promoCode === 'MARCA10') setPromoApplied(true) }}
-                          className="px-3 py-1.5 text-[10px] tracking-widest uppercase bg-brand-black text-white hover:bg-brand-gold hover:text-brand-black transition-colors"
-                        >
-                          OK
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex justify-between items-center text-sm text-green-600">
-                        <span>Code MARCA10 appliqué</span>
-                        <span className="font-semibold">−{format(discount)}</span>
-                      </div>
-                    )}
+                  {/* Shipping */}
+                  <div className="flex justify-between text-sm items-center">
+                    <span className="text-brand-gray flex items-center gap-1.5">
+                      <Truck size={13} className="text-brand-gold" />
+                      Livraison
+                      {country && <span className="text-[10px] text-brand-light-gray uppercase">({country})</span>}
+                    </span>
+                    <span className="font-semibold">
+                      {shippingLoading ? (
+                        <Loader2 size={14} className="animate-spin text-brand-gray" />
+                      ) : shippingFee !== null ? (
+                        format(shippingFee)
+                      ) : (
+                        <span className="text-brand-gray text-xs">Calculé au checkout</span>
+                      )}
+                    </span>
                   </div>
                 </div>
 
                 {/* Total */}
                 <div className="border-t-2 border-brand-black pt-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-[11px] tracking-[0.2em] uppercase font-semibold">Total</span>
-                    <span className="text-2xl font-display font-bold">{format(total)}</span>
+                    <span className="text-[11px] tracking-[0.2em] uppercase font-semibold">Total estimé</span>
+                    <span className="text-2xl font-display font-bold">
+                      {shippingFee !== null ? format(total) : format(subtotal)}
+                    </span>
                   </div>
-                  {shipping === 0 && (
-                    <p className="text-[10px] text-green-600 mt-1 tracking-wide">✓ Livraison gratuite incluse</p>
+                  {shippingFee === null && (
+                    <p className="text-[10px] text-brand-gray mt-1">+ frais de livraison</p>
                   )}
-                  <p className="text-[10px] text-brand-gray mt-1">TVA incluse</p>
                 </div>
 
                 {/* CTA */}
