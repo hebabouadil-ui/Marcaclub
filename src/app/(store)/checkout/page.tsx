@@ -595,17 +595,22 @@ export default function CheckoutPage() {
     }
   }, [geo])
 
-  // When customer logs in during auth step, advance to info
-  const handleAuthSuccess = useCallback(() => {
-    if (customer) {
-      setShippingForm(prev => ({
-        ...prev,
-        name: prev.name || customer.name,
-        email: prev.email || customer.email,
-      }))
-    }
+  // When customer logs in during auth step, refresh session then advance to info
+  const handleAuthSuccess = useCallback(async () => {
+    // Re-fetch customer so we have latest data before advancing
+    try {
+      const res = await fetch('/api/auth/customer/me')
+      if (res.ok) {
+        const c = await res.json()
+        setShippingForm(prev => ({
+          ...prev,
+          name: prev.name || c.name || '',
+          email: prev.email || c.email || '',
+        }))
+      }
+    } catch {}
     setStep('info')
-  }, [customer])
+  }, [])
 
   const set = useCallback((key: keyof CustomerForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const value = e.target.value
