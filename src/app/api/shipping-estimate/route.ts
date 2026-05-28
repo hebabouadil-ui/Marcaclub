@@ -86,12 +86,16 @@ export async function POST(req: NextRequest) {
 
       if (!product.cjPid) continue
       hasCjPid = true
+      // Try exact size match first, then any VID from the product as fallback
       const sizeEntry = product.sizes?.find(s => s.size === item.size)
-      if (sizeEntry?.cjVid) cjProducts.push({ vid: sizeEntry.cjVid, quantity: item.quantity, weight: product.productWeight })
+      const anyVidEntry = product.sizes?.find(s => s.cjVid)
+      const vid = sizeEntry?.cjVid ?? anyVidEntry?.cjVid
+      if (vid) cjProducts.push({ vid, quantity: item.quantity, weight: product.productWeight })
     }
 
     const totalUnits = items.reduce((s: number, i: { quantity: number }) => s + i.quantity, 0)
-    const bakedUSD = maxBakedUSD * (1 + (totalUnits - 1) * 0.15)
+    // CJ ships everything in one package — baked shipping is a per-shipment cost, never scale by unit count
+    const bakedUSD = maxBakedUSD
 
     let shippingFeeCAD: number
 
