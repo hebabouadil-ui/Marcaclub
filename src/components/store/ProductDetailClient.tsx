@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ShoppingBag, ChevronLeft, ChevronRight, ArrowRight, ShoppingCart, Truck, Play, Star } from 'lucide-react'
+import { ShoppingBag, ChevronLeft, ChevronRight, ArrowRight, ShoppingCart, Truck, Play, Star, Shield, RefreshCw, CheckCircle, HeartHandshake } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cartStore'
 import { useCurrency } from '@/lib/context/CurrencyContext'
 import { useLanguage } from '@/lib/i18n'
@@ -670,7 +670,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
 
             {/* Description tab */}
             {activeTab === 'description' && (product.description || product.descriptionHtml) && (
-              <div className="py-8">
+              <div className={product.descriptionHtml ? 'pt-6 pb-2' : 'py-8'}>
                 {product.descriptionHtml ? (
                   <div
                     className="cj-description mx-auto"
@@ -730,6 +730,24 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
             )}
           </div>
         )}
+
+        {/* ── Trust strip ── */}
+        <div className="mt-12 bg-brand-black py-10 px-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-3xl mx-auto">
+            {[
+              { icon: Shield, title: lang === 'en' ? 'Secure Payment' : 'Paiement sécurisé', sub: 'Stripe · 3D Secure' },
+              { icon: Truck, title: lang === 'en' ? 'Worldwide Shipping' : 'Livraison mondiale', sub: lang === 'en' ? '7–20 business days' : '7–20 jours ouvrés' },
+              { icon: HeartHandshake, title: lang === 'en' ? 'Responsive Support' : 'SAV réactif', sub: lang === 'en' ? 'Reply within 24h' : 'Réponse sous 24h' },
+              { icon: CheckCircle, title: lang === 'en' ? 'Authentic Products' : 'Produits authentiques', sub: lang === 'en' ? 'Carefully curated' : 'Sélection rigoureuse' },
+            ].map(({ icon: Icon, title, sub }) => (
+              <div key={title} className="flex flex-col items-center text-center gap-2.5">
+                <Icon size={22} className="text-brand-gold" strokeWidth={1.5} />
+                <p className="text-white text-[10px] font-semibold tracking-[0.2em] uppercase leading-tight">{title}</p>
+                <p className="text-white/40 text-[10px] tracking-wide">{sub}</p>
+              </div>
+            ))}
+          </div>
+        </div>
 
         {/* ── Reviews section ── */}
         {reviews.length > 0 && (() => {
