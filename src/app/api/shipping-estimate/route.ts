@@ -48,7 +48,9 @@ export async function POST(req: NextRequest) {
       const product = await Product.findById(item.productId).lean() as ProductDoc | null
       if (!product) continue
 
-      if (product.productWeight) totalWeightG += product.productWeight * item.quantity
+      // Use stored weight or default 300g per unit so CJ weight API can fire
+      const weight = product.productWeight ?? (product.cjPid ? 300 : 0)
+      if (weight) totalWeightG += weight * item.quantity
 
       if (product.shippingBakedUSD && product.shippingBakedUSD > 0) {
         if (product.shippingBakedUSD > maxBakedUSD) maxBakedUSD = product.shippingBakedUSD
