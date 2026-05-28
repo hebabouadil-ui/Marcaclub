@@ -37,6 +37,8 @@ interface CJProduct {
   description?: string
   variants?: CJVariant[]
   productImageSet?: Array<{ imageUrl: string }>
+  supplierId?: string
+  supplierName?: string
 }
 
 interface ShippingOption {
@@ -116,6 +118,8 @@ function normalizeProduct(raw: any): CJProduct {
     description: raw.description ?? raw.productDescription ?? undefined,
     variants,
     productImageSet: parseImageSetField(raw.productImageSet ?? raw.imageList ?? raw.productImages),
+    supplierId: raw.supplierId ?? raw.warehouseId ?? raw.vendorId ?? undefined,
+    supplierName: raw.supplierName ?? raw.warehouseName ?? raw.vendorName ?? undefined,
   }
 }
 
@@ -467,6 +471,8 @@ export default function CJImportPage() {
           shippingBakedUSD: shippingUSD,
           shippingRefCountry: shippingUSD > 0 ? shippingCountry : undefined,
           productWeight: preview.productWeight ?? 200,
+          cjWarehouseId: preview.supplierId || undefined,
+          cjWarehouseName: preview.supplierName || undefined,
           featured: form.featured,
           onSale: form.onSale,
         }),
@@ -627,12 +633,25 @@ export default function CJImportPage() {
         <div className="fixed inset-0 bg-black/90 z-50 flex items-start justify-center p-4 overflow-y-auto" onClick={() => setPreview(null)}>
           <div className="bg-[#0f0f0f] border border-white/10 w-full max-w-4xl my-4" onClick={(e) => e.stopPropagation()}>
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-              <div>
-                <p className="text-white/30 text-[10px] tracking-widest">CJ DROPSHIPPING · {preview.pid}</p>
-                <p className="text-white text-sm font-semibold mt-0.5">{preview.productNameEn}</p>
+            <div className="flex items-start justify-between px-6 py-4 border-b border-white/10">
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-1">
+                  <span className="text-white/30 text-[10px] tracking-widest font-mono">PID: {preview.pid}</span>
+                  {preview.supplierId && (
+                    <span className="text-white/20 text-[10px] font-mono">Supplier ID: {preview.supplierId}</span>
+                  )}
+                </div>
+                <p className="text-white text-sm font-semibold">{preview.productNameEn}</p>
+                {preview.supplierName ? (
+                  <div className="mt-1 flex items-center gap-2">
+                    <span className="text-[10px] text-white/40 uppercase tracking-widest">Warehouse / Supplier:</span>
+                    <span className="text-xs text-brand-gold font-semibold">{preview.supplierName}</span>
+                  </div>
+                ) : (
+                  <p className="text-white/20 text-[10px] mt-1">Warehouse: not returned by CJ API</p>
+                )}
               </div>
-              <button onClick={() => setPreview(null)} className="text-white/40 hover:text-white transition-colors p-1">
+              <button onClick={() => setPreview(null)} className="text-white/40 hover:text-white transition-colors p-1 flex-shrink-0 ml-4">
                 <X size={18} />
               </button>
             </div>
@@ -710,13 +729,14 @@ export default function CJImportPage() {
                   <div className="mt-4">
                     <p className="text-white/40 text-[10px] tracking-widest mb-2">ALL VARIANTS</p>
                     <div className="border border-white/10 overflow-hidden">
-                      <div className="grid grid-cols-4 text-[10px] text-white/30 px-3 py-1.5 border-b border-white/10 bg-white/3">
-                        <span>Name</span><span>Price</span><span>Stock</span><span>Weight</span>
+                      <div className="grid grid-cols-[1fr_auto_auto_auto_auto] text-[10px] text-white/30 px-3 py-1.5 border-b border-white/10 bg-white/3 gap-2">
+                        <span>Name</span><span>SKU</span><span>Price</span><span>Stock</span><span>Weight</span>
                       </div>
                       <div className="max-h-48 overflow-y-auto">
                         {preview.variants!.map((v) => (
-                          <div key={v.vid} className="grid grid-cols-4 text-[11px] px-3 py-1.5 border-b border-white/5 hover:bg-white/3">
+                          <div key={v.vid} className="grid grid-cols-[1fr_auto_auto_auto_auto] text-[10px] px-3 py-1.5 border-b border-white/5 hover:bg-white/3 gap-2 items-center">
                             <span className="text-white truncate">{v.variantNameEn}</span>
+                            <span className="text-white/30 font-mono text-[9px] select-all">{v.variantSku || '—'}</span>
                             <span className="text-brand-gold">{cadUSD(v.variantPrice ?? 0)}</span>
                             <span className={v.variantStock > 0 ? 'text-green-400' : 'text-red-400'}>{v.variantStock}</span>
                             <span className="text-white/40">{v.variantWeight}g</span>
