@@ -2,16 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
+function getSiteOrigin(): string {
+  const url = (process.env.NEXTAUTH_URL ?? 'https://www.marca-club.com').replace(/\/$/, '')
+  return url.replace('://marca-club.com', '://www.marca-club.com')
+}
+
 export async function GET(req: NextRequest) {
-  const nextauthUrl = process.env.NEXTAUTH_URL ?? ''
-  const base = nextauthUrl.replace(/\/$/, '')
-  const redirectUri = `${base}/api/customer/auth/google/callback`
-  const clientId = process.env.GOOGLE_CLIENT_ID ?? ''
+  const siteOrigin = getSiteOrigin()
   return NextResponse.json({
-    nextauthUrl,
-    redirectUri,
-    clientIdPrefix: clientId.slice(0, 20) + '…',
-    clientIdConfigured: !!clientId,
+    nextauthUrl: process.env.NEXTAUTH_URL,
+    siteOrigin,
+    redirectUri: `${siteOrigin}/api/customer/auth/google/callback`,
+    clientIdConfigured: !!process.env.GOOGLE_CLIENT_ID,
     clientSecretConfigured: !!process.env.GOOGLE_CLIENT_SECRET,
   })
 }
