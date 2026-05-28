@@ -189,23 +189,14 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
         return { ...opt, agingMin, agingMax }
       })
       if (options.length === 0) { setShipping(null); return }
-      const preferred = product.cjLogisticName
-        ? options.find((o) => o.logisticName === product.cjLogisticName)
-        : null
-      if (preferred) { setShipping(preferred); return }
-      const maxPrice = Math.max(...options.map((o) => o.logisticPrice), 1)
-      const maxDays = Math.max(...options.map((o) => o.agingMax || o.agingMin || 30), 1)
-      const scored = options.map((o) => ({
-        ...o,
-        score: (o.logisticPrice / maxPrice) * 0.7 + ((o.agingMax || o.agingMin || 30) / maxDays) * 0.3,
-      }))
-      setShipping(scored.sort((a, b) => a.score - b.score)[0])
+      // Pick cheapest option — mirrors CJ's fulfillment selection exactly
+      setShipping([...options].sort((a, b) => a.logisticPrice - b.logisticPrice)[0])
     } catch {
       setShipping(null)
     } finally {
       setShippingLoading(false)
     }
-  }, [product._id, product.cjPid, product.cjLogisticName, product.productWeight, product.sizes])
+  }, [product._id, product.cjPid, product.productWeight, product.sizes])
 
   // Auto-translate description when language changes
   useEffect(() => {
