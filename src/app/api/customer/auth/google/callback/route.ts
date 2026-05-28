@@ -12,7 +12,6 @@ export async function GET(req: NextRequest) {
   const state = searchParams.get('state')
   const googleError = searchParams.get('error')
 
-  // Google rejected the auth (user cancelled, etc.)
   if (googleError) {
     console.error('Google OAuth denied:', googleError)
     return NextResponse.redirect(new URL('/account/login?error=oauth_denied', req.url))
@@ -22,13 +21,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL('/account/login?error=oauth_denied', req.url))
   }
 
-  // Derive the redirect_uri from the actual request URL so it always matches
-  // what was sent in the initial auth request (both use req.url-based origin)
-  const reqOrigin = new URL(req.url).origin
-  const redirectUri = `${reqOrigin}/api/customer/auth/google/callback`
+  // Use same host-header approach as the auth route so redirect_uri always matches
+  const host = req.headers.get('host') ?? req.nextUrl.host
+  const proto = req.headers.get('x-forwarded-proto') ?? 'https'
+  const redirectUri = `${proto}://${host}/api/customer/auth/google/callback`
+
+  console.log('[google-callback] redirect_uri:', redirectUri)
 
   try {
-    // Exchange code for access token
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -47,14 +47,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(new URL(`/account/login?error=${encodeURIComponent(msg)}`, req.url))
     }
 
-    // Get user profile
     const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
     })
     const gUser = await userRes.json()
     if (!gUser.email) throw new Error('No email from Google')
 
-    // Find or create customer — Google-verified so emailVerified = true
     await connectDB()
     let customer = await Customer.findOne({ email: gUser.email.toLowerCase() })
     if (!customer) {
@@ -75,11 +73,11 @@ export async function GET(req: NextRequest) {
 
     const token = await signCustomerToken({ id: String(customer._id), email: customer.email, name: customer.name })
     const returnTo = state || '/'
-    const redirectUrl = returnTo.startsWith('http') ? returnTo : new URL(returnTo, req.url).toString()
+    const redirectUrl = returnTo.startsWith('http') ? returnTo : `${proto}://${host}${returnTo}`
     const res = NextResponse.redirect(redirectUrl)
     res.cookies.set(CUSTOMER_COOKIE, token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: true,
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 30,
       path: '/',

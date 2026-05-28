@@ -8,9 +8,11 @@ export async function GET(req: NextRequest) {
   }
 
   const returnTo = req.nextUrl.searchParams.get('returnTo') ?? '/'
-  // Use the actual request origin so redirect_uri always matches the registered one
-  const origin = new URL(req.url).origin
-  const redirectUri = `${origin}/api/customer/auth/google/callback`
+
+  // Use host header to build the exact public-facing redirect URI
+  const host = req.headers.get('host') ?? req.nextUrl.host
+  const proto = req.headers.get('x-forwarded-proto') ?? 'https'
+  const redirectUri = `${proto}://${host}/api/customer/auth/google/callback`
 
   const params = new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID,
