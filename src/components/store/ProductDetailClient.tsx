@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ShoppingBag, ChevronLeft, ChevronRight, ArrowRight, ShoppingCart, Truck, Play, Star, Shield, RefreshCw, CheckCircle, HeartHandshake } from 'lucide-react'
+import { ShoppingBag, ChevronLeft, ChevronRight, ArrowRight, ShoppingCart, Truck, Play, Star } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cartStore'
 import { useCurrency } from '@/lib/context/CurrencyContext'
 import { useLanguage } from '@/lib/i18n'
@@ -637,288 +637,224 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
           </div>
         </div>
 
-        {/* ── Tabbed section: Description + Video ── */}
-        {(product.description || product.descriptionHtml || videoEmbed) && (
-          <div className="mt-12 border-t border-brand-light-gray">
-            {/* Tab bar */}
-            <div className="flex border-b border-brand-light-gray">
-              {(product.description || product.descriptionHtml) && (
-                <button
-                  onClick={() => setActiveTab('description')}
-                  className={`px-6 py-4 text-xs tracking-[0.25em] uppercase font-semibold transition-colors border-b-2 -mb-px ${
-                    activeTab === 'description'
-                      ? 'border-brand-black text-brand-black'
-                      : 'border-transparent text-brand-gray hover:text-brand-black'
-                  }`}
-                >
-                  Description
-                </button>
-              )}
-              {videoEmbed && (
-                <button
-                  onClick={() => setActiveTab('video')}
-                  className={`px-6 py-4 text-xs tracking-[0.25em] uppercase font-semibold transition-colors border-b-2 -mb-px flex items-center gap-2 ${
-                    activeTab === 'video'
-                      ? 'border-brand-black text-brand-black'
-                      : 'border-transparent text-brand-gray hover:text-brand-black'
-                  }`}
-                >
-                  <Play size={11} fill="currentColor" /> Vidéo
-                </button>
-              )}
-            </div>
+        {/* ── Description + Reviews side-by-side ── */}
+        <div className="mt-12 border-t border-brand-light-gray">
+          <div className="flex flex-col lg:flex-row gap-0 lg:divide-x lg:divide-brand-light-gray">
 
-            {/* Description tab */}
-            {activeTab === 'description' && (product.description || product.descriptionHtml) && (
-              <div className={product.descriptionHtml ? 'pt-6 pb-2' : 'py-8'}>
-                {product.descriptionHtml ? (
-                  <div
-                    className="cj-description mx-auto"
-                    style={{ maxWidth: '860px' }}
-                    dangerouslySetInnerHTML={{ __html: translatedDescriptionHtml ?? product.descriptionHtml }}
-                  />
-                ) : (
-                  <p className="text-sm text-brand-gray leading-relaxed max-w-2xl mx-auto">
-                    {translatedDescription
-                      ?? (lang === 'en' && product.descriptionEn ? product.descriptionEn : product.description)}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Video tab */}
-            {activeTab === 'video' && videoEmbed && (
-              <div className="py-8 flex justify-center">
-                {videoEmbed.type === 'tiktok' ? (
-                  /* TikTok: clip header (~60px) and footer (~70px) to show only the video */
-                  <div style={{ width: '340px', position: 'relative', overflow: 'hidden', height: '580px', borderRadius: '12px', boxShadow: '0 8px 40px rgba(0,0,0,0.18)' }}>
-                    <iframe
-                      src={videoEmbed.embedUrl}
-                      style={{
-                        position: 'absolute',
-                        top: '-60px',
-                        left: 0,
-                        width: '100%',
-                        height: 'calc(100% + 130px)',
-                        border: 'none',
-                      }}
-                      allow="autoplay; encrypted-media"
-                      allowFullScreen
-                    />
-                  </div>
-                ) : videoEmbed.type === 'youtube' ? (
-                  <div style={{ width: '100%', maxWidth: '720px' }}>
-                    <iframe
-                      src={videoEmbed.embedUrl}
-                      style={{ width: '100%', aspectRatio: '16/9', border: 'none', borderRadius: '8px', boxShadow: '0 8px 40px rgba(0,0,0,0.12)', display: 'block' }}
-                      allow="autoplay; encrypted-media"
-                      allowFullScreen
-                    />
-                  </div>
-                ) : videoEmbed.type === 'video' ? (
-                  <div style={{ width: '100%', maxWidth: '720px' }}>
-                    {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-                    <video src={videoEmbed.embedUrl} controls style={{ width: '100%', borderRadius: '8px', boxShadow: '0 8px 40px rgba(0,0,0,0.12)', display: 'block' }} />
-                  </div>
-                ) : (
-                  <a href={videoEmbed.embedUrl} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm text-brand-gold underline">
-                    <Play size={14} /> Voir la vidéo
-                  </a>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── Trust strip ── */}
-        <div className="mt-12 bg-brand-black py-10 px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-3xl mx-auto">
-            {[
-              { icon: Shield, title: lang === 'en' ? 'Secure Payment' : 'Paiement sécurisé', sub: 'Stripe · 3D Secure' },
-              { icon: Truck, title: lang === 'en' ? 'Worldwide Shipping' : 'Livraison mondiale', sub: lang === 'en' ? '7–20 business days' : '7–20 jours ouvrés' },
-              { icon: HeartHandshake, title: lang === 'en' ? 'Responsive Support' : 'SAV réactif', sub: lang === 'en' ? 'Reply within 24h' : 'Réponse sous 24h' },
-              { icon: CheckCircle, title: lang === 'en' ? 'Authentic Products' : 'Produits authentiques', sub: lang === 'en' ? 'Carefully curated' : 'Sélection rigoureuse' },
-            ].map(({ icon: Icon, title, sub }) => (
-              <div key={title} className="flex flex-col items-center text-center gap-2.5">
-                <Icon size={22} className="text-brand-gold" strokeWidth={1.5} />
-                <p className="text-white text-[10px] font-semibold tracking-[0.2em] uppercase leading-tight">{title}</p>
-                <p className="text-white/40 text-[10px] tracking-wide">{sub}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ── Reviews section ── */}
-        {reviews.length > 0 && (() => {
-          const avg = reviews.reduce((s, r) => s + r.rating, 0) / reviews.length
-          const dist = [5,4,3,2,1].map(n => ({ n, count: reviews.filter(r => r.rating === n).length }))
-          const AVATAR_COLORS = ['#c084fc','#f472b6','#fb923c','#34d399','#60a5fa','#a78bfa','#fbbf24','#f87171']
-          const avatarColor = (id: string) => AVATAR_COLORS[id.charCodeAt(id.length - 1) % AVATAR_COLORS.length]
-          return (
-            <div className="mt-16 border-t border-brand-light-gray pt-12">
-              {/* Header with overall rating */}
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-10">
-                <h2 className="text-xl font-semibold tracking-wide">Avis clients</h2>
-                <div className="flex items-center gap-2">
-                  <div className="flex gap-0.5">
-                    {[1,2,3,4,5].map(i => (
-                      <Star key={i} size={18} fill={i <= Math.round(avg) ? '#f59e0b' : 'none'} stroke={i <= Math.round(avg) ? '#f59e0b' : '#d1d5db'} />
-                    ))}
-                  </div>
-                  <span className="text-brand-black font-bold text-lg">{avg.toFixed(1)}</span>
-                  <span className="text-brand-gray text-sm">({reviews.length} avis)</span>
-                </div>
-              </div>
-
-              {/* Summary bar */}
-              <div className="bg-brand-off-white p-5 mb-10 max-w-md">
-                <p className="text-xs text-brand-gray uppercase tracking-widest font-semibold mb-3">Répartition des notes</p>
-                <div className="space-y-2">
-                  {dist.map(({ n, count }) => (
-                    <div key={n} className="flex items-center gap-3 text-sm">
-                      <div className="flex items-center gap-1 w-16 flex-shrink-0">
-                        <span className="text-xs text-brand-gray w-3">{n}</span>
-                        <Star size={11} fill="#f59e0b" stroke="#f59e0b" />
-                      </div>
-                      <div className="flex-1 bg-gray-200 h-2 rounded-full overflow-hidden">
-                        <div className="h-full bg-amber-400 rounded-full transition-all" style={{ width: reviews.length ? `${(count / reviews.length) * 100}%` : '0%' }} />
-                      </div>
-                      <span className="text-brand-gray text-xs w-5 text-right">{count}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Individual reviews */}
-              <div className="space-y-8">
-                {reviews.map((r) => (
-                  <div key={r._id} className="border-b border-brand-light-gray pb-8 last:border-0">
-                    <div className="flex items-start gap-4">
-                      {r.photo ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={r.photo} alt="" className="w-11 h-11 rounded-full object-cover flex-shrink-0 shadow-sm" />
-                      ) : (
-                        <div
-                          className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold text-base shadow-sm"
-                          style={{ background: avatarColor(r._id) }}
-                        >
-                          {r.author[0].toUpperCase()}
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 mb-2">
-                          <span className="font-semibold text-brand-black text-sm">{r.author}</span>
-                          {r.location && <span className="text-brand-gray text-xs">{r.location}</span>}
-                        </div>
-                        <div className="flex items-center gap-3 mb-2">
-                          <div className="flex gap-0.5">
-                            {[1,2,3,4,5].map(i => (
-                              <Star key={i} size={13} fill={i <= r.rating ? '#f59e0b' : 'none'} stroke={i <= r.rating ? '#f59e0b' : '#d1d5db'} />
-                            ))}
-                          </div>
-                          {r.verified && (
-                            <span className="text-green-700 text-[10px] font-semibold bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">✓ Achat vérifié</span>
-                          )}
-                          <span className="text-brand-gray text-[11px] ml-auto">{new Date(r.date).toLocaleDateString('fr-FR', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
-                        </div>
-                        {r.title && <p className="font-semibold text-brand-black text-sm mb-1.5">{r.title}</p>}
-                        <p className="text-brand-gray text-sm leading-relaxed">{r.body}</p>
-                        {r.productPhoto && (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={r.productPhoto} alt="produit" className="mt-3 w-24 h-24 object-cover rounded-lg border border-brand-light-gray" />
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-            </div>
-          )
-        })()}
-
-        {/* ── Write a review section (always visible) ── */}
-        <div className="mt-12 border-t border-brand-light-gray pt-10">
-          <h3 className="text-sm font-semibold tracking-widest uppercase text-brand-black mb-4">Laisser un avis</h3>
-          {!customer ? (
-            <p className="text-sm text-brand-gray">
-              Acheteurs vérifiés uniquement ·{' '}
-              <button onClick={() => setShowAuthModal(true)} className="text-brand-black underline hover:text-brand-gold transition-colors">
-                Se connecter
-              </button>
-            </p>
-          ) : reviewSubmitted ? (
-            <p className="text-sm text-green-600">Merci pour votre avis !</p>
-          ) : (
-            <form onSubmit={async (e) => {
-              e.preventDefault()
-              setReviewError('')
-              setReviewSubmitting(true)
-              try {
-                const res = await fetch(`/api/reviews/${product._id}`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ author: customer.name, rating: reviewRating, title: reviewTitle, body: reviewBody }),
-                })
-                const data = await res.json()
-                if (res.ok) {
-                  setReviews(prev => [{ ...data, fake: false }, ...prev])
-                  setReviewSubmitted(true)
-                } else if (data.error === 'not_a_buyer') {
-                  setReviewError('Vous devez avoir acheté et reçu ce produit pour laisser un avis.')
-                } else if (data.error === 'already_reviewed') {
-                  setReviewError('Vous avez déjà laissé un avis pour ce produit.')
-                } else {
-                  setReviewError(data.error || 'Erreur')
-                }
-              } catch {
-                setReviewError('Erreur réseau')
-              } finally {
-                setReviewSubmitting(false)
-              }
-            }} className="space-y-4 max-w-lg">
-              <div>
-                <p className="text-xs tracking-widest uppercase text-brand-gray mb-2">Note</p>
-                <div className="flex gap-1">
-                  {[1,2,3,4,5].map(i => (
-                    <button key={i} type="button" onClick={() => setReviewRating(i)}>
-                      <Star size={22} fill={i <= reviewRating ? '#f59e0b' : 'none'} stroke={i <= reviewRating ? '#f59e0b' : '#d1d5db'} />
+            {/* LEFT: Description / Video */}
+            {(product.description || product.descriptionHtml || videoEmbed) && (
+              <div className="lg:w-[58%] lg:pr-10 py-10">
+                {/* Tab bar */}
+                <div className="flex gap-6 border-b border-brand-light-gray mb-6">
+                  {(product.description || product.descriptionHtml) && (
+                    <button
+                      onClick={() => setActiveTab('description')}
+                      className={`pb-3 text-xs tracking-[0.25em] uppercase font-semibold transition-colors border-b-2 -mb-px ${
+                        activeTab === 'description' ? 'border-brand-black text-brand-black' : 'border-transparent text-brand-gray hover:text-brand-black'
+                      }`}
+                    >
+                      Description
                     </button>
-                  ))}
+                  )}
+                  {videoEmbed && (
+                    <button
+                      onClick={() => setActiveTab('video')}
+                      className={`pb-3 text-xs tracking-[0.25em] uppercase font-semibold transition-colors border-b-2 -mb-px flex items-center gap-2 ${
+                        activeTab === 'video' ? 'border-brand-black text-brand-black' : 'border-transparent text-brand-gray hover:text-brand-black'
+                      }`}
+                    >
+                      <Play size={11} fill="currentColor" /> Vidéo
+                    </button>
+                  )}
                 </div>
+
+                {activeTab === 'description' && (product.description || product.descriptionHtml) && (
+                  product.descriptionHtml ? (
+                    <div className="cj-description" dangerouslySetInnerHTML={{ __html: translatedDescriptionHtml ?? product.descriptionHtml }} />
+                  ) : (
+                    <p className="text-sm text-brand-gray leading-relaxed">
+                      {translatedDescription ?? (lang === 'en' && product.descriptionEn ? product.descriptionEn : product.description)}
+                    </p>
+                  )
+                )}
+
+                {activeTab === 'video' && videoEmbed && (
+                  <div className="flex justify-center">
+                    {videoEmbed.type === 'tiktok' ? (
+                      <div style={{ width: '320px', position: 'relative', overflow: 'hidden', height: '540px', borderRadius: '12px', boxShadow: '0 8px 40px rgba(0,0,0,0.18)' }}>
+                        <iframe src={videoEmbed.embedUrl} style={{ position: 'absolute', top: '-60px', left: 0, width: '100%', height: 'calc(100% + 130px)', border: 'none' }} allow="autoplay; encrypted-media" allowFullScreen />
+                      </div>
+                    ) : videoEmbed.type === 'youtube' ? (
+                      <div style={{ width: '100%' }}>
+                        <iframe src={videoEmbed.embedUrl} style={{ width: '100%', aspectRatio: '16/9', border: 'none', borderRadius: '8px', display: 'block' }} allow="autoplay; encrypted-media" allowFullScreen />
+                      </div>
+                    ) : videoEmbed.type === 'video' ? (
+                      // eslint-disable-next-line jsx-a11y/media-has-caption
+                      <video src={videoEmbed.embedUrl} controls style={{ width: '100%', borderRadius: '8px', display: 'block' }} />
+                    ) : (
+                      <a href={videoEmbed.embedUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-brand-gold underline">
+                        <Play size={14} /> Voir la vidéo
+                      </a>
+                    )}
+                  </div>
+                )}
               </div>
-              <div>
-                <label className="block text-xs tracking-widest uppercase text-brand-gray mb-1">Titre (optionnel)</label>
-                <input
-                  type="text"
-                  value={reviewTitle}
-                  onChange={(e) => setReviewTitle(e.target.value)}
-                  placeholder="Super produit !"
-                  className="w-full border border-brand-light-gray px-3 py-2.5 text-sm focus:outline-none focus:border-brand-black transition-colors"
-                />
+            )}
+
+            {/* RIGHT: Reviews */}
+            <div className="lg:w-[42%] lg:pl-10 py-10">
+              {reviews.length > 0 && (() => {
+                const avg = reviews.reduce((s, r) => s + r.rating, 0) / reviews.length
+                const dist = [5,4,3,2,1].map(n => ({ n, count: reviews.filter(r => r.rating === n).length }))
+                const AVATAR_COLORS = ['#c084fc','#f472b6','#fb923c','#34d399','#60a5fa','#a78bfa','#fbbf24','#f87171']
+                const avatarColor = (id: string) => AVATAR_COLORS[id.charCodeAt(id.length - 1) % AVATAR_COLORS.length]
+                return (
+                  <>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
+                      <h2 className="text-base font-semibold tracking-wide">Avis clients</h2>
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-0.5">
+                          {[1,2,3,4,5].map(i => (
+                            <Star key={i} size={15} fill={i <= Math.round(avg) ? '#f59e0b' : 'none'} stroke={i <= Math.round(avg) ? '#f59e0b' : '#d1d5db'} />
+                          ))}
+                        </div>
+                        <span className="text-brand-black font-bold">{avg.toFixed(1)}</span>
+                        <span className="text-brand-gray text-xs">({reviews.length} avis)</span>
+                      </div>
+                    </div>
+
+                    <div className="bg-brand-off-white p-4 mb-6">
+                      <div className="space-y-1.5">
+                        {dist.map(({ n, count }) => (
+                          <div key={n} className="flex items-center gap-2 text-sm">
+                            <div className="flex items-center gap-1 w-12 flex-shrink-0">
+                              <span className="text-xs text-brand-gray w-3">{n}</span>
+                              <Star size={10} fill="#f59e0b" stroke="#f59e0b" />
+                            </div>
+                            <div className="flex-1 bg-gray-200 h-1.5 rounded-full overflow-hidden">
+                              <div className="h-full bg-amber-400 rounded-full transition-all" style={{ width: reviews.length ? `${(count / reviews.length) * 100}%` : '0%' }} />
+                            </div>
+                            <span className="text-brand-gray text-xs w-4 text-right">{count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-6 max-h-[640px] overflow-y-auto pr-1">
+                      {reviews.map((r) => (
+                        <div key={r._id} className="border-b border-brand-light-gray pb-6 last:border-0">
+                          <div className="flex items-start gap-3">
+                            {r.photo ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={r.photo} alt="" className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
+                            ) : (
+                              <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold text-sm" style={{ background: avatarColor(r._id) }}>
+                                {r.author[0].toUpperCase()}
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-baseline gap-x-2 mb-1">
+                                <span className="font-semibold text-brand-black text-sm">{r.author}</span>
+                                {r.location && <span className="text-brand-gray text-xs">{r.location}</span>}
+                              </div>
+                              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                                <div className="flex gap-0.5">
+                                  {[1,2,3,4,5].map(i => (
+                                    <Star key={i} size={11} fill={i <= r.rating ? '#f59e0b' : 'none'} stroke={i <= r.rating ? '#f59e0b' : '#d1d5db'} />
+                                  ))}
+                                </div>
+                                {r.verified && (
+                                  <span className="text-green-700 text-[9px] font-semibold bg-green-50 border border-green-200 px-1.5 py-0.5 rounded-full">✓ Achat vérifié</span>
+                                )}
+                                <span className="text-brand-gray text-[10px] ml-auto">{new Date(r.date).toLocaleDateString('fr-FR', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                              </div>
+                              {r.title && <p className="font-semibold text-brand-black text-sm mb-1">{r.title}</p>}
+                              <p className="text-brand-gray text-sm leading-relaxed">{r.body}</p>
+                              {r.productPhoto && (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={r.productPhoto} alt="produit" className="mt-2 w-20 h-20 object-cover rounded-lg border border-brand-light-gray" />
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )
+              })()}
+
+              {/* Write a review */}
+              <div className={reviews.length > 0 ? 'mt-8 pt-8 border-t border-brand-light-gray' : ''}>
+                <h3 className="text-sm font-semibold tracking-widest uppercase text-brand-black mb-4">Laisser un avis</h3>
+                {!customer ? (
+                  <p className="text-sm text-brand-gray">
+                    Acheteurs vérifiés uniquement ·{' '}
+                    <button onClick={() => setShowAuthModal(true)} className="text-brand-black underline hover:text-brand-gold transition-colors">
+                      Se connecter
+                    </button>
+                  </p>
+                ) : reviewSubmitted ? (
+                  <p className="text-sm text-green-600">Merci pour votre avis !</p>
+                ) : (
+                  <form onSubmit={async (e) => {
+                    e.preventDefault()
+                    setReviewError('')
+                    setReviewSubmitting(true)
+                    try {
+                      const res = await fetch(`/api/reviews/${product._id}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ author: customer.name, rating: reviewRating, title: reviewTitle, body: reviewBody }),
+                      })
+                      const data = await res.json()
+                      if (res.ok) {
+                        setReviews(prev => [{ ...data, fake: false }, ...prev])
+                        setReviewSubmitted(true)
+                      } else if (data.error === 'not_a_buyer') {
+                        setReviewError('Vous devez avoir acheté et reçu ce produit pour laisser un avis.')
+                      } else if (data.error === 'already_reviewed') {
+                        setReviewError('Vous avez déjà laissé un avis pour ce produit.')
+                      } else {
+                        setReviewError(data.error || 'Erreur')
+                      }
+                    } catch {
+                      setReviewError('Erreur réseau')
+                    } finally {
+                      setReviewSubmitting(false)
+                    }
+                  }} className="space-y-3">
+                    <div>
+                      <p className="text-xs tracking-widest uppercase text-brand-gray mb-2">Note</p>
+                      <div className="flex gap-1">
+                        {[1,2,3,4,5].map(i => (
+                          <button key={i} type="button" onClick={() => setReviewRating(i)}>
+                            <Star size={20} fill={i <= reviewRating ? '#f59e0b' : 'none'} stroke={i <= reviewRating ? '#f59e0b' : '#d1d5db'} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs tracking-widest uppercase text-brand-gray mb-1">Titre (optionnel)</label>
+                      <input type="text" value={reviewTitle} onChange={(e) => setReviewTitle(e.target.value)} placeholder="Super produit !"
+                        className="w-full border border-brand-light-gray px-3 py-2 text-sm focus:outline-none focus:border-brand-black transition-colors" />
+                    </div>
+                    <div>
+                      <label className="block text-xs tracking-widest uppercase text-brand-gray mb-1">Avis *</label>
+                      <textarea value={reviewBody} onChange={(e) => setReviewBody(e.target.value)} required rows={3}
+                        placeholder="Partagez votre expérience avec ce produit..."
+                        className="w-full border border-brand-light-gray px-3 py-2 text-sm focus:outline-none focus:border-brand-black transition-colors resize-none" />
+                    </div>
+                    {reviewError && <p className="text-red-500 text-xs">{reviewError}</p>}
+                    <button type="submit" disabled={reviewSubmitting}
+                      className="bg-brand-black text-white text-xs tracking-widest uppercase font-bold px-6 py-3 hover:bg-brand-gold hover:text-brand-black disabled:opacity-50 transition-colors">
+                      {reviewSubmitting ? 'Envoi...' : 'Publier mon avis'}
+                    </button>
+                  </form>
+                )}
               </div>
-              <div>
-                <label className="block text-xs tracking-widest uppercase text-brand-gray mb-1">Avis *</label>
-                <textarea
-                  value={reviewBody}
-                  onChange={(e) => setReviewBody(e.target.value)}
-                  required
-                  rows={3}
-                  placeholder="Partagez votre expérience avec ce produit..."
-                  className="w-full border border-brand-light-gray px-3 py-2.5 text-sm focus:outline-none focus:border-brand-black transition-colors resize-none"
-                />
-              </div>
-              {reviewError && <p className="text-red-500 text-xs">{reviewError}</p>}
-              <button
-                type="submit"
-                disabled={reviewSubmitting}
-                className="bg-brand-black text-white text-xs tracking-widest uppercase font-bold px-6 py-3 hover:bg-brand-gold hover:text-brand-black disabled:opacity-50 transition-colors"
-              >
-                {reviewSubmitting ? 'Envoi...' : 'Publier mon avis'}
-              </button>
-            </form>
-          )}
+            </div>
+
+          </div>
         </div>
 
         {showAuthModal && (
