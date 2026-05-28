@@ -861,6 +861,174 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
           <CustomerAuthModal onClose={() => setShowAuthModal(false)} />
         )}
       </div>
+
+      {/* ── Related products ── */}
+      <RelatedProducts currentId={product._id} category={product.category} lang={lang} format={format} addItem={addItem} />
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────────
+   Related Products — marquee + animated grid
+───────────────────────────────────────────── */
+interface RelatedProduct {
+  _id: string; name: string; slug: string; price: number
+  originalPrice?: number; images: string[]; stock: number
+  sizes: { size: string; stock: number }[]
+}
+
+function RelatedProducts({ currentId, category, lang, format, addItem }: {
+  currentId: string; category: string; lang: string
+  format: (n: number) => string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  addItem: (item: any) => void
+}) {
+  const [products, setProducts] = useState<RelatedProduct[]>([])
+  const [hoveredId, setHoveredId] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch(`/api/products?category=${encodeURIComponent(category)}`)
+      .then(r => r.json())
+      .then((all: RelatedProduct[]) => {
+        const filtered = all.filter(p => p._id !== currentId && p.stock > 0).slice(0, 6)
+        setProducts(filtered)
+      })
+      .catch(() => {})
+  }, [currentId, category])
+
+  if (products.length === 0) return null
+
+  const MARQUEE_WORDS = lang === 'fr'
+    ? ['Beauté Premium', 'Livraison Mondiale', 'Soins Experts', 'Qualité Certifiée', 'Tendances Beauty', 'Routine Parfaite', 'Ingrédients Purs', 'Résultats Visibles']
+    : ['Premium Beauty', 'Worldwide Delivery', 'Expert Skincare', 'Certified Quality', 'Beauty Trends', 'Perfect Routine', 'Pure Ingredients', 'Visible Results']
+
+  return (
+    <div className="mt-0 bg-[#0a0a0a] overflow-hidden">
+      {/* Marquee ticker */}
+      <div className="relative py-4 border-b border-white/5 overflow-hidden">
+        <div className="flex whitespace-nowrap" style={{ animation: 'marquee 28s linear infinite' }}>
+          {[...MARQUEE_WORDS, ...MARQUEE_WORDS, ...MARQUEE_WORDS].map((w, i) => (
+            <span key={i} className="inline-flex items-center gap-3 mx-6">
+              <span className="text-[10px] tracking-[0.35em] uppercase text-white/25 font-medium">{w}</span>
+              <span className="text-brand-gold/40 text-xs">✦</span>
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Header */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-4">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="flex items-end justify-between"
+        >
+          <div>
+            <p className="text-[10px] tracking-[0.35em] text-brand-gold uppercase mb-2">
+              {lang === 'fr' ? 'Dans la même catégorie' : 'Same collection'}
+            </p>
+            <h2 className="font-display text-2xl md:text-3xl text-white leading-tight">
+              {lang === 'fr' ? 'Vous aimerez aussi' : 'You may also like'}
+            </h2>
+          </div>
+          <Link
+            href={`/products?category=${encodeURIComponent(category)}`}
+            className="hidden md:flex items-center gap-2 text-[10px] tracking-[0.25em] uppercase text-white/30 hover:text-brand-gold transition-colors"
+          >
+            {lang === 'fr' ? 'Voir tout' : 'View all'} <ArrowRight size={12} />
+          </Link>
+        </motion.div>
+      </div>
+
+      {/* Product grid */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 pt-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
+          {products.map((p, i) => {
+            const discount = p.originalPrice && p.price < p.originalPrice
+              ? Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100)
+              : null
+            const firstSize = p.sizes?.[0]?.size ?? ''
+            return (
+              <motion.div
+                key={p._id}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-40px' }}
+                transition={{ duration: 0.45, delay: i * 0.07 }}
+                className="group relative"
+                onMouseEnter={() => setHoveredId(p._id)}
+                onMouseLeave={() => setHoveredId(null)}
+              >
+                <Link href={`/products/${p.slug}`} className="block">
+                  {/* Image */}
+                  <div className="relative overflow-hidden bg-[#111] aspect-square">
+                    {p.images[0] && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={p.images[0]}
+                        alt={p.name}
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                      />
+                    )}
+                    {/* Gold shimmer overlay on hover */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-brand-gold/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+
+                    {discount && (
+                      <span className="absolute top-2 left-2 bg-brand-gold text-brand-black text-[9px] font-bold px-1.5 py-0.5 tracking-widest">
+                        -{discount}%
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Info */}
+                  <div className="pt-3 pb-1">
+                    <p className="text-white/80 text-xs font-medium leading-snug line-clamp-2 group-hover:text-white transition-colors mb-1.5">
+                      {p.name}
+                    </p>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-brand-gold text-sm font-semibold">{format(p.price)}</span>
+                      {p.originalPrice && p.originalPrice > p.price && (
+                        <span className="text-white/25 text-xs line-through">{format(p.originalPrice)}</span>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+
+                {/* Quick-add — slides up on hover */}
+                <AnimatePresence>
+                  {hoveredId === p._id && firstSize && (
+                    <motion.button
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 6 }}
+                      transition={{ duration: 0.18 }}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        addItem({ productId: p._id, name: p.name, price: p.price, quantity: 1, size: firstSize, image: p.images[0] || '', stock: p.sizes[0].stock })
+                        toast.success(lang === 'fr' ? 'Ajouté au panier' : 'Added to cart')
+                      }}
+                      className="mt-1.5 w-full flex items-center justify-center gap-1.5 bg-brand-gold text-brand-black text-[10px] tracking-[0.2em] uppercase font-bold py-2 hover:bg-yellow-400 transition-colors"
+                    >
+                      <ShoppingBag size={11} />
+                      {lang === 'fr' ? 'Ajouter' : 'Quick add'}
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Marquee keyframes */}
+      <style jsx global>{`
+        @keyframes marquee {
+          from { transform: translateX(0); }
+          to   { transform: translateX(-33.333%); }
+        }
+      `}</style>
     </div>
   )
 }
