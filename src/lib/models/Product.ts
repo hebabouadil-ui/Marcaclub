@@ -17,6 +17,8 @@ export interface IProduct extends Document {
   onSale: boolean
   active: boolean
   cjPid?: string
+  cjWarehouseId?: string
+  cjWarehouseName?: string
   cjLogisticName?: string
   productWeight?: number
   shippingBakedUSD?: number
@@ -45,6 +47,8 @@ const ProductSchema = new Schema<IProduct>(
     onSale: { type: Boolean, default: false },
     active: { type: Boolean, default: true },
     cjPid: { type: String },
+    cjWarehouseId: { type: String },
+    cjWarehouseName: { type: String },
     cjLogisticName: { type: String },
     productWeight: { type: Number },
     shippingBakedUSD: { type: Number },

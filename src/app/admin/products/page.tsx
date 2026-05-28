@@ -24,6 +24,8 @@ interface Product {
   descriptionEn?: string
   videoUrl?: string
   cjPid?: string
+  cjWarehouseId?: string
+  cjWarehouseName?: string
 }
 
 type ProductForm = Omit<Product, '_id' | 'stock'>
@@ -110,7 +112,9 @@ export default function AdminProductsPage() {
     setForm({ name: p.name, price: p.price, originalPrice: p.originalPrice, category: p.category,
       images: p.images, sizes: normalizedSizes, featured: p.featured, onSale: p.onSale, active: p.active,
       description: p.description, descriptionEn: (p as { descriptionEn?: string }).descriptionEn ?? '',
-      videoUrl: (p as { videoUrl?: string }).videoUrl ?? '' })
+      videoUrl: (p as { videoUrl?: string }).videoUrl ?? '',
+      cjWarehouseId: (p as { cjWarehouseId?: string }).cjWarehouseId ?? '',
+      cjWarehouseName: (p as { cjWarehouseName?: string }).cjWarehouseName ?? '' })
     setModal(true)
   }
 
@@ -278,7 +282,12 @@ export default function AdminProductsPage() {
                 <p className="text-white text-sm font-medium truncate">{p.name}</p>
                 <p className="text-brand-gold text-sm">{p.price.toLocaleString('en-US', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 })}</p>
                 <p className="text-white/40 text-xs">Stock: {p.sizes?.reduce((s, i) => s + i.stock, 0) ?? 0}</p>
-                {p.cjPid && <p className="text-white/25 text-[10px] font-mono truncate">CJ: {p.cjPid}</p>}
+                {p.cjPid && (
+                  <p className="text-white/25 text-[10px] font-mono truncate">
+                    CJ: {p.cjPid}
+                    {p.cjWarehouseName && <span className="text-white/20 not-italic font-sans ml-1">· {p.cjWarehouseName}</span>}
+                  </p>
+                )}
                 <div className="flex gap-2 mt-3">
                   <button
                     onClick={() => openEdit(p)}
@@ -463,12 +472,33 @@ export default function AdminProductsPage() {
                 {/* CJ SKU / VID info — read-only, for matching with CJ supplier */}
                 {editing?.cjPid && (
                   <div className="border border-white/10 rounded p-3 bg-white/5">
-                    <p className="text-white/40 text-[10px] uppercase tracking-widest mb-2">CJ Dropshipping</p>
+                    <p className="text-white/40 text-[10px] uppercase tracking-widest mb-3">CJ Dropshipping</p>
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-white/40 text-xs">PID:</span>
+                      <span className="text-white/40 text-xs w-20">PID:</span>
                       <code className="text-brand-gold text-xs font-mono select-all">{editing.cjPid}</code>
                       <button type="button" onClick={() => navigator.clipboard.writeText(editing.cjPid!)}
                         className="text-white/30 hover:text-white text-[10px] underline">copy</button>
+                    </div>
+                    {/* Editable warehouse fields */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-white/40 text-xs w-20">Warehouse:</span>
+                      <input
+                        type="text"
+                        value={form.cjWarehouseName ?? ''}
+                        onChange={e => setForm(f => ({ ...f, cjWarehouseName: e.target.value }))}
+                        placeholder="e.g. CN Overseas Warehouse A"
+                        className="flex-1 bg-transparent border border-white/10 rounded px-2 py-0.5 text-xs text-white placeholder-white/20 focus:outline-none focus:border-brand-gold"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-white/40 text-xs w-20">Warehouse ID:</span>
+                      <input
+                        type="text"
+                        value={form.cjWarehouseId ?? ''}
+                        onChange={e => setForm(f => ({ ...f, cjWarehouseId: e.target.value }))}
+                        placeholder="Supplier / warehouse ID"
+                        className="flex-1 bg-transparent border border-white/10 rounded px-2 py-0.5 text-xs text-white placeholder-white/20 focus:outline-none focus:border-brand-gold"
+                      />
                     </div>
                     {editing.sizes.filter(s => s.cjVid || s.cjSku).map(s => (
                       <div key={s.size} className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs mb-1">
