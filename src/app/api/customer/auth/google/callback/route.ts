@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
     const gUser = await userRes.json()
     if (!gUser.email) throw new Error('No email from Google')
 
-    // Find or create customer
+    // Find or create customer — Google-verified accounts are always email-verified
     await connectDB()
     let customer = await Customer.findOne({ email: gUser.email.toLowerCase() })
     if (!customer) {
@@ -49,15 +49,20 @@ export async function GET(req: NextRequest) {
         email: gUser.email.toLowerCase(),
         passwordHash,
         googleId: gUser.sub,
+        emailVerified: true,
       })
-    } else if (!customer.googleId) {
-      customer.googleId = gUser.sub
-      await customer.save()
+    } else {
+      let changed = false
+      if (!customer.googleId) { customer.googleId = gUser.sub; changed = true }
+      if (!customer.emailVerified) { customer.emailVerified = true; changed = true }
+      if (changed) await customer.save()
     }
 
     const token = await signCustomerToken({ id: String(customer._id), email: customer.email, name: customer.name })
+    // Use req.url as base so the redirect goes to the correct domain regardless of SITE_URL
     const returnTo = state || '/'
-    const res = NextResponse.redirect(new URL(returnTo, base))
+    const redirectUrl = returnTo.startsWith('http') ? returnTo : new URL(returnTo, req.url).toString()
+    const res = NextResponse.redirect(redirectUrl)
     res.cookies.set(CUSTOMER_COOKIE, token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',

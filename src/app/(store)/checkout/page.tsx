@@ -558,26 +558,28 @@ export default function CheckoutPage() {
   // All amounts in CAD; format() converts to display currency
   const total = subtotal + effectiveShippingCAD + taxAmount
 
-  // Detect return from OAuth redirect (?auth=done)
+  // Detect return from OAuth redirect (?auth=done) — advance to info immediately
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     if (params.get('auth') === 'done') {
       setAuthReturnFromOAuth(true)
+      setStep('info') // advance right away; customer data prefills once loaded
       const url = new URL(window.location.href)
       url.searchParams.delete('auth')
       window.history.replaceState({}, '', url)
     }
   }, [])
 
-  // After OAuth return, advance to info once customer loads
+  // Prefill form once customer loads after OAuth return
   useEffect(() => {
-    if (authReturnFromOAuth && !authLoading && customer) {
-      setShippingForm(prev => ({
-        ...prev,
-        name: prev.name || customer.name,
-        email: prev.email || customer.email,
-      }))
-      setStep('info')
+    if (authReturnFromOAuth && !authLoading) {
+      if (customer) {
+        setShippingForm(prev => ({
+          ...prev,
+          name: prev.name || customer.name,
+          email: prev.email || customer.email,
+        }))
+      }
       setAuthReturnFromOAuth(false)
     }
   }, [authReturnFromOAuth, authLoading, customer])
