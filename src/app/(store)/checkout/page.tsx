@@ -744,25 +744,36 @@ export default function CheckoutPage() {
                   ))}
                 </div>
 
-                {/* Order summary — visible before proceeding to checkout */}
-                <div className="mt-4 border-t border-gray-100 pt-4 space-y-2">
-                  <div className="flex justify-between text-sm text-gray-500">
-                    <span>Subtotal</span><span>{format(subtotal)}</span>
+                {/* Order summary with live shipping */}
+                <div className="mt-4 border-t border-gray-100 pt-4 space-y-2.5">
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>Subtotal</span><span className="font-medium">{format(subtotal)}</span>
                   </div>
-                  <div className="flex justify-between text-sm text-gray-500">
-                    <span>Shipping</span>
-                    <span>{shippingFeeLoading ? <span className="text-gray-400 text-xs">Calculating…</span> : format(shippingFeeCAD)}</span>
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span className="flex items-center gap-1">
+                      Shipping
+                      {shippingForm.country && !shippingFeeLoading && !geo && (
+                        <span className="text-[10px] text-gray-400">(detecting location…)</span>
+                      )}
+                      {shippingForm.country && !shippingFeeLoading && geo && (
+                        <span className="text-[10px] text-gray-400">({COUNTRIES.find(c => c.code === shippingForm.country)?.name ?? shippingForm.country})</span>
+                      )}
+                    </span>
+                    <span className="font-medium">
+                      {shippingFeeLoading
+                        ? <span className="text-gray-400 text-xs animate-pulse">Calculating…</span>
+                        : format(effectiveShippingCAD)}
+                    </span>
                   </div>
-                  {taxComponents.length > 0 && taxAmount > 0 && taxComponents.filter(c => c.rate > 0).map(c => (
-                    <div key={c.label} className="flex justify-between text-sm text-gray-500">
+                  {taxComponents.filter(c => c.rate > 0).map(c => (
+                    <div key={c.label} className="flex justify-between text-sm text-gray-600">
                       <span>{c.label}</span>
-                      <span>{format(Math.round(subtotal * c.rate * 100) / 100)}</span>
+                      <span className="font-medium">{format(Math.round(subtotal * c.rate * 100) / 100)}</span>
                     </div>
                   ))}
-                  <div className="flex justify-between font-bold text-gray-900 text-base pt-2 border-t border-gray-100">
+                  <div className="flex justify-between font-bold text-gray-900 text-lg pt-3 border-t border-gray-200">
                     <span>Total</span><span>{format(total)}</span>
                   </div>
-                  <p className="text-[10px] text-gray-400 text-center pt-1">Shipping estimated based on your location · final amount confirmed at payment</p>
                 </div>
 
                 <button onClick={handleProceedFromCart}
@@ -924,6 +935,25 @@ export default function CheckoutPage() {
                     <p className="text-xs text-gray-500">{shippingForm.address}, {shippingForm.city}{shippingForm.state ? `, ${shippingForm.state}` : ''} {shippingForm.postalCode} · {countryName}</p>
                   </div>
                   <button onClick={() => setStep('info')} className="text-xs text-gray-400 hover:text-gray-600 underline">Change</button>
+                </div>
+                {/* Confirmed order breakdown */}
+                <div className="bg-gray-50 rounded-lg px-4 py-3 mb-5 space-y-2">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold mb-2">Order Summary</p>
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>Subtotal</span><span>{format(subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>Shipping</span><span>{format(effectiveShippingCAD)}</span>
+                  </div>
+                  {taxComponents.filter(c => c.rate > 0).map(c => (
+                    <div key={c.label} className="flex justify-between text-sm text-gray-600">
+                      <span>{c.label}</span>
+                      <span>{format(Math.round(subtotal * c.rate * 100) / 100)}</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between font-bold text-gray-900 pt-2 border-t border-gray-200">
+                    <span>Total to pay</span><span className="text-lg">{format(total)}</span>
+                  </div>
                 </div>
                 <h2 className="font-semibold text-gray-900 mb-5">Payment</h2>
                 <Elements stripe={stripePromise} options={{
