@@ -56,8 +56,8 @@ export async function GET(req: NextRequest) {
     }
 
     const token = await signCustomerToken({ id: String(customer._id), email: customer.email, name: customer.name })
-    const returnTo = state ? decodeURIComponent(state) : '/'
-    const res = NextResponse.redirect(new URL(returnTo, req.url))
+    const returnTo = state || '/'
+    const res = NextResponse.redirect(new URL(returnTo, base))
     res.cookies.set(CUSTOMER_COOKIE, token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',

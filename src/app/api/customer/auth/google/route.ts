@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   }
 
   const returnTo = req.nextUrl.searchParams.get('returnTo') ?? '/'
-  const state = encodeURIComponent(returnTo)
+  // Pass returnTo as raw state — URLSearchParams will encode it once
   const base = (process.env.SITE_URL ?? 'https://marca-club.com').replace(/\/$/, '')
 
   const params = new URLSearchParams({
@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     redirect_uri: `${base}/api/customer/auth/google/callback`,
     response_type: 'code',
     scope: 'openid email profile',
-    state,
+    state: returnTo,
     prompt: 'select_account',
   })
 
