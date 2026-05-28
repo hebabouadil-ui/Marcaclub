@@ -9,10 +9,8 @@ export const dynamic = 'force-dynamic'
 
 interface ProductDoc {
   cjPid?: string
-  cjLogisticName?: string
   productWeight?: number
   shippingBakedUSD?: number
-  shippingRefCountry?: string
   sizes?: Array<{ size: string; cjVid?: string }>
 }
 
@@ -24,16 +22,9 @@ interface ShippingOption {
   [key: string]: unknown
 }
 
-function pickBestOption(options: ShippingOption[], preferredLogistic?: string): ShippingOption {
-  if (preferredLogistic) {
-    const preferred = options.find(o => o.logisticName === preferredLogistic)
-    if (preferred) return preferred
-  }
-  const maxPrice = Math.max(...options.map(o => o.logisticPrice))
-  const maxDays  = Math.max(...options.map(o => o.agingMax ?? o.agingMin ?? 30))
-  return options
-    .map(o => ({ ...o, score: (o.logisticPrice / (maxPrice || 1)) * 0.7 + ((o.agingMax ?? o.agingMin ?? 30) / (maxDays || 1)) * 0.3 }))
-    .sort((a, b) => (a as { score: number }).score - (b as { score: number }).score)[0]
+// CJ picks the cheapest applicable method for fulfillment — mirror that logic
+function pickBestOption(options: ShippingOption[]): ShippingOption {
+  return [...options].sort((a, b) => a.logisticPrice - b.logisticPrice)[0]
 }
 
 function parseAging(opt: ShippingOption): { agingMin: number; agingMax: number } {
@@ -68,7 +59,6 @@ export async function POST(req: NextRequest) {
     let totalWeightG = 0
     let hasBakedData = false
     let hasCjPid = false
-    let preferredLogistic: string | undefined
 
     for (const item of items) {
       const product = await Product.findById(item.productId).lean() as ProductDoc | null
@@ -80,9 +70,6 @@ export async function POST(req: NextRequest) {
         if (product.shippingBakedUSD > maxBakedUSD) maxBakedUSD = product.shippingBakedUSD
         hasBakedData = true
       }
-
-      // Use the preferred logistic from the first CJ product
-      if (product.cjLogisticName && !preferredLogistic) preferredLogistic = product.cjLogisticName
 
       if (!product.cjPid) continue
       hasCjPid = true
@@ -105,7 +92,7 @@ export async function POST(req: NextRequest) {
         const cjData = await getCJShippingInfo({ startCountryCode: 'CN', endCountryCode: destCountry, products: cjProducts })
         const options: ShippingOption[] = (cjData.result && Array.isArray(cjData.data)) ? cjData.data : []
         if (options.length > 0) {
-          const best = pickBestOption(options, preferredLogistic)
+          const best = pickBestOption(options)
           const { agingMin, agingMax } = parseAging(best)
           shippingFeeCAD = Math.round(best.logisticPrice * usdToCAD * 100) / 100
           return NextResponse.json({ shippingFeeCAD, agingMin, agingMax, logisticName: best.logisticName, source: 'cj-api' })
@@ -126,7 +113,7 @@ export async function POST(req: NextRequest) {
         })
         const options: ShippingOption[] = (cjData.result && Array.isArray(cjData.data)) ? cjData.data : []
         if (options.length > 0) {
-          const best = pickBestOption(options, preferredLogistic)
+          const best = pickBestOption(options)
           const { agingMin, agingMax } = parseAging(best)
           shippingFeeCAD = Math.round(best.logisticPrice * usdToCAD * 100) / 100
           return NextResponse.json({ shippingFeeCAD, agingMin, agingMax, logisticName: best.logisticName, source: 'cj-api-weight' })
