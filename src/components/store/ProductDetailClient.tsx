@@ -168,35 +168,36 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
   }, [product._id])
 
   const loadShipping = useCallback(async (country: string) => {
-    if (!product.cjPid || !country) return
+    if (!country) return
     setShippingLoading(true)
     try {
-      const firstSize = product.sizes?.find((s) => s.cjVid)
-      const vid = firstSize?.cjVid ?? ''
-      const weight = product.productWeight ?? 200
-      const params = new URLSearchParams({ country, weight: String(weight) })
-      if (vid) params.set('vid', vid)
-      const res = await fetch(`/api/shipping?${params}`)
-      const data = await res.json()
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const options: ShippingOption[] = (data.options ?? []).map((opt: any) => {
-        let agingMin = opt.agingMin ?? opt.ageMin ?? 0
-        let agingMax = opt.agingMax ?? opt.ageMax ?? 0
-        if (!agingMin || !agingMax) {
-          const s = opt.logisticAging ?? opt.logisticAge ?? opt.aging ?? opt.deliveryTime ?? ''
-          if (s) { const p = String(s).split('-'); agingMin = parseInt(p[0]) || 0; agingMax = parseInt(p[1] ?? p[0]) || 0 }
-        }
-        return { ...opt, agingMin, agingMax }
+      const size = product.sizes?.[0]?.size ?? ''
+      const res = await fetch('/api/shipping-estimate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: [{ productId: product._id, size, quantity: 1 }],
+          country,
+        }),
       })
-      if (options.length === 0) { setShipping(null); return }
-      // Pick cheapest option — mirrors CJ's fulfillment selection exactly
-      setShipping([...options].sort((a, b) => a.logisticPrice - b.logisticPrice)[0])
+      const data = await res.json()
+      if (typeof data.shippingFeeCAD === 'number') {
+        setShipping({
+          logisticPrice: data.shippingFeeCAD,
+          logisticName: data.logisticName ?? '',
+          logisticNameEn: data.logisticName ?? '',
+          agingMin: data.agingMin ?? 0,
+          agingMax: data.agingMax ?? 0,
+        })
+      } else {
+        setShipping(null)
+      }
     } catch {
       setShipping(null)
     } finally {
       setShippingLoading(false)
     }
-  }, [product._id, product.cjPid, product.productWeight, product.sizes])
+  }, [product._id, product.sizes])
 
   // Auto-translate description when language changes
   useEffect(() => {
@@ -280,7 +281,8 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
   // displayPrice = admin-set price only (no CJ shipping baked in)
   // Shipping is charged separately at checkout via shippingFeeCAD in Settings
   const displayPrice = basePrice
-  const effectiveShipUSD = shipping ? shipping.logisticPrice : shippingCostUSD
+  // shipping.logisticPrice is already in CAD (from /api/shipping-estimate) — convert back to USD for display math
+  const effectiveShipUSD = shipping ? shipping.logisticPrice / usdToCAD : shippingCostUSD
 
   const originalPrice = product.originalPrice
   const discount = originalPrice && displayPrice < originalPrice
