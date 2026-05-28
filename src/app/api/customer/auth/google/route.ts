@@ -9,8 +9,8 @@ export async function GET(req: NextRequest) {
 
   const returnTo = req.nextUrl.searchParams.get('returnTo') ?? '/'
 
-  // Use host header to build the exact public-facing redirect URI
-  const host = req.headers.get('host') ?? req.nextUrl.host
+  // x-forwarded-host is the public hostname on Vercel; host may be internal
+  const host = req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? req.nextUrl.host
   const proto = req.headers.get('x-forwarded-proto') ?? 'https'
   const redirectUri = `${proto}://${host}/api/customer/auth/google/callback`
 
