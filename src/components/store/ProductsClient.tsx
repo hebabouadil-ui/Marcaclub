@@ -58,13 +58,15 @@ export default function ProductsClient({ products, filters, hideHeader }: Props)
     <div>
       {/* Page Header */}
       {!hideHeader && (
-        <div className="bg-brand-black text-brand-white py-16 md:py-24">
-          <div className="max-w-7xl mx-auto px-4 text-center">
-            <p className="text-[10px] tracking-[0.3em] text-brand-gold uppercase mb-3">{tr.nav.shop}</p>
-            <h1 className="font-display text-4xl md:text-6xl">
-              {filters.category ? (CATEGORY_LABELS[filters.category] ?? filters.category) : tr.products.title}
-            </h1>
-            <p className="text-brand-white/40 text-sm mt-3 tracking-widest">
+        <div className="bg-brand-black text-brand-white py-6 md:py-8">
+          <div className="max-w-7xl mx-auto px-4 flex items-end justify-between">
+            <div>
+              <p className="text-[10px] tracking-[0.3em] text-brand-gold uppercase mb-1">{tr.nav.shop}</p>
+              <h1 className="font-display text-2xl md:text-3xl">
+                {filters.category ? (CATEGORY_LABELS[filters.category] ?? filters.category) : tr.products.title}
+              </h1>
+            </div>
+            <p className="text-white/40 text-xs tracking-widest pb-0.5">
               {tr.products.available(products.length)}
             </p>
           </div>
