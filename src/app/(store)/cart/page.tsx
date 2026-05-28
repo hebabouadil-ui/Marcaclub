@@ -90,11 +90,13 @@ export default function CartPage() {
   return (
     <div className="min-h-screen bg-[#faf8f5]">
       {/* Header */}
-      <div className="bg-brand-black text-brand-white py-10 md:py-14">
-        <div className="max-w-7xl mx-auto px-4">
-          <p className="text-[10px] tracking-[0.3em] text-brand-gold uppercase mb-2">{tr.nav.shop}</p>
-          <h1 className="font-display text-3xl md:text-5xl">{tr.cart.title}</h1>
-          <p className="text-white/40 text-xs mt-2 tracking-widest">{items.length} article{items.length > 1 ? 's' : ''}</p>
+      <div className="bg-brand-black text-brand-white py-6 md:py-8">
+        <div className="max-w-7xl mx-auto px-4 flex items-end justify-between">
+          <div>
+            <p className="text-[10px] tracking-[0.3em] text-brand-gold uppercase mb-1">{tr.nav.shop}</p>
+            <h1 className="font-display text-2xl md:text-3xl">{tr.cart.title}</h1>
+          </div>
+          <p className="text-white/40 text-xs tracking-widest pb-0.5">{items.length} article{items.length > 1 ? 's' : ''}</p>
         </div>
       </div>
 
