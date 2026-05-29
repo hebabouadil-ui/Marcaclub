@@ -22,6 +22,15 @@ export async function getCJToken(): Promise<string> {
   return cachedToken!
 }
 
+// CJ returns VIDs as 19-digit integers which exceed JS MAX_SAFE_INTEGER.
+// We parse the raw JSON text and convert large integers to strings before parsing.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function parseCJJson(text: string): any {
+  // Replace bare large integers (>16 digits) with quoted strings to preserve precision
+  const safe = text.replace(/:\s*(\d{17,})/g, ':"$1"')
+  try { return JSON.parse(safe) } catch { return JSON.parse(text) }
+}
+
 async function cjFetch(path: string, options: RequestInit = {}) {
   const token = await getCJToken()
   const res = await fetch(`${CJ_BASE}${path}`, {
@@ -32,7 +41,8 @@ async function cjFetch(path: string, options: RequestInit = {}) {
       ...(options.headers ?? {}),
     },
   })
-  return res.json()
+  const text = await res.text()
+  return parseCJJson(text)
 }
 
 export interface CJProduct {
@@ -91,22 +101,21 @@ export async function getCJShippingInfo(params: {
   variantSku?: string
   products?: Array<{ vid: string; variantSku?: string; quantity: number; weight?: number }>
 }) {
-  // When vid is provided, do NOT send weight — CJ knows the product weight from its own DB.
-  // Sending weight alongside vid overrides CJ's data and causes price mismatches.
+  // VIDs from CJ are 19-digit integers — JS JSON.parse loses precision, so VIDs stored in DB
+  // may be corrupted (e.g. 2511290921331637400 → 2511290921331637000). SKUs are strings and
+  // always accurate. Prefer variantSku for product lookup; include vid only as secondary hint.
   const products = params.products && params.products.length > 0
     ? params.products.map(p => ({
         quantity: p.quantity,
-        ...(p.vid ? { vid: p.vid } : {}),
-        ...(p.variantSku ? { variantSku: p.variantSku } : {}),
-        // Only include weight when no vid/sku — weight-only fallback path
-        ...(!p.vid && !p.variantSku && p.weight ? { weight: p.weight } : {}),
+        // Only send vid when we have no SKU (SKU is more reliable — no precision loss)
+        ...(p.variantSku ? { variantSku: p.variantSku } : p.vid ? { vid: p.vid } : {}),
+        // Only include weight when no identifier at all — weight-only fallback path
+        ...(!p.variantSku && !p.vid && p.weight ? { weight: p.weight } : {}),
       }))
     : [{
         quantity: params.quantity ?? 1,
-        ...(params.vid ? { vid: params.vid } : {}),
-        ...(params.variantSku ? { variantSku: params.variantSku } : {}),
-        // Only send weight when no identifier available
-        ...(!params.vid && !params.variantSku ? { weight: params.productWeight ?? 300 } : {}),
+        ...(params.variantSku ? { variantSku: params.variantSku } : params.vid ? { vid: params.vid } : {}),
+        ...(!params.variantSku && !params.vid ? { weight: params.productWeight ?? 300 } : {}),
       }]
 
   const data = await cjFetch('/logistic/freightCalculate', {
