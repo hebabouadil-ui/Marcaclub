@@ -89,16 +89,24 @@ export async function getCJShippingInfo(params: {
   quantity?: number
   vid?: string
   variantSku?: string
-  products?: Array<{ vid: string; quantity: number; weight?: number }>
+  products?: Array<{ vid: string; variantSku?: string; quantity: number; weight?: number }>
 }) {
-  // Build products array: prefer explicit products list (with real VIDs), fallback to single-item
+  // When vid is provided, do NOT send weight — CJ knows the product weight from its own DB.
+  // Sending weight alongside vid overrides CJ's data and causes price mismatches.
   const products = params.products && params.products.length > 0
-    ? params.products.map(p => ({ vid: p.vid, quantity: p.quantity, ...(p.weight ? { weight: p.weight } : {}) }))
+    ? params.products.map(p => ({
+        quantity: p.quantity,
+        ...(p.vid ? { vid: p.vid } : {}),
+        ...(p.variantSku ? { variantSku: p.variantSku } : {}),
+        // Only include weight when no vid/sku — weight-only fallback path
+        ...(!p.vid && !p.variantSku && p.weight ? { weight: p.weight } : {}),
+      }))
     : [{
         quantity: params.quantity ?? 1,
-        weight: params.productWeight ?? 300,
         ...(params.vid ? { vid: params.vid } : {}),
         ...(params.variantSku ? { variantSku: params.variantSku } : {}),
+        // Only send weight when no identifier available
+        ...(!params.vid && !params.variantSku ? { weight: params.productWeight ?? 300 } : {}),
       }]
 
   const data = await cjFetch('/logistic/freightCalculate', {

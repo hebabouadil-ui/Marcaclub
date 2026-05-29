@@ -11,7 +11,7 @@ interface ProductDoc {
   cjPid?: string
   productWeight?: number
   shippingBakedUSD?: number
-  sizes?: Array<{ size: string; cjVid?: string }>
+  sizes?: Array<{ size: string; cjVid?: string; cjSku?: string }>
 }
 
 interface ShippingOption {
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
 
     await connectDB()
 
-    const cjProducts: Array<{ vid: string; quantity: number; weight?: number }> = []
+    const cjProducts: Array<{ vid: string; variantSku?: string; quantity: number; weight?: number }> = []
     let maxBakedUSD = 0
     let totalWeightG = 0
     let hasBakedData = false
@@ -75,9 +75,13 @@ export async function POST(req: NextRequest) {
       hasCjPid = true
       // Try exact size match first, then any VID from the product as fallback
       const sizeEntry = product.sizes?.find(s => s.size === item.size)
-      const anyVidEntry = product.sizes?.find(s => s.cjVid)
-      const vid = sizeEntry?.cjVid ?? anyVidEntry?.cjVid
-      if (vid) cjProducts.push({ vid, quantity: item.quantity, weight: product.productWeight })
+      const anyVidEntry = product.sizes?.find(s => s.cjVid || s.cjSku)
+      const entry = sizeEntry ?? anyVidEntry
+      const vid = entry?.cjVid ?? ''
+      const variantSku = entry?.cjSku ?? ''
+      if (vid || variantSku) {
+        cjProducts.push({ vid, variantSku: variantSku || undefined, quantity: item.quantity, weight: product.productWeight })
+      }
     }
 
     const totalUnits = items.reduce((s: number, i: { quantity: number }) => s + i.quantity, 0)
@@ -86,23 +90,27 @@ export async function POST(req: NextRequest) {
 
     let shippingFeeCAD: number
 
-    // Priority 1a: CJ API with real VIDs
+    // Priority 1: CJ API with exact VIDs/SKUs (no weight — CJ knows weight from its own DB)
     if (cjProducts.length > 0) {
       try {
+        console.log('[shipping-estimate] CJ call:', JSON.stringify({ destCountry, products: cjProducts }))
         const cjData = await getCJShippingInfo({ startCountryCode: 'CN', endCountryCode: destCountry, products: cjProducts })
+        console.log('[shipping-estimate] CJ response:', JSON.stringify(cjData).slice(0, 500))
         const options: ShippingOption[] = (cjData.result && Array.isArray(cjData.data)) ? cjData.data : []
         if (options.length > 0) {
           const best = pickBestOption(options)
           const { agingMin, agingMax } = parseAging(best)
           shippingFeeCAD = Math.round(best.logisticPrice * usdToCAD * 100) / 100
+          console.log(`[shipping-estimate] picked ${best.logisticName} $${best.logisticPrice} USD → CA$${shippingFeeCAD}`)
           return NextResponse.json({ shippingFeeCAD, agingMin, agingMax, logisticName: best.logisticName, source: 'cj-api' })
         }
+        console.warn('[shipping-estimate] CJ returned empty options, falling back')
       } catch (err) {
-        console.warn('[shipping-estimate] CJ VID API failed:', err)
+        console.warn('[shipping-estimate] CJ API failed:', err)
       }
     }
 
-    // Priority 1b: CJ API with total weight
+    // Priority 1b: CJ API with total weight (when no VID/SKU available)
     if (hasCjPid && totalWeightG > 0) {
       try {
         const cjData = await getCJShippingInfo({
@@ -116,7 +124,8 @@ export async function POST(req: NextRequest) {
           const best = pickBestOption(options)
           const { agingMin, agingMax } = parseAging(best)
           shippingFeeCAD = Math.round(best.logisticPrice * usdToCAD * 100) / 100
-          return NextResponse.json({ shippingFeeCAD, agingMin, agingMax, logisticName: best.logisticName, source: 'cj-api-weight' })
+          console.log(`[shipping-estimate] weight fallback: ${best.logisticName} $${best.logisticPrice} USD → CA$${shippingFeeCAD}`)
+          return NextResponse.json({ shippingFeeCAD, agingMin, agingMax, logisticName: best.logisticName, source: 'cj-weight' })
         }
       } catch (err) {
         console.warn('[shipping-estimate] CJ weight API failed:', err)
