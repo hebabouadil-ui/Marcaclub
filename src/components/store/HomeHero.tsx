@@ -12,7 +12,7 @@ export default function HomeHero({ title, subtitle, titleEn, subtitleEn }: Props
   const displaySubtitle = lang === 'en' && subtitleEn ? subtitleEn : subtitle
 
   return (
-    <section className="relative bg-brand-black overflow-hidden h-[calc(100svh-4rem)] md:h-[calc(100svh-5rem)] flex flex-col">
+    <section className="relative bg-brand-black overflow-hidden h-[calc(100svh-4rem)] md:h-[calc(100svh-5rem)] flex flex-col min-h-[580px]">
       {/* Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a0a] via-[#111] to-[#0a0a0a]" />
       <div className="absolute inset-0 opacity-[0.04]"
@@ -24,17 +24,17 @@ export default function HomeHero({ title, subtitle, titleEn, subtitleEn }: Props
       <div className="relative z-10 flex-1 flex items-start md:items-center justify-center">
         <div className="text-center px-5 max-w-4xl mx-auto pt-8 pb-4 md:py-8">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 border border-brand-gold/20 bg-brand-gold/5 text-brand-gold text-[9px] md:text-[10px] tracking-[0.2em] uppercase px-3 md:px-4 py-1.5 md:py-2 rounded-full mb-4 md:mb-8 max-w-[280px] sm:max-w-none text-center leading-relaxed">
+            className="inline-flex items-center gap-2 border border-brand-gold/20 bg-brand-gold/5 text-brand-gold text-[10px] md:text-[11px] tracking-[0.2em] uppercase px-3 md:px-4 py-1.5 md:py-2 rounded-full mb-4 md:mb-8 max-w-[300px] sm:max-w-none text-center leading-relaxed">
             <Globe size={9} className="flex-shrink-0" /> {tr.hero.badge}
           </motion.div>
 
           <motion.h1 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.1 }}
-            className="font-display text-[2rem] sm:text-5xl md:text-6xl lg:text-7xl text-white leading-tight mb-4 md:mb-6">
+            className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-white leading-tight mb-4 md:mb-6">
             {displayTitle}
           </motion.h1>
 
           <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.25 }}
-            className="text-white/50 text-sm max-w-xl mx-auto mb-6 md:mb-10 leading-relaxed px-2">
+            className="text-white/50 text-base max-w-xl mx-auto mb-6 md:mb-10 leading-relaxed px-2">
             {displaySubtitle}
           </motion.p>
 
@@ -66,16 +66,16 @@ export default function HomeHero({ title, subtitle, titleEn, subtitleEn }: Props
         </div>
       </div>
 
-      {/* Scroll indicator — lives in its own flex row, never overlaps content */}
+      {/* Scroll indicator */}
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }}
         className="relative z-10 flex-shrink-0 flex flex-col items-center gap-2 pt-2 pb-6 md:pb-10">
-        <span className="text-white/20 text-[9px] tracking-[0.3em] uppercase">Scroll</span>
-        <div className="w-px h-10 bg-white/10 relative overflow-hidden">
+        <span className="text-white/40 text-[10px] tracking-[0.3em] uppercase">Scroll</span>
+        <div className="w-[2px] h-12 bg-white/15 relative overflow-hidden rounded-full">
           <motion.div
-            className="absolute top-0 left-0 w-full bg-brand-gold"
-            animate={{ y: ['-100%', '200%'] }}
+            className="absolute top-0 left-0 w-full rounded-full"
+            animate={{ y: ['-100%', '180%'] }}
             transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-            style={{ height: '40%' }}
+            style={{ height: '45%', backgroundColor: '#C9A84C' }}
           />
         </div>
       </motion.div>
