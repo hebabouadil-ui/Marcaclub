@@ -177,7 +177,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: [{ productId: product._id, size, quantity: 1 }],
+          items: [{ productId: product._id, size, quantity: qty }],
           country,
         }),
       })
@@ -198,7 +198,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
     } finally {
       setShippingLoading(false)
     }
-  }, [product._id, product.sizes, selectedSize])
+  }, [product._id, product.sizes, selectedSize, qty])
 
   // Auto-translate description when language changes
   useEffect(() => {
@@ -260,7 +260,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
   useEffect(() => {
     if (shipCountry && selectedSize) loadShipping(shipCountry)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSize])
+  }, [selectedSize, qty])
 
   const handleCountryChange = (country: string) => {
     setShipCountry(country)
