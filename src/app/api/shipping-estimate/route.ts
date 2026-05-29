@@ -99,7 +99,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    let shippingFeeCAD: number
+    // respond with both USD (for accurate client-side display) and CAD (for order totals)
+    const respond = (usd: number, extra: Record<string, unknown> = {}) => {
+      const cadVal = Math.round(usd * usdToCAD * 100) / 100
+      return NextResponse.json({ shippingFeeUSD: Math.round(usd * 100) / 100, shippingFeeCAD: cadVal, ...extra })
+    }
 
     // Priority 1: CJ API with SKU + full quantity
     // CJ computes weight = variant_weight × quantity internally.
@@ -116,9 +120,8 @@ export async function POST(req: NextRequest) {
         if (options.length > 0) {
           const best = pickBestOption(options)
           const { agingMin, agingMax } = parseAging(best)
-          shippingFeeCAD = Math.round(best.logisticPrice * usdToCAD * 100) / 100
-          console.log(`[shipping-estimate] single shipment: ${best.logisticName} $${best.logisticPrice} → CA$${shippingFeeCAD}`)
-          return NextResponse.json({ shippingFeeCAD, agingMin, agingMax, logisticName: best.logisticName, source: 'cj-sku' })
+          console.log(`[shipping-estimate] single shipment: ${best.logisticName} $${best.logisticPrice} USD`)
+          return respond(best.logisticPrice, { agingMin, agingMax, logisticName: best.logisticName, source: 'cj-sku' })
         }
 
         // Too heavy for one shipment — get per-unit price and multiply packets
@@ -133,10 +136,9 @@ export async function POST(req: NextRequest) {
           const { agingMin, agingMax } = parseAging(best)
           // Total packets = sum of all item quantities (worst case: 1 item per packet)
           const totalQty = cjItems.reduce((s, i) => s + i.totalQty, 0)
-          const totalPrice = best.logisticPrice * totalQty
-          shippingFeeCAD = Math.round(totalPrice * usdToCAD * 100) / 100
-          console.log(`[shipping-estimate] ${totalQty} packets×qty1: ${best.logisticName} $${best.logisticPrice}×${totalQty} → CA$${shippingFeeCAD}`)
-          return NextResponse.json({ shippingFeeCAD, agingMin, agingMax, logisticName: best.logisticName, source: 'cj-multipacket' })
+          const totalUSD = best.logisticPrice * totalQty
+          console.log(`[shipping-estimate] ${totalQty} packets×qty1: ${best.logisticName} $${best.logisticPrice}×${totalQty} = $${totalUSD} USD`)
+          return respond(totalUSD, { agingMin, agingMax, logisticName: best.logisticName, source: 'cj-multipacket' })
         }
         console.warn('[shipping-estimate] CJ qty=1 also empty, falling back. msg:', singleData.message)
       } catch (err) {
@@ -146,22 +148,20 @@ export async function POST(req: NextRequest) {
 
     // Priority 2: baked shipping
     if (hasBakedData && maxBakedUSD > 0) {
-      shippingFeeCAD = Math.round(maxBakedUSD * usdToCAD * 100) / 100
-      return NextResponse.json({ shippingFeeCAD, source: 'baked' })
+      return respond(maxBakedUSD, { source: 'baked' })
     }
 
     // Priority 3: weight-based static estimate
     if (totalWeightG > 0) {
       const baseWeight = 300
       const weightMultiplier = Math.max(1, totalWeightG / baseWeight)
-      const baseCAD = getShippingFeeCAD(destCountry, usdToCAD)
-      shippingFeeCAD = Math.round(baseCAD * weightMultiplier * 100) / 100
-      return NextResponse.json({ shippingFeeCAD, source: 'weight-static' })
+      const baseUSD = getShippingFeeCAD(destCountry, usdToCAD) / usdToCAD
+      return respond(baseUSD * weightMultiplier, { source: 'weight-static' })
     }
 
     // Priority 4: static table fallback
-    shippingFeeCAD = getShippingFeeCAD(destCountry, usdToCAD)
-    return NextResponse.json({ shippingFeeCAD, source: 'static' })
+    const fallbackUSD = getShippingFeeCAD(destCountry, usdToCAD) / usdToCAD
+    return respond(fallbackUSD, { source: 'static' })
 
   } catch (err) {
     console.error('shipping-estimate error:', err)

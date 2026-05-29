@@ -60,6 +60,7 @@ interface ShippingOption {
   logisticName: string
   logisticNameEn: string
   logisticPrice: number
+  isUSD?: boolean
   agingMin: number
   agingMax: number
 }
@@ -124,7 +125,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
   const [activeTab, setActiveTab] = useState<'description' | 'video'>(hasDescription ? 'description' : 'video')
   const addItem = useCartStore((s) => s.addItem)
   const router = useRouter()
-  const { format, usdToCAD } = useCurrency()
+  const { format, formatUSD, usdToCAD } = useCurrency()
   const { tr, lang } = useLanguage()
 
   const [shipping, setShipping] = useState<ShippingOption | null>(null)
@@ -182,9 +183,14 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
         }),
       })
       const data = await res.json()
-      if (typeof data.shippingFeeCAD === 'number') {
+      // Prefer USD so display uses client-side rate (avoids server/client rate drift)
+      const feeUSD = typeof data.shippingFeeUSD === 'number' ? data.shippingFeeUSD : null
+      const feeCAD = typeof data.shippingFeeCAD === 'number' ? data.shippingFeeCAD : null
+      const fee = feeUSD ?? feeCAD
+      if (fee != null) {
         setShipping({
-          logisticPrice: data.shippingFeeCAD,
+          logisticPrice: fee,
+          isUSD: feeUSD != null,
           logisticName: data.logisticName ?? '',
           logisticNameEn: data.logisticName ?? '',
           agingMin: data.agingMin ?? 0,
@@ -287,8 +293,10 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
   // displayPrice = admin-set price only (no CJ shipping baked in)
   // Shipping is charged separately at checkout via shippingFeeCAD in Settings
   const displayPrice = basePrice
-  // shipping.logisticPrice is already in CAD (from /api/shipping-estimate) — convert to USD for display math
-  const effectiveShipUSD = shipping ? shipping.logisticPrice / usdToCAD : 0
+  // logisticPrice is USD when isUSD=true, CAD otherwise (legacy fallback)
+  const effectiveShipUSD = shipping
+    ? (shipping.isUSD ? shipping.logisticPrice : shipping.logisticPrice / usdToCAD)
+    : 0
 
   const originalPrice = product.originalPrice
   const discount = originalPrice && displayPrice < originalPrice
@@ -503,7 +511,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                       {shippingLoading
                         ? <span className="text-xs text-brand-gray animate-pulse">...</span>
                         : effectiveShipUSD > 0
-                          ? format(effectiveShipUSD * usdToCAD)
+                          ? formatUSD(effectiveShipUSD)
                           : '—'}
                     </span>
                   </div>
