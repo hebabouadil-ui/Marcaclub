@@ -12,7 +12,7 @@ export default function HomeHero({ title, subtitle, titleEn, subtitleEn }: Props
   const displaySubtitle = lang === 'en' && subtitleEn ? subtitleEn : subtitle
 
   return (
-    <section className="relative bg-brand-black flex items-center justify-center overflow-hidden h-[calc(100svh-4rem)] md:h-[calc(100svh-5rem)]">
+    <section className="relative bg-brand-black overflow-hidden h-[calc(100svh-4rem)] md:h-[calc(100svh-5rem)] flex flex-col">
       {/* Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a0a] via-[#111] to-[#0a0a0a]" />
       <div className="absolute inset-0 opacity-[0.04]"
@@ -20,54 +20,57 @@ export default function HomeHero({ title, subtitle, titleEn, subtitleEn }: Props
       {/* Glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] md:w-[600px] md:h-[600px] rounded-full bg-brand-gold/5 blur-3xl pointer-events-none" />
 
-      <div className="relative z-10 text-center px-5 max-w-4xl mx-auto py-8 pb-16 md:py-20 md:pb-24">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className="inline-flex items-center gap-2 border border-brand-gold/20 bg-brand-gold/5 text-brand-gold text-[9px] md:text-[10px] tracking-[0.2em] uppercase px-3 md:px-4 py-1.5 md:py-2 rounded-full mb-5 md:mb-8 max-w-[280px] sm:max-w-none text-center leading-relaxed">
-          <Globe size={9} className="flex-shrink-0" /> {tr.hero.badge}
-        </motion.div>
+      {/* Main content — takes all available space, centered */}
+      <div className="relative z-10 flex-1 flex items-center justify-center">
+        <div className="text-center px-5 max-w-4xl mx-auto py-8">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+            className="inline-flex items-center gap-2 border border-brand-gold/20 bg-brand-gold/5 text-brand-gold text-[9px] md:text-[10px] tracking-[0.2em] uppercase px-3 md:px-4 py-1.5 md:py-2 rounded-full mb-5 md:mb-8 max-w-[280px] sm:max-w-none text-center leading-relaxed">
+            <Globe size={9} className="flex-shrink-0" /> {tr.hero.badge}
+          </motion.div>
 
-        <motion.h1 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.1 }}
-          className="font-display text-[2rem] sm:text-5xl md:text-6xl lg:text-7xl text-white leading-tight mb-4 md:mb-6">
-          {displayTitle}
-        </motion.h1>
+          <motion.h1 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.1 }}
+            className="font-display text-[2rem] sm:text-5xl md:text-6xl lg:text-7xl text-white leading-tight mb-4 md:mb-6">
+            {displayTitle}
+          </motion.h1>
 
-        <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.25 }}
-          className="text-white/50 text-sm max-w-xl mx-auto mb-8 md:mb-10 leading-relaxed px-2">
-          {displaySubtitle}
-        </motion.p>
+          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.25 }}
+            className="text-white/50 text-sm max-w-xl mx-auto mb-8 md:mb-10 leading-relaxed px-2">
+            {displaySubtitle}
+          </motion.p>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.4 }}
-          className="flex flex-col sm:flex-row gap-3 justify-center mb-10 md:mb-14">
-          <Link href="/products"
-            className="group inline-flex items-center justify-center gap-2 bg-brand-gold text-brand-black px-7 py-3.5 md:py-4 text-xs tracking-[0.2em] uppercase font-bold hover:bg-yellow-400 transition-colors duration-300">
-            {tr.hero.shopNow} <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-          </Link>
-          <Link href="/account/register"
-            className="inline-flex items-center justify-center gap-2 border border-white/15 text-white/70 px-7 py-3.5 md:py-4 text-xs tracking-[0.2em] uppercase hover:border-brand-gold hover:text-brand-gold transition-colors duration-300">
-            {tr.hero.createAccount}
-          </Link>
-        </motion.div>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.4 }}
+            className="flex flex-col sm:flex-row gap-3 justify-center mb-10 md:mb-14">
+            <Link href="/products"
+              className="group inline-flex items-center justify-center gap-2 bg-brand-gold text-brand-black px-7 py-3.5 md:py-4 text-xs tracking-[0.2em] uppercase font-bold hover:bg-yellow-400 transition-colors duration-300">
+              {tr.hero.shopNow} <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+            </Link>
+            <Link href="/account/register"
+              className="inline-flex items-center justify-center gap-2 border border-white/15 text-white/70 px-7 py-3.5 md:py-4 text-xs tracking-[0.2em] uppercase hover:border-brand-gold hover:text-brand-gold transition-colors duration-300">
+              {tr.hero.createAccount}
+            </Link>
+          </motion.div>
 
-        {/* Trust bar — always row on mobile with smaller text */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}
-          className="flex flex-row items-center justify-center gap-4 sm:gap-10 flex-wrap">
-          {[
-            { icon: Globe, text: tr.hero.shipsWorldwide },
-            { icon: Shield, text: tr.hero.securePayment },
-            { icon: Zap, text: tr.hero.fastDelivery },
-          ].map(({ icon: Icon, text }) => (
-            <div key={text} className="flex items-center gap-1.5 text-white/30 text-[10px] sm:text-xs tracking-wider">
-              <Icon size={11} className="text-brand-gold/60 flex-shrink-0" /> {text}
-            </div>
-          ))}
-        </motion.div>
+          {/* Trust bar */}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}
+            className="flex flex-row items-center justify-center gap-4 sm:gap-10 flex-wrap">
+            {[
+              { icon: Globe, text: tr.hero.shipsWorldwide },
+              { icon: Shield, text: tr.hero.securePayment },
+              { icon: Zap, text: tr.hero.fastDelivery },
+            ].map(({ icon: Icon, text }) => (
+              <div key={text} className="flex items-center gap-1.5 text-white/30 text-[10px] sm:text-xs tracking-wider">
+                <Icon size={11} className="text-brand-gold/60 flex-shrink-0" /> {text}
+              </div>
+            ))}
+          </motion.div>
+        </div>
       </div>
 
-      {/* Scroll indicator */}
+      {/* Scroll indicator — always in its own fixed-height row at the bottom, never overlaps content */}
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }}
-        className="absolute bottom-5 md:bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
+        className="relative z-10 flex flex-col items-center gap-2 pb-5 md:pb-8">
         <span className="text-white/20 text-[9px] tracking-[0.3em] uppercase">Scroll</span>
-        <div className="w-px h-8 md:h-10 bg-white/10 relative" style={{ overflow: 'hidden', isolation: 'isolate' }}>
+        <div className="w-px h-8 md:h-10 bg-white/10 relative overflow-hidden">
           <motion.div
             className="absolute top-0 left-0 w-full bg-brand-gold"
             animate={{ y: ['0%', '160%'] }}
