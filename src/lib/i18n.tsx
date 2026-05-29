@@ -31,6 +31,7 @@ const t = {
       shipsWorldwide: 'Livraison mondiale',
       securePayment: 'Paiement sécurisé',
       fastDelivery: 'Livraison 7–12 jours',
+      newArrivals: 'Voir les nouveautés',
     },
     categories: {
       title: 'Nos Univers',
@@ -156,6 +157,7 @@ const t = {
       shipsWorldwide: 'Ships Worldwide',
       securePayment: 'Secure Payment',
       fastDelivery: 'Fast Delivery 7–12 days',
+      newArrivals: 'New Arrivals',
     },
     categories: {
       title: 'What\'s Coming',

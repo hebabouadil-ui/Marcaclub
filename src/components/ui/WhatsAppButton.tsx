@@ -1,12 +1,38 @@
 'use client'
 import { motion } from 'framer-motion'
+import { usePathname } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
-interface Props {
-  phone: string
-}
+interface Props { phone: string }
 
 export default function WhatsAppButton({ phone }: Props) {
-  const url = `https://wa.me/${phone.replace(/\D/g, '')}`
+  const pathname = usePathname()
+  const [productName, setProductName] = useState('')
+
+  useEffect(() => {
+    if (pathname?.startsWith('/products/') && pathname !== '/products') {
+      // Try to get the product name from the page <h1>
+      const h1 = document.querySelector('h1')
+      if (h1?.textContent) setProductName(h1.textContent.trim())
+    } else {
+      setProductName('')
+    }
+  }, [pathname])
+
+  const getMessage = () => {
+    if (pathname?.startsWith('/products/') && pathname !== '/products') {
+      const name = productName || pathname.split('/').pop()?.replace(/-/g, ' ') || 'ce produit'
+      return `Bonjour, je suis intéressé(e) par ${name} sur Marca Club 🛍️`
+    }
+    if (pathname === '/cart' || pathname?.startsWith('/checkout')) {
+      return `Bonjour, j'ai besoin d'aide pour finaliser ma commande 🛒`
+    }
+    return `Bonjour, j'ai une question sur Marca Club 💬`
+  }
+
+  const cleanPhone = phone.replace(/\D/g, '') || '212695504949'
+  const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(getMessage())}`
+
   return (
     <motion.a
       href={url}

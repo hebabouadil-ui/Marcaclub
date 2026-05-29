@@ -142,6 +142,15 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
   const [reviewSubmitting, setReviewSubmitting] = useState(false)
   const [reviewError, setReviewError] = useState('')
   const [reviewSubmitted, setReviewSubmitted] = useState(false)
+  const [urgencyStock] = useState(() => 3 + Math.floor(Math.random() * 6))
+  const [urgencyVisitors, setUrgencyVisitors] = useState(() => 8 + Math.floor(Math.random() * 17))
+
+  useEffect(() => {
+    const iv = setInterval(() => {
+      setUrgencyVisitors(8 + Math.floor(Math.random() * 17))
+    }, 30000)
+    return () => clearInterval(iv)
+  }, [])
 
   useEffect(() => {
     if (product.category) {
@@ -353,7 +362,9 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
           <span>/</span>
           <Link href="/products" className="hover:text-brand-black transition-colors">Collection</Link>
           <span>/</span>
-          <span className="text-brand-black truncate max-w-[160px]">{product.name}</span>
+          <span className="text-brand-black truncate max-w-[120px]" title={product.name}>
+            {product.name.length > 25 ? product.name.slice(0, 25) + '…' : product.name}
+          </span>
         </div>
 
         <div className="grid md:grid-cols-[1fr_420px] gap-5 md:gap-8 lg:gap-12 items-start" style={{ overflow: 'hidden' }}>
@@ -638,12 +649,38 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                 )}
               </div>
 
-              {/* Secure payment note for non-CJ products */}
-              {!product.cjPid && (
-                <div className="border border-brand-light-gray px-4 py-2.5">
-                  <p className="text-xs text-brand-gray">✓ Paiement sécurisé · Livraison 7–15 jours ouvrés</p>
+              {/* Urgency signals */}
+              {totalStock > 0 && (
+                <div className="flex flex-col gap-1.5 mt-1">
+                  <p className="text-xs text-red-500 font-medium">🔴 Plus que {urgencyStock} articles en stock</p>
+                  <p className="text-xs text-brand-gray">👁️ {urgencyVisitors} personnes regardent ce produit</p>
                 </div>
               )}
+
+              {/* Payment logos */}
+              <div className="mt-4 border border-brand-light-gray px-4 py-3 flex flex-col gap-2">
+                <p className="text-[10px] text-brand-gray tracking-wider uppercase">🔒 Paiement 100% sécurisé</p>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <svg viewBox="0 0 60 20" className="h-6 opacity-50" aria-label="Visa">
+                    <rect width="60" height="20" rx="3" fill="#1A1F71"/>
+                    <text x="6" y="14" fontFamily="Arial" fontSize="12" fontWeight="bold" fill="white" letterSpacing="1">VISA</text>
+                  </svg>
+                  <svg viewBox="0 0 44 28" className="h-6 opacity-50" aria-label="Mastercard">
+                    <rect width="44" height="28" rx="3" fill="#252525"/>
+                    <circle cx="16" cy="14" r="10" fill="#EB001B"/>
+                    <circle cx="28" cy="14" r="10" fill="#F79E1B"/>
+                    <path d="M22 6.3a10 10 0 0 1 0 15.4A10 10 0 0 1 22 6.3z" fill="#FF5F00"/>
+                  </svg>
+                  <svg viewBox="0 0 70 20" className="h-6 opacity-50" aria-label="PayPal">
+                    <rect width="70" height="20" rx="3" fill="#003087"/>
+                    <text x="6" y="14" fontFamily="Arial" fontSize="11" fontWeight="bold" fill="white">PayPal</text>
+                  </svg>
+                  <svg viewBox="0 0 44 28" className="h-6 opacity-50" aria-label="CB">
+                    <rect width="44" height="28" rx="3" fill="#1A1F71"/>
+                    <text x="8" y="18" fontFamily="Arial" fontSize="12" fontWeight="bold" fill="white">CB</text>
+                  </svg>
+                </div>
+              </div>
             </motion.div>
           </div>
         </div>

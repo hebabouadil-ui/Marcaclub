@@ -80,9 +80,8 @@ export default function Footer({ instagramUrl, tiktokUrl, facebookUrl, contactEm
             <ul className="space-y-3 text-sm">
               <li><Link href="/#community" className="hover:text-brand-gold transition-colors">{tr.footer.liveSessions}</Link></li>
               <li><Link href="/cart" className="hover:text-brand-gold transition-colors">{tr.footer.myCart}</Link></li>
-              <li className="text-brand-white/40 text-xs leading-relaxed pt-1">
-                {tr.footer.securePayment}<br />{tr.footer.delivery}
-              </li>
+              <li><Link href="/faq" className="hover:text-brand-gold transition-colors">FAQ</Link></li>
+              <li><Link href="/track" className="hover:text-brand-gold transition-colors">{lang === 'fr' ? 'Suivi de commande' : 'Track Order'}</Link></li>
             </ul>
           </div>
 
@@ -116,6 +115,27 @@ export default function Footer({ instagramUrl, tiktokUrl, facebookUrl, contactEm
                 </li>
               )}
             </ul>
+          </div>
+        </div>
+
+        {/* Payment trust */}
+        <div className="border-t border-white/5 py-5 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <span className="text-white/30 text-[10px] tracking-wider uppercase">🔒 {lang === 'fr' ? 'Paiement 100% sécurisé' : '100% Secure Payment'}</span>
+          <div className="flex items-center gap-3">
+            {/* Visa */}
+            <svg viewBox="0 0 48 16" className="h-5 opacity-40" fill="white" aria-label="Visa">
+              <text x="0" y="13" fontFamily="Arial" fontSize="14" fontWeight="bold" letterSpacing="1">VISA</text>
+            </svg>
+            {/* Mastercard */}
+            <svg viewBox="0 0 38 24" className="h-5 opacity-40" aria-label="Mastercard">
+              <circle cx="13" cy="12" r="11" fill="#EB001B" opacity="0.9"/>
+              <circle cx="25" cy="12" r="11" fill="#F79E1B" opacity="0.9"/>
+              <path d="M19 5.3a11 11 0 0 1 0 13.4A11 11 0 0 1 19 5.3z" fill="#FF5F00"/>
+            </svg>
+            {/* PayPal text */}
+            <svg viewBox="0 0 60 20" className="h-5 opacity-40" fill="white" aria-label="PayPal">
+              <text x="0" y="14" fontFamily="Arial" fontSize="12" fontWeight="bold">PayPal</text>
+            </svg>
           </div>
         </div>
 
