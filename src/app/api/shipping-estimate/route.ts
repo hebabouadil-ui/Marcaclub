@@ -110,23 +110,31 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ shippingFeeCAD, agingMin, agingMax, logisticName: best.logisticName, source: 'cj-weight' })
         }
 
-        // CJ returned empty — total weight likely exceeds per-packet limit (~2kg).
-        // Estimate by getting price for a reference weight and scaling proportionally.
-        console.warn(`[shipping-estimate] CJ empty for ${totalWeightG}g — trying reference weight scale`)
-        const refWeight = Math.min(totalWeightG, 1500)
-        const refData = await getCJShippingInfo({ startCountryCode: 'CN', endCountryCode: destCountry, productWeight: refWeight, quantity: 1 })
-        const refOptions: ShippingOption[] = (refData.result && Array.isArray(refData.data)) ? refData.data : []
-        if (refOptions.length > 0) {
-          const best = pickBestOption(refOptions)
-          const { agingMin, agingMax } = parseAging(best)
-          // Scale price: total / ref weight ratio, with slight discount for bulk (0.85 factor)
-          const scale = (totalWeightG / refWeight) * 0.85
-          const scaledPrice = best.logisticPrice * Math.max(1, scale)
-          shippingFeeCAD = Math.round(scaledPrice * usdToCAD * 100) / 100
-          console.log(`[shipping-estimate] scaled ${best.logisticName} $${best.logisticPrice}×${scale.toFixed(2)} → CA$${shippingFeeCAD}`)
-          return NextResponse.json({ shippingFeeCAD, agingMin, agingMax, logisticName: best.logisticName, source: 'cj-scaled' })
+        // CJ returned empty — total weight exceeds per-packet limit for this route.
+        // Find the max working weight (try 1900g, 1500g, 1000g, single-unit) and multiply by
+        // number of packets needed: ceil(totalWeightG / maxPacketWeight).
+        console.warn(`[shipping-estimate] CJ empty for ${totalWeightG}g — finding max packet weight`)
+        const candidateWeights = [1900, 1500, 1000, 500]
+        // Also try single unit weight if known
+        const singleUnitWeight = items.length > 0 ? totalWeightG / items.reduce((s: number, i: { quantity: number }) => s + i.quantity, 0) : 0
+        if (singleUnitWeight > 0 && !candidateWeights.includes(Math.round(singleUnitWeight))) {
+          candidateWeights.push(Math.round(singleUnitWeight))
         }
-        console.warn('[shipping-estimate] CJ weight returned empty options even for ref weight, falling back')
+        for (const tryWeight of candidateWeights) {
+          if (tryWeight >= totalWeightG) continue // already tried, was empty
+          const tryData = await getCJShippingInfo({ startCountryCode: 'CN', endCountryCode: destCountry, productWeight: tryWeight, quantity: 1 })
+          const tryOptions: ShippingOption[] = (tryData.result && Array.isArray(tryData.data)) ? tryData.data : []
+          if (tryOptions.length > 0) {
+            const best = pickBestOption(tryOptions)
+            const { agingMin, agingMax } = parseAging(best)
+            const packets = Math.ceil(totalWeightG / tryWeight)
+            const totalPrice = best.logisticPrice * packets
+            shippingFeeCAD = Math.round(totalPrice * usdToCAD * 100) / 100
+            console.log(`[shipping-estimate] ${packets} packets×${tryWeight}g: ${best.logisticName} $${best.logisticPrice}×${packets} → CA$${shippingFeeCAD}`)
+            return NextResponse.json({ shippingFeeCAD, agingMin, agingMax, logisticName: best.logisticName, source: 'cj-multipacket' })
+          }
+        }
+        console.warn('[shipping-estimate] CJ weight returned empty options for all candidate weights, falling back')
       } catch (err) {
         console.warn('[shipping-estimate] CJ weight API failed:', err)
       }
