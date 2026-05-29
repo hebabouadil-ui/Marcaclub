@@ -54,6 +54,7 @@ export async function POST(req: NextRequest) {
         stock: v.variantStock ?? v.variantInventory ?? v.stock ?? 100,
         cjVid: vid,
         cjSku: sku,
+        variantWeight: v.variantWeight ?? v.weight ?? undefined,
         variantPrice: adminPrice != null ? adminPrice : (v.variantSellPrice ?? v.variantPrice ?? v.sellPrice ?? undefined),
         baseVariantPrice: adminBasePrice != null ? adminBasePrice : undefined,
       }
