@@ -52,7 +52,7 @@ export default function HomeHero({ title, subtitle, titleEn, subtitleEn }: Props
 
           {/* Trust bar */}
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}
-            className="flex flex-row items-center justify-center gap-4 sm:gap-10 flex-wrap">
+            className="flex flex-row items-center justify-center gap-4 sm:gap-10 flex-wrap pb-2">
             {[
               { icon: Globe, text: tr.hero.shipsWorldwide },
               { icon: Shield, text: tr.hero.securePayment },
@@ -66,14 +66,14 @@ export default function HomeHero({ title, subtitle, titleEn, subtitleEn }: Props
         </div>
       </div>
 
-      {/* Scroll indicator — always in its own fixed-height row at the bottom, never overlaps content */}
+      {/* Scroll indicator — lives in its own flex row, never overlaps content */}
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }}
-        className="relative z-10 flex flex-col items-center gap-2 pb-5 md:pb-8">
+        className="relative z-10 flex-shrink-0 flex flex-col items-center gap-2 pt-2 pb-6 md:pb-10">
         <span className="text-white/20 text-[9px] tracking-[0.3em] uppercase">Scroll</span>
-        <div className="w-px h-8 md:h-10 bg-white/10 relative overflow-hidden">
+        <div className="w-px h-10 bg-white/10 relative overflow-hidden">
           <motion.div
             className="absolute top-0 left-0 w-full bg-brand-gold"
-            animate={{ y: ['0%', '160%'] }}
+            animate={{ y: ['-100%', '200%'] }}
             transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
             style={{ height: '40%' }}
           />
