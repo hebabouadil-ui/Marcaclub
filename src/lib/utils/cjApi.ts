@@ -45,6 +45,8 @@ async function cjFetch(path: string, options: RequestInit = {}) {
   return parseCJJson(text)
 }
 
+export const cjFetchRaw = cjFetch
+
 export interface CJProduct {
   pid: string
   productNameEn: string
