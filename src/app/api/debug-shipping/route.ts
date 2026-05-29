@@ -25,18 +25,16 @@ export async function POST(req: NextRequest) {
     const itemWeight = (matchedSize?.variantWeight as number) ?? (anyWithVWeight?.variantWeight as number) ?? (product.productWeight as number) ?? cjVariantWeight ?? 0
     const totalWeight = itemWeight * (quantity ?? 1)
 
-    // Try CJ call
-    let cjResult = null
-    if (totalWeight > 0) {
+    // Test multiple weights to find where CJ stops having options
+    const testWeights = [...new Set([totalWeight, 1900, 1500, 1000, 800, itemWeight, 500, 300].filter(w => w > 0).sort((a,b) => b-a))]
+    const weightTests: Record<number, { optionCount: number; cheapest?: unknown }> = {}
+    for (const w of testWeights) {
       try {
-        cjResult = await getCJShippingInfo({
-          startCountryCode: 'CN',
-          endCountryCode: String(country ?? 'MA').toUpperCase(),
-          productWeight: totalWeight,
-          quantity: 1,
-        })
+        const r = await getCJShippingInfo({ startCountryCode: 'CN', endCountryCode: String(country ?? 'MA').toUpperCase(), productWeight: w, quantity: 1 })
+        const opts = (r.result && Array.isArray(r.data)) ? r.data : []
+        weightTests[w] = { optionCount: opts.length, cheapest: opts.length > 0 ? { name: opts[0].logisticName, price: opts[0].logisticPrice } : null }
       } catch (e) {
-        cjResult = { error: String(e) }
+        weightTests[w] = { optionCount: -1 }
       }
     }
 
@@ -44,14 +42,10 @@ export async function POST(req: NextRequest) {
       productId,
       productWeight: product.productWeight,
       cjPid: product.cjPid,
-      sizes: sizes.map(s => ({ size: s.size, variantWeight: s.variantWeight, cjVid: s.cjVid, cjSku: s.cjSku })),
-      cjDataVariants: cjVariants.map(v => ({ weight: v.weight, variantWeight: v.variantWeight, name: v.name })),
-      matchedSize,
-      cjVariantWeight,
+      sizes: sizes.map(s => ({ size: s.size, variantWeight: s.variantWeight, cjSku: s.cjSku })),
       itemWeightUsed: itemWeight,
       totalWeight,
-      usdToCAD,
-      cjResult,
+      weightTests,
     })
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
