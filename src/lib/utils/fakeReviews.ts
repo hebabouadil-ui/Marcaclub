@@ -157,12 +157,10 @@ export function generateFakeReviews(productId: string, count = 8): FakeReview[] 
     const name = NAMES[Math.floor(rand() * NAMES.length)]
     const location = locationPool[Math.floor(rand() * locationPool.length)]
 
-    // Weight toward 5-star (65%) and 4-star (28%)
-    const roll = rand()
-    const fiveStarTemplates = TEMPLATES.filter(t => t.rating === 5)
-    const fourStarTemplates = TEMPLATES.filter(t => t.rating === 4)
-    const pool = roll < 0.65 ? fiveStarTemplates : roll < 0.93 ? fourStarTemplates : fiveStarTemplates
-    const tpl = pool[Math.floor(rand() * pool.length)]
+    // Rotate through templates so no two reviews on the same product share a body
+    // Offset by productId hash so each product gets a different rotation
+    const offset = hashStr(productId) % TEMPLATES.length
+    const tpl = TEMPLATES[(offset + i) % TEMPLATES.length]
 
     // Spread dates randomly
     const daysAgo = Math.floor(rand() * DATES_RANGE_DAYS) + 2

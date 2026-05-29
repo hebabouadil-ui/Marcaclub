@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation'
 import { generateFakeReviews, type FakeReview } from '@/lib/utils/fakeReviews'
 import { useCustomer } from '@/lib/context/CustomerContext'
 import CustomerAuthModal from '@/components/store/CustomerAuthModal'
+import { useDeliveryMessage } from '@/lib/hooks/useDeliveryMessage'
 
 interface SizeEntry {
   size: string
@@ -127,6 +128,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
   const router = useRouter()
   const { format, formatUSD, usdToCAD } = useCurrency()
   const { tr, lang } = useLanguage()
+  const { message: deliveryMsg } = useDeliveryMessage()
 
   const [shipping, setShipping] = useState<ShippingOption | null>(null)
   const [shippingLoading, setShippingLoading] = useState(!!product.cjPid)
@@ -542,9 +544,9 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                       </span>
                     </div>
                   </div>
-                  {shipping && (
+                  {(deliveryMsg || shipping) && (
                     <p className="text-[10px] text-brand-gray">
-                      Livraison en {shipping.agingMin > 0 ? `${shipping.agingMin}–${shipping.agingMax}` : '7–20'} jours · ✓ Paiement sécurisé
+                      {deliveryMsg || '✓ Livraison internationale · Suivi inclus'} · ✓ Paiement sécurisé
                     </p>
                   )}
                 </div>
@@ -560,22 +562,18 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                 </div>
               )}
 
-              {/* Stock status */}
-              <div className="mb-3">
-                {totalStock === 0 ? (
-                  <span className="text-sm text-brand-gray tracking-widest uppercase">Épuisé</span>
-                ) : selectedSize ? (
-                  selectedStock === 0 ? (
+              {/* Stock status — only show when relevant */}
+              {(totalStock === 0 || (selectedSize && selectedStock === 0) || (selectedSize && selectedStock > 0 && selectedStock <= 5)) && (
+                <div className="mb-3">
+                  {totalStock === 0 ? (
+                    <span className="text-sm text-brand-gray tracking-widest uppercase">Épuisé</span>
+                  ) : selectedSize && selectedStock === 0 ? (
                     <span className="text-sm text-red-500 tracking-widest uppercase">Taille épuisée</span>
-                  ) : selectedStock <= 5 ? (
-                    <span className="text-sm text-amber-600 tracking-widest uppercase">Plus que {selectedStock} en stock</span>
                   ) : (
-                    <span className="text-sm text-green-600 tracking-widest uppercase">{selectedStock} en stock</span>
-                  )
-                ) : (
-                  <span className="text-sm text-green-600 tracking-widest uppercase">En stock</span>
-                )}
-              </div>
+                    <span className="text-xs text-amber-600 tracking-wider">⚡ Plus que {selectedStock} en stock</span>
+                  )}
+                </div>
+              )}
 
               {/* Sizes */}
               {sizes.length > 0 && (
@@ -649,36 +647,27 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                 )}
               </div>
 
-              {/* Urgency signals */}
+              {/* Urgency signal — visitors only, subtle */}
               {totalStock > 0 && (
-                <div className="flex flex-col gap-1.5 mt-1">
-                  <p className="text-xs text-red-500 font-medium">🔴 Plus que {urgencyStock} articles en stock</p>
-                  <p className="text-xs text-brand-gray">👁️ {urgencyVisitors} personnes regardent ce produit</p>
-                </div>
+                <p className="text-[11px] text-brand-gray mt-2">
+                  <span style={{ color: '#C9A84C' }}>●</span> {urgencyVisitors} personnes regardent ce produit
+                </p>
               )}
 
-              {/* Payment logos */}
-              <div className="mt-4 border border-brand-light-gray px-4 py-3 flex flex-col gap-2">
-                <p className="text-[10px] text-brand-gray tracking-wider uppercase">🔒 Paiement 100% sécurisé</p>
+              {/* Payment trust */}
+              <div className="mt-4 pt-3 border-t border-brand-light-gray">
                 <div className="flex items-center gap-3 flex-wrap">
-                  <svg viewBox="0 0 60 20" className="h-6 opacity-50" aria-label="Visa">
-                    <rect width="60" height="20" rx="3" fill="#1A1F71"/>
-                    <text x="6" y="14" fontFamily="Arial" fontSize="12" fontWeight="bold" fill="white" letterSpacing="1">VISA</text>
-                  </svg>
-                  <svg viewBox="0 0 44 28" className="h-6 opacity-50" aria-label="Mastercard">
-                    <rect width="44" height="28" rx="3" fill="#252525"/>
-                    <circle cx="16" cy="14" r="10" fill="#EB001B"/>
-                    <circle cx="28" cy="14" r="10" fill="#F79E1B"/>
-                    <path d="M22 6.3a10 10 0 0 1 0 15.4A10 10 0 0 1 22 6.3z" fill="#FF5F00"/>
-                  </svg>
-                  <svg viewBox="0 0 70 20" className="h-6 opacity-50" aria-label="PayPal">
-                    <rect width="70" height="20" rx="3" fill="#003087"/>
-                    <text x="6" y="14" fontFamily="Arial" fontSize="11" fontWeight="bold" fill="white">PayPal</text>
-                  </svg>
-                  <svg viewBox="0 0 44 28" className="h-6 opacity-50" aria-label="CB">
-                    <rect width="44" height="28" rx="3" fill="#1A1F71"/>
-                    <text x="8" y="18" fontFamily="Arial" fontSize="12" fontWeight="bold" fill="white">CB</text>
-                  </svg>
+                  <span className="text-[10px] text-brand-gray">🔒 Paiement sécurisé</span>
+                  <div className="flex items-center gap-2 opacity-40">
+                    <svg viewBox="0 0 50 16" height="14" aria-label="Visa"><text x="0" y="13" fontFamily="Arial" fontSize="13" fontWeight="bold" fill="currentColor" letterSpacing="1">VISA</text></svg>
+                    <svg viewBox="0 0 34 22" height="18" aria-label="Mastercard">
+                      <circle cx="11" cy="11" r="10" fill="#EB001B"/>
+                      <circle cx="23" cy="11" r="10" fill="#F79E1B"/>
+                      <path d="M17 3.8a10 10 0 0 1 0 14.4A10 10 0 0 1 17 3.8z" fill="#FF5F00"/>
+                    </svg>
+                    <svg viewBox="0 0 52 16" height="14" aria-label="PayPal"><text x="0" y="13" fontFamily="Arial" fontSize="11" fontWeight="bold" fill="currentColor">PayPal</text></svg>
+                    <svg viewBox="0 0 28 16" height="14" aria-label="CB"><text x="0" y="13" fontFamily="Arial" fontSize="12" fontWeight="bold" fill="currentColor">CB</text></svg>
+                  </div>
                 </div>
               </div>
             </motion.div>

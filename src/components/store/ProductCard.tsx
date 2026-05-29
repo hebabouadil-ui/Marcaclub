@@ -1,10 +1,12 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { Eye } from 'lucide-react'
 import { useCurrency } from '@/lib/context/CurrencyContext'
 import { useLanguage } from '@/lib/i18n'
+
+// Beauty placeholder shown when product image fails to load
+const PLACEHOLDER = 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=400&h=400&fit=crop&auto=format'
 
 interface Props {
   product: {
@@ -25,23 +27,17 @@ interface Props {
 
 export default function ProductCard({ product }: Props) {
   const [hovered, setHovered] = useState(false)
+  const [img0Src, setImg0Src] = useState(product.images?.[0] || PLACEHOLDER)
+  const [img1Src, setImg1Src] = useState(product.images?.[1] || null)
   const { format } = useCurrency()
   const { tr, lang } = useLanguage()
 
-  // Show base price only — shipping varies per product weight & country
-  // Exact total shown on detail page (Produit / Livraison / Total breakdown)
   const displayPrice = product.price
   const originalDisplay = product.originalPrice
 
   const discount = originalDisplay && originalDisplay > displayPrice
     ? Math.round(((originalDisplay - displayPrice) / originalDisplay) * 100)
     : null
-
-  const img0 = product.images?.[0] || null
-  const img1 = product.images?.[1] || null
-  const isExternal = (url: string) => !url.includes('cloudinary.com')
-  const unopt0 = img0 ? isExternal(img0) : false
-  const unopt1 = img1 ? isExternal(img1) : false
 
   return (
     <div
@@ -51,32 +47,30 @@ export default function ProductCard({ product }: Props) {
     >
       {/* Image */}
       <Link href={`/products/${product.slug}`}>
-        <div className="relative w-full overflow-hidden bg-white" style={{ paddingBottom: '100%' }}>
-          {img0 ? (
-            <>
-              <Image
-                src={img0}
-                alt={product.name}
-                fill
-                unoptimized={unopt0}
-                className={`object-contain transition-all duration-500 ${hovered && img1 ? 'opacity-0' : 'opacity-100'}`}
-                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-              />
-              {img1 && (
-                <Image
-                  src={img1}
-                  alt={product.name}
-                  fill
-                  unoptimized={unopt1}
-                  className={`object-contain transition-all duration-500 ${hovered ? 'opacity-100 scale-105' : 'opacity-0 scale-100'}`}
-                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                />
-              )}
-            </>
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-brand-gray text-xs tracking-widest uppercase">Marcaclub</span>
-            </div>
+        <div className="relative w-full overflow-hidden bg-[#f8f8f8]" style={{ paddingBottom: '100%' }}>
+          {/* Primary image */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={img0Src}
+            alt={product.name}
+            loading="lazy"
+            width={400}
+            height={400}
+            onError={() => setImg0Src(PLACEHOLDER)}
+            className={`absolute inset-0 w-full h-full object-contain transition-all duration-500 ${hovered && img1Src ? 'opacity-0' : 'opacity-100'}`}
+          />
+          {/* Hover image */}
+          {img1Src && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={img1Src}
+              alt={product.name}
+              loading="lazy"
+              width={400}
+              height={400}
+              onError={() => setImg1Src(null)}
+              className={`absolute inset-0 w-full h-full object-contain transition-all duration-500 ${hovered ? 'opacity-100 scale-105' : 'opacity-0 scale-100'}`}
+            />
           )}
 
           {/* Badges */}
