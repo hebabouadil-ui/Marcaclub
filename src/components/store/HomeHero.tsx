@@ -20,11 +20,11 @@ export default function HomeHero({ title, subtitle, titleEn, subtitleEn }: Props
       {/* Glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] md:w-[600px] md:h-[600px] rounded-full bg-brand-gold/5 blur-3xl pointer-events-none" />
 
-      {/* Main content — takes all available space, centered */}
-      <div className="relative z-10 flex-1 flex items-center justify-center">
-        <div className="text-center px-5 max-w-4xl mx-auto py-8">
+      {/* Main content — top-aligned on mobile (avoids huge black gaps), centered on desktop */}
+      <div className="relative z-10 flex-1 flex items-start md:items-center justify-center">
+        <div className="text-center px-5 max-w-4xl mx-auto pt-8 pb-4 md:py-8">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 border border-brand-gold/20 bg-brand-gold/5 text-brand-gold text-[9px] md:text-[10px] tracking-[0.2em] uppercase px-3 md:px-4 py-1.5 md:py-2 rounded-full mb-5 md:mb-8 max-w-[280px] sm:max-w-none text-center leading-relaxed">
+            className="inline-flex items-center gap-2 border border-brand-gold/20 bg-brand-gold/5 text-brand-gold text-[9px] md:text-[10px] tracking-[0.2em] uppercase px-3 md:px-4 py-1.5 md:py-2 rounded-full mb-4 md:mb-8 max-w-[280px] sm:max-w-none text-center leading-relaxed">
             <Globe size={9} className="flex-shrink-0" /> {tr.hero.badge}
           </motion.div>
 
@@ -34,12 +34,12 @@ export default function HomeHero({ title, subtitle, titleEn, subtitleEn }: Props
           </motion.h1>
 
           <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.25 }}
-            className="text-white/50 text-sm max-w-xl mx-auto mb-8 md:mb-10 leading-relaxed px-2">
+            className="text-white/50 text-sm max-w-xl mx-auto mb-6 md:mb-10 leading-relaxed px-2">
             {displaySubtitle}
           </motion.p>
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.4 }}
-            className="flex flex-col sm:flex-row gap-3 justify-center mb-10 md:mb-14">
+            className="flex flex-col sm:flex-row gap-3 justify-center mb-8 md:mb-14">
             <Link href="/products"
               className="group inline-flex items-center justify-center gap-2 bg-brand-gold text-brand-black px-7 py-3.5 md:py-4 text-xs tracking-[0.2em] uppercase font-bold hover:bg-yellow-400 transition-colors duration-300">
               {tr.hero.shopNow} <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
