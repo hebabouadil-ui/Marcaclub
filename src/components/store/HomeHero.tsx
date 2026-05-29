@@ -12,8 +12,7 @@ export default function HomeHero({ title, subtitle, titleEn, subtitleEn }: Props
   const displaySubtitle = lang === 'en' && subtitleEn ? subtitleEn : subtitle
 
   return (
-    <section className="relative bg-brand-black flex items-center justify-center overflow-hidden"
-      style={{ height: 'calc(100svh - 4rem)', minHeight: '600px' }}>
+    <section className="relative bg-brand-black flex items-center justify-center overflow-hidden h-[calc(100svh-4rem)] md:h-[calc(100svh-5rem)]">
       {/* Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a0a] via-[#111] to-[#0a0a0a]" />
       <div className="absolute inset-0 opacity-[0.04]"
