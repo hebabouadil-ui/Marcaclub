@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     const totalWeight = itemWeight * (quantity ?? 1)
 
     // Test multiple weights to find where CJ stops having options
-    const testWeights = [...new Set([totalWeight, 1900, 1500, 1000, 800, itemWeight, 500, 300].filter(w => w > 0).sort((a,b) => b-a))]
+    const testWeights = Array.from(new Set([totalWeight, 1900, 1500, 1000, 800, itemWeight, 500, 300].filter(w => w > 0))).sort((a,b) => b-a)
     const weightTests: Record<number, { optionCount: number; cheapest?: unknown }> = {}
     for (const w of testWeights) {
       try {
