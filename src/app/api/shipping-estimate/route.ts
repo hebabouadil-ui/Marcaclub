@@ -109,7 +109,24 @@ export async function POST(req: NextRequest) {
           console.log(`[shipping-estimate] picked ${best.logisticName} $${best.logisticPrice} USD → CA$${shippingFeeCAD}`)
           return NextResponse.json({ shippingFeeCAD, agingMin, agingMax, logisticName: best.logisticName, source: 'cj-weight' })
         }
-        console.warn('[shipping-estimate] CJ weight returned empty options, falling back')
+
+        // CJ returned empty — total weight likely exceeds per-packet limit (~2kg).
+        // Estimate by getting price for a reference weight and scaling proportionally.
+        console.warn(`[shipping-estimate] CJ empty for ${totalWeightG}g — trying reference weight scale`)
+        const refWeight = Math.min(totalWeightG, 1500)
+        const refData = await getCJShippingInfo({ startCountryCode: 'CN', endCountryCode: destCountry, productWeight: refWeight, quantity: 1 })
+        const refOptions: ShippingOption[] = (refData.result && Array.isArray(refData.data)) ? refData.data : []
+        if (refOptions.length > 0) {
+          const best = pickBestOption(refOptions)
+          const { agingMin, agingMax } = parseAging(best)
+          // Scale price: total / ref weight ratio, with slight discount for bulk (0.85 factor)
+          const scale = (totalWeightG / refWeight) * 0.85
+          const scaledPrice = best.logisticPrice * Math.max(1, scale)
+          shippingFeeCAD = Math.round(scaledPrice * usdToCAD * 100) / 100
+          console.log(`[shipping-estimate] scaled ${best.logisticName} $${best.logisticPrice}×${scale.toFixed(2)} → CA$${shippingFeeCAD}`)
+          return NextResponse.json({ shippingFeeCAD, agingMin, agingMax, logisticName: best.logisticName, source: 'cj-scaled' })
+        }
+        console.warn('[shipping-estimate] CJ weight returned empty options even for ref weight, falling back')
       } catch (err) {
         console.warn('[shipping-estimate] CJ weight API failed:', err)
       }
