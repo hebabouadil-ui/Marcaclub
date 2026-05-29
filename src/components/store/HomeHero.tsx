@@ -13,7 +13,7 @@ export default function HomeHero({ title, subtitle, titleEn, subtitleEn }: Props
 
   return (
     <section className="relative bg-brand-black flex items-center justify-center overflow-hidden"
-      style={{ minHeight: 'calc(100svh - 4rem)' }}>
+      style={{ height: 'calc(100svh - 4rem)', minHeight: '600px' }}>
       {/* Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a0a] via-[#111] to-[#0a0a0a]" />
       <div className="absolute inset-0 opacity-[0.04]"

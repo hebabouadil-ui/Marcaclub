@@ -171,7 +171,8 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
     if (!country) return
     setShippingLoading(true)
     try {
-      const size = product.sizes?.[0]?.size ?? ''
+      // Use selectedSize if set, else first size — ensures same VID lookup as cart
+      const size = selectedSize || (product.sizes?.[0]?.size ?? '')
       const res = await fetch('/api/shipping-estimate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -197,7 +198,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
     } finally {
       setShippingLoading(false)
     }
-  }, [product._id, product.sizes])
+  }, [product._id, product.sizes, selectedSize])
 
   // Auto-translate description when language changes
   useEffect(() => {
@@ -255,6 +256,11 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
     init()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product._id, product.cjPid])
+
+  useEffect(() => {
+    if (shipCountry && selectedSize) loadShipping(shipCountry)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSize])
 
   const handleCountryChange = (country: string) => {
     setShipCountry(country)

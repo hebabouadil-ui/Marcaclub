@@ -73,10 +73,10 @@ export async function POST(req: NextRequest) {
 
       if (!product.cjPid) continue
       hasCjPid = true
-      // Try exact size match first, then any VID from the product as fallback
+      // Prefer size match that has a VID/SKU; fall back to any entry with VID/SKU
       const sizeEntry = product.sizes?.find(s => s.size === item.size)
       const anyVidEntry = product.sizes?.find(s => s.cjVid || s.cjSku)
-      const entry = sizeEntry ?? anyVidEntry
+      const entry = (sizeEntry?.cjVid || sizeEntry?.cjSku) ? sizeEntry : anyVidEntry
       const vid = entry?.cjVid ?? ''
       const variantSku = entry?.cjSku ?? ''
       if (vid || variantSku) {
