@@ -26,6 +26,7 @@ interface Product {
   cjPid?: string
   cjWarehouseId?: string
   cjWarehouseName?: string
+  productWeight?: number
 }
 
 type ProductForm = Omit<Product, '_id' | 'stock'>
@@ -114,7 +115,8 @@ export default function AdminProductsPage() {
       description: p.description, descriptionEn: (p as { descriptionEn?: string }).descriptionEn ?? '',
       videoUrl: (p as { videoUrl?: string }).videoUrl ?? '',
       cjWarehouseId: (p as { cjWarehouseId?: string }).cjWarehouseId ?? '',
-      cjWarehouseName: (p as { cjWarehouseName?: string }).cjWarehouseName ?? '' })
+      cjWarehouseName: (p as { cjWarehouseName?: string }).cjWarehouseName ?? '',
+      productWeight: (p as { productWeight?: number }).productWeight ?? undefined })
     setModal(true)
   }
 
@@ -365,6 +367,19 @@ export default function AdminProductsPage() {
                       className="w-full bg-white/5 border border-white/10 text-white px-4 py-2.5 text-sm focus:outline-none focus:border-brand-gold"
                     />
                   </div>
+                </div>
+
+                {/* Weight */}
+                <div>
+                  <label className="block text-white/40 text-xs uppercase tracking-widest mb-2">Poids produit (grammes) — utilisé pour le calcul de livraison</label>
+                  <input
+                    type="number"
+                    min={0}
+                    placeholder="ex: 82"
+                    value={(form as { productWeight?: number }).productWeight ?? ''}
+                    onChange={(e) => setForm({ ...form, productWeight: e.target.value ? Number(e.target.value) : undefined } as ProductForm)}
+                    className="w-full bg-white/5 border border-white/10 text-white px-4 py-2.5 text-sm focus:outline-none focus:border-brand-gold placeholder-white/20"
+                  />
                 </div>
 
                 {/* Category */}
