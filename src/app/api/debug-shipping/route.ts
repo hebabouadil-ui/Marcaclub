@@ -27,14 +27,17 @@ export async function POST(req: NextRequest) {
 
     // Test multiple weights to find where CJ stops having options
     const testWeights = Array.from(new Set([totalWeight, 1900, 1500, 1000, 800, itemWeight, 500, 300].filter(w => w > 0))).sort((a,b) => b-a)
-    const weightTests: Record<number, { optionCount: number; cheapest?: unknown }> = {}
+    const weightTests: Record<number, unknown> = {}
     for (const w of testWeights) {
       try {
         const r = await getCJShippingInfo({ startCountryCode: 'CN', endCountryCode: String(country ?? 'MA').toUpperCase(), productWeight: w, quantity: 1 })
         const opts = (r.result && Array.isArray(r.data)) ? r.data : []
-        weightTests[w] = { optionCount: opts.length, cheapest: opts.length > 0 ? { name: opts[0].logisticName, price: opts[0].logisticPrice } : null }
+        // Show raw response for first weight to diagnose auth/API issues
+        weightTests[w] = w === testWeights[0]
+          ? { result: r.result, message: r.message, code: r.code, optionCount: opts.length, rawSlice: JSON.stringify(r).slice(0, 300) }
+          : { result: r.result, message: r.message, optionCount: opts.length }
       } catch (e) {
-        weightTests[w] = { optionCount: -1 }
+        weightTests[w] = { error: String(e) }
       }
     }
 
