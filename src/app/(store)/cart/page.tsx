@@ -2,7 +2,7 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useCartStore, cartTotal } from '@/lib/store/cartStore'
 import { useCurrency } from '@/lib/context/CurrencyContext'
 import { useLanguage } from '@/lib/i18n'
@@ -16,15 +16,17 @@ function shortSize(s: string) {
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity } = useCartStore()
-  const { format } = useCurrency()
+  const { format, geo } = useCurrency()
   const { tr } = useLanguage()
   const [continueHref, setContinueHref] = useState('/products')
-  const [country, setCountry] = useState<string>('')
   const [shippingFee, setShippingFee] = useState<number | null>(null)
   const [shippingDays, setShippingDays] = useState<{ min: number; max: number } | null>(null)
   const [shippingLoading, setShippingLoading] = useState(false)
+  const abortRef = useRef<AbortController | null>(null)
 
-  // Derive "continue shopping" href from cart items or localStorage
+  // country from CurrencyContext — already resolved server-side, no race condition
+  const country = geo?.countryCode || ''
+
   useEffect(() => {
     const cartCat = items[0]?.category
     if (cartCat) {
@@ -35,43 +37,36 @@ export default function CartPage() {
     }
   }, [items])
 
-  // Detect country via geo API
+  // Fetch shipping whenever items or country changes — abort previous in-flight request
   useEffect(() => {
-    fetch('/api/geo')
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.countryCode) setCountry(d.countryCode) })
-      .catch(() => {})
-  }, [])
+    if (items.length === 0) { setShippingFee(null); setShippingDays(null); return }
+    if (!country) return // wait for country to be known
 
-  // Fetch real shipping estimate whenever items or country changes
-  const fetchShipping = useCallback(async () => {
-    if (items.length === 0) { setShippingFee(null); return }
+    abortRef.current?.abort()
+    const ctrl = new AbortController()
+    abortRef.current = ctrl
+
     setShippingLoading(true)
-    try {
-      const res = await fetch('/api/shipping-estimate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: items.map(i => ({ productId: i.productId, size: i.size, quantity: i.quantity })),
-          country: country || 'CA',
-        }),
-      })
-      if (res.ok) {
-        const data = await res.json()
+    fetch('/api/shipping-estimate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        items: items.map(i => ({ productId: i.productId, size: i.size, quantity: i.quantity })),
+        country,
+      }),
+      signal: ctrl.signal,
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data) return
         setShippingFee(typeof data.shippingFeeCAD === 'number' ? data.shippingFeeCAD : null)
-        if (data.agingMin && data.agingMax) setShippingDays({ min: data.agingMin, max: data.agingMax })
-        else setShippingDays(null)
-      }
-    } catch {
-      // leave shippingFee null — will show "Calculé au checkout"
-    } finally {
-      setShippingLoading(false)
-    }
-  }, [items, country])
+        setShippingDays(data.agingMin && data.agingMax ? { min: data.agingMin, max: data.agingMax } : null)
+      })
+      .catch(e => { if (e.name !== 'AbortError') setShippingFee(null) })
+      .finally(() => setShippingLoading(false))
 
-  useEffect(() => {
-    fetchShipping()
-  }, [fetchShipping])
+    return () => ctrl.abort()
+  }, [items, country])
 
   const subtotal = cartTotal(items)
   const total = subtotal + (shippingFee ?? 0)
@@ -93,13 +88,10 @@ export default function CartPage() {
   return (
     <div className="min-h-screen bg-[#faf8f5]">
       {/* Header */}
-      <div className="bg-brand-black text-brand-white py-6 md:py-8">
-        <div className="max-w-7xl mx-auto px-4 flex items-end justify-between">
-          <div>
-            <p className="text-[10px] tracking-[0.3em] text-brand-gold uppercase mb-1">{tr.nav.shop}</p>
-            <h1 className="font-display text-2xl md:text-3xl">{tr.cart.title}</h1>
-          </div>
-          <p className="text-white/40 text-xs tracking-widest pb-0.5">{items.length} article{items.length > 1 ? 's' : ''}</p>
+      <div className="bg-brand-black text-brand-white py-4 md:py-6">
+        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
+          <h1 className="font-display text-xl md:text-2xl">{tr.cart.title}</h1>
+          <span className="text-white/40 text-xs tracking-widest">{items.length} article{items.length > 1 ? 's' : ''}{country && ` · ${country}`}</span>
         </div>
       </div>
 
