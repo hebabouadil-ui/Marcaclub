@@ -22,7 +22,6 @@ interface ShippingOption {
   [key: string]: unknown
 }
 
-// CJ picks the cheapest applicable method for fulfillment — mirror that logic
 function pickBestOption(options: ShippingOption[]): ShippingOption {
   return [...options].sort((a, b) => a.logisticPrice - b.logisticPrice)[0]
 }
@@ -54,11 +53,12 @@ export async function POST(req: NextRequest) {
 
     await connectDB()
 
-    const cjProducts: Array<{ vid: string; variantSku?: string; quantity: number; weight?: number }> = []
     let maxBakedUSD = 0
     let totalWeightG = 0
     let hasBakedData = false
     let hasCjPid = false
+    // Fallback VID/SKU products — only used if we have no weight data at all
+    const cjProductsFallback: Array<{ vid: string; variantSku?: string; quantity: number }> = []
 
     for (const item of items) {
       const product = await Product.findById(item.productId).lean() as ProductDoc | null
@@ -73,28 +73,33 @@ export async function POST(req: NextRequest) {
 
       if (!product.cjPid) continue
       hasCjPid = true
-      // Prefer size match that has a VID/SKU; fall back to any entry with VID/SKU
-      const sizeEntry = product.sizes?.find(s => s.size === item.size)
-      const anyVidEntry = product.sizes?.find(s => s.cjVid || s.cjSku)
-      const entry = (sizeEntry?.cjVid || sizeEntry?.cjSku) ? sizeEntry : anyVidEntry
-      const vid = entry?.cjVid ?? ''
-      const variantSku = entry?.cjSku ?? ''
-      if (vid || variantSku) {
-        cjProducts.push({ vid, variantSku: variantSku || undefined, quantity: item.quantity, weight: product.productWeight })
+
+      // Only collect VID/SKU as fallback for products with no stored weight
+      if (!product.productWeight) {
+        const sizeEntry = product.sizes?.find(s => s.size === item.size)
+        const anyVidEntry = product.sizes?.find(s => s.cjVid || s.cjSku)
+        const entry = (sizeEntry?.cjVid || sizeEntry?.cjSku) ? sizeEntry : anyVidEntry
+        const vid = entry?.cjVid ?? ''
+        const variantSku = entry?.cjSku ?? ''
+        if (vid || variantSku) {
+          cjProductsFallback.push({ vid, variantSku: variantSku || undefined, quantity: item.quantity })
+        }
       }
     }
 
-    const totalUnits = items.reduce((s: number, i: { quantity: number }) => s + i.quantity, 0)
-    // CJ ships everything in one package — baked shipping is a per-shipment cost, never scale by unit count
-    const bakedUSD = maxBakedUSD
-
     let shippingFeeCAD: number
 
-    // Priority 1: CJ API with exact VIDs/SKUs (no weight — CJ knows weight from its own DB)
-    if (cjProducts.length > 0) {
+    // Priority 1: CJ API with total weight (most accurate — productWeight × quantity per item)
+    // This bypasses VID precision issues entirely; weight is computed from our own DB.
+    if (hasCjPid && totalWeightG > 0) {
       try {
-        console.log('[shipping-estimate] CJ call:', JSON.stringify({ destCountry, products: cjProducts }))
-        const cjData = await getCJShippingInfo({ startCountryCode: 'CN', endCountryCode: destCountry, products: cjProducts })
+        console.log(`[shipping-estimate] CJ weight call: ${totalWeightG}g → ${destCountry}`)
+        const cjData = await getCJShippingInfo({
+          startCountryCode: 'CN',
+          endCountryCode: destCountry,
+          productWeight: totalWeightG,
+          quantity: 1,
+        })
         console.log('[shipping-estimate] CJ response:', JSON.stringify(cjData).slice(0, 500))
         const options: ShippingOption[] = (cjData.result && Array.isArray(cjData.data)) ? cjData.data : []
         if (options.length > 0) {
@@ -102,52 +107,47 @@ export async function POST(req: NextRequest) {
           const { agingMin, agingMax } = parseAging(best)
           shippingFeeCAD = Math.round(best.logisticPrice * usdToCAD * 100) / 100
           console.log(`[shipping-estimate] picked ${best.logisticName} $${best.logisticPrice} USD → CA$${shippingFeeCAD}`)
-          return NextResponse.json({ shippingFeeCAD, agingMin, agingMax, logisticName: best.logisticName, source: 'cj-api' })
-        }
-        console.warn('[shipping-estimate] CJ returned empty options, falling back')
-      } catch (err) {
-        console.warn('[shipping-estimate] CJ API failed:', err)
-      }
-    }
-
-    // Priority 1b: CJ API with total weight (when no VID/SKU available)
-    if (hasCjPid && totalWeightG > 0) {
-      try {
-        const cjData = await getCJShippingInfo({
-          startCountryCode: 'CN',
-          endCountryCode: destCountry,
-          productWeight: totalWeightG,
-          quantity: totalUnits,
-        })
-        const options: ShippingOption[] = (cjData.result && Array.isArray(cjData.data)) ? cjData.data : []
-        if (options.length > 0) {
-          const best = pickBestOption(options)
-          const { agingMin, agingMax } = parseAging(best)
-          shippingFeeCAD = Math.round(best.logisticPrice * usdToCAD * 100) / 100
-          console.log(`[shipping-estimate] weight fallback: ${best.logisticName} $${best.logisticPrice} USD → CA$${shippingFeeCAD}`)
           return NextResponse.json({ shippingFeeCAD, agingMin, agingMax, logisticName: best.logisticName, source: 'cj-weight' })
         }
+        console.warn('[shipping-estimate] CJ weight returned empty options, falling back')
       } catch (err) {
         console.warn('[shipping-estimate] CJ weight API failed:', err)
       }
     }
 
-    // Priority 2: baked shipping
-    if (hasBakedData && bakedUSD > 0) {
-      shippingFeeCAD = Math.round(bakedUSD * usdToCAD * 100) / 100
+    // Priority 2: CJ API with VID/SKU (for CJ products where productWeight is not stored)
+    if (cjProductsFallback.length > 0) {
+      try {
+        console.log('[shipping-estimate] CJ VID/SKU fallback call:', JSON.stringify(cjProductsFallback))
+        const cjData = await getCJShippingInfo({ startCountryCode: 'CN', endCountryCode: destCountry, products: cjProductsFallback })
+        const options: ShippingOption[] = (cjData.result && Array.isArray(cjData.data)) ? cjData.data : []
+        if (options.length > 0) {
+          const best = pickBestOption(options)
+          const { agingMin, agingMax } = parseAging(best)
+          shippingFeeCAD = Math.round(best.logisticPrice * usdToCAD * 100) / 100
+          return NextResponse.json({ shippingFeeCAD, agingMin, agingMax, logisticName: best.logisticName, source: 'cj-vid' })
+        }
+      } catch (err) {
+        console.warn('[shipping-estimate] CJ VID/SKU API failed:', err)
+      }
+    }
+
+    // Priority 3: baked shipping
+    if (hasBakedData && maxBakedUSD > 0) {
+      shippingFeeCAD = Math.round(maxBakedUSD * usdToCAD * 100) / 100
       return NextResponse.json({ shippingFeeCAD, source: 'baked' })
     }
 
-    // Priority 3: weight-based estimate
+    // Priority 4: weight-based static estimate
     if (totalWeightG > 0) {
       const baseWeight = 300
       const weightMultiplier = Math.max(1, totalWeightG / baseWeight)
       const baseCAD = getShippingFeeCAD(destCountry, usdToCAD)
       shippingFeeCAD = Math.round(baseCAD * weightMultiplier * 100) / 100
-      return NextResponse.json({ shippingFeeCAD, source: 'weight' })
+      return NextResponse.json({ shippingFeeCAD, source: 'weight-static' })
     }
 
-    // Priority 4: static table fallback
+    // Priority 5: static table fallback
     shippingFeeCAD = getShippingFeeCAD(destCountry, usdToCAD)
     return NextResponse.json({ shippingFeeCAD, source: 'static' })
 
