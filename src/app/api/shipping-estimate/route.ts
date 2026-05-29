@@ -12,6 +12,7 @@ interface ProductDoc {
   productWeight?: number
   shippingBakedUSD?: number
   sizes?: Array<{ size: string; cjVid?: string; cjSku?: string; variantWeight?: number }>
+  cjData?: { variants?: Array<{ weight?: number; variantWeight?: number }> }
 }
 
 interface ShippingOption {
@@ -64,10 +65,13 @@ export async function POST(req: NextRequest) {
       const product = await Product.findById(item.productId).lean() as ProductDoc | null
       if (!product) continue
 
-      // Use variant-specific weight if available (most accurate), else product-level weight
+      // Weight priority: matched-size variantWeight → any-size variantWeight →
+      // productWeight → cjData.variants[0].weight (always stored from CJ import)
       const matchedSize = product.sizes?.find(s => s.size === item.size)
       const anySize = product.sizes?.find(s => s.variantWeight)
-      const itemWeight = matchedSize?.variantWeight ?? anySize?.variantWeight ?? product.productWeight ?? 0
+      const cjVariantWeight = product.cjData?.variants?.[0]?.weight ?? product.cjData?.variants?.[0]?.variantWeight ?? 0
+      const itemWeight = matchedSize?.variantWeight ?? anySize?.variantWeight ?? product.productWeight ?? cjVariantWeight
+      console.log(`[shipping-estimate] product weight sources: matchedVariant=${matchedSize?.variantWeight} anyVariant=${anySize?.variantWeight} productWeight=${product.productWeight} cjData=${cjVariantWeight} → using ${itemWeight}g`)
       if (itemWeight) totalWeightG += itemWeight * item.quantity
 
       if (product.shippingBakedUSD && product.shippingBakedUSD > 0) {

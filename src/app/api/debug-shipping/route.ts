@@ -19,8 +19,10 @@ export async function POST(req: NextRequest) {
     const sizes = (product.sizes as Array<Record<string, unknown>>) ?? []
     const matchedSize = sizes.find(s => s.size === size)
     const anyWithVWeight = sizes.find(s => s.variantWeight)
+    const cjVariants = ((product.cjData as Record<string, unknown>)?.variants as Array<Record<string, unknown>>) ?? []
+    const cjVariantWeight = (cjVariants[0]?.weight as number) ?? (cjVariants[0]?.variantWeight as number) ?? 0
 
-    const itemWeight = (matchedSize?.variantWeight as number) ?? (anyWithVWeight?.variantWeight as number) ?? (product.productWeight as number) ?? 0
+    const itemWeight = (matchedSize?.variantWeight as number) ?? (anyWithVWeight?.variantWeight as number) ?? (product.productWeight as number) ?? cjVariantWeight ?? 0
     const totalWeight = itemWeight * (quantity ?? 1)
 
     // Try CJ call
@@ -43,7 +45,9 @@ export async function POST(req: NextRequest) {
       productWeight: product.productWeight,
       cjPid: product.cjPid,
       sizes: sizes.map(s => ({ size: s.size, variantWeight: s.variantWeight, cjVid: s.cjVid, cjSku: s.cjSku })),
+      cjDataVariants: cjVariants.map(v => ({ weight: v.weight, variantWeight: v.variantWeight, name: v.name })),
       matchedSize,
+      cjVariantWeight,
       itemWeightUsed: itemWeight,
       totalWeight,
       usdToCAD,
