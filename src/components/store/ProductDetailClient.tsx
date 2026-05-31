@@ -940,7 +940,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
 interface RelatedProduct {
   _id: string; name: string; slug: string; price: number
   originalPrice?: number; images: string[]; stock: number
-  sizes: { size: string; stock: number }[]
+  sizes: { size: string; stock: number; variantPrice?: number }[]
 }
 
 function RelatedProducts({ currentId, category, lang, format, addItem }: {
@@ -1050,7 +1050,7 @@ function RelatedProducts({ currentId, category, lang, format, addItem }: {
                     transition={{ duration: 0.15 }}
                     onClick={(e) => {
                       e.preventDefault()
-                      addItem({ productId: p._id, name: p.name, price: p.price, quantity: 1, size: firstSize, image: p.images[0] || '', stock: p.sizes[0].stock })
+                      addItem({ productId: p._id, name: p.name, price: p.sizes[0]?.variantPrice ?? p.price, quantity: 1, size: firstSize, image: p.images[0] || '', stock: p.sizes[0].stock })
                       toast.success(lang === 'fr' ? 'Ajouté au panier' : 'Added to cart')
                     }}
                     className="mt-2 w-full flex items-center justify-center gap-1.5 bg-brand-black text-white text-[10px] tracking-[0.2em] uppercase font-bold py-2.5 hover:bg-brand-gold hover:text-brand-black transition-colors"

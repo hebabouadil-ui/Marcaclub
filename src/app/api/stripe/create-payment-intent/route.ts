@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
 
     // Sum CAD subtotal — mirror client price resolution: variantPrice ?? product.price
     let subtotalCAD = 0
+    const resolvedItems: Array<{ productId: string; size: string; unitPrice: number; source: string }> = []
     for (const item of items) {
       const product = await Product.findById(item.productId).lean() as {
         price: number
@@ -48,6 +49,8 @@ export async function POST(req: NextRequest) {
       if (!product) return NextResponse.json({ error: 'Product not found' }, { status: 400 })
       const matchedSize = product.sizes?.find((s) => s.size === item.size)
       const unitPrice = matchedSize?.variantPrice ?? product.price
+      const source = matchedSize?.variantPrice != null ? 'variantPrice' : 'product.price'
+      resolvedItems.push({ productId: String(item.productId), size: item.size, unitPrice, source })
       subtotalCAD += unitPrice * item.quantity
     }
 
@@ -88,7 +91,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    return NextResponse.json({ clientSecret: paymentIntent.client_secret, amount: amountInCents, taxAmount, shippingFee, shippingFeeCAD, subtotal, fxRate, currency: currencyLower })
+    return NextResponse.json({ clientSecret: paymentIntent.client_secret, amount: amountInCents, taxAmount, shippingFee, shippingFeeCAD, subtotal, fxRate, currency: currencyLower, debug: { resolvedItems, subtotalCAD } })
   } catch (err) {
     console.error('create-payment-intent error:', err)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
