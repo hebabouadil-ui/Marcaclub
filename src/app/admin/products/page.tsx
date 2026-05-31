@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
-import { Plus, Pencil, Trash2, X, Loader2, Upload, Star, Crown, RefreshCw } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Loader2, Upload, Star, Crown, RefreshCw, Download } from 'lucide-react'
 
 interface SizeStock { size: string; stock: number; cjVid?: string; cjSku?: string }
 
