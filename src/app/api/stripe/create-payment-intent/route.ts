@@ -38,12 +38,17 @@ export async function POST(req: NextRequest) {
     // usdToCAD for shipping calculation
     const usdToCAD = 1 / (rates['USD'] ?? 0.73)
 
-    // Sum CAD subtotal
+    // Sum CAD subtotal — mirror client price resolution: variantPrice ?? product.price
     let subtotalCAD = 0
     for (const item of items) {
-      const product = await Product.findById(item.productId).lean() as { price: number } | null
+      const product = await Product.findById(item.productId).lean() as {
+        price: number
+        sizes?: Array<{ size: string; variantPrice?: number }>
+      } | null
       if (!product) return NextResponse.json({ error: 'Product not found' }, { status: 400 })
-      subtotalCAD += product.price * item.quantity
+      const matchedSize = product.sizes?.find((s) => s.size === item.size)
+      const unitPrice = matchedSize?.variantPrice ?? product.price
+      subtotalCAD += unitPrice * item.quantity
     }
 
     // Shipping: SINGLE SOURCE OF TRUTH — identical function, CJ request, option
