@@ -3,8 +3,7 @@ import Stripe from 'stripe'
 import { connectDB } from '@/lib/db'
 import Product from '@/lib/models/Product'
 import { getCadRates } from '@/lib/utils/getRates'
-import { getShippingFeeCAD } from '@/lib/utils/shippingFee'
-import { getCJShippingInfo } from '@/lib/utils/cjApi'
+import { computeShippingUSD } from '@/lib/utils/computeShipping'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,62 +38,23 @@ export async function POST(req: NextRequest) {
     // usdToCAD for shipping calculation
     const usdToCAD = 1 / (rates['USD'] ?? 0.73)
 
-    // Sum CAD subtotal + collect CJ VIDs and baked shipping data
+    // Sum CAD subtotal
     let subtotalCAD = 0
-    const cjProducts: Array<{ vid: string; quantity: number; weight?: number }> = []
-    let totalBakedUSD = 0
-    let hasBakedData = false
     for (const item of items) {
-      const product = await Product.findById(item.productId).lean() as {
-        price: number; cjPid?: string; shippingBakedUSD?: number; productWeight?: number
-        sizes?: Array<{ size: string; cjVid?: string }>
-      } | null
+      const product = await Product.findById(item.productId).lean() as { price: number } | null
       if (!product) return NextResponse.json({ error: 'Product not found' }, { status: 400 })
       subtotalCAD += product.price * item.quantity
-      if (product.shippingBakedUSD && product.shippingBakedUSD > 0) {
-        if (product.shippingBakedUSD > totalBakedUSD) totalBakedUSD = product.shippingBakedUSD
-        hasBakedData = true
-      }
-      if (product.cjPid) {
-        const sizeEntry = product.sizes?.find(s => s.size === item.size)
-        if (sizeEntry?.cjVid) cjProducts.push({ vid: sizeEntry.cjVid, quantity: item.quantity, weight: product.productWeight })
-      }
     }
 
-    // CJ ships everything in one package — baked = max product shipping + 15% per extra unit
-    const totalUnits = items.reduce((s: number, i: { quantity: number }) => s + i.quantity, 0)
-    const bakedUSD = totalBakedUSD * (1 + (totalUnits - 1) * 0.15)
-
-    // Shipping: Priority 1 = live CJ API, Priority 2 = baked price from import, Priority 3 = static table
-    let shippingFeeCAD: number
-    const destCountry = String(country).toUpperCase()
-    if (cjProducts.length > 0) {
-      try {
-        const cjData = await getCJShippingInfo({ startCountryCode: 'CN', endCountryCode: destCountry, products: cjProducts })
-        const options: Array<{ logisticPrice: number; agingMax?: number; agingMin?: number }> =
-          (cjData.result && Array.isArray(cjData.data)) ? cjData.data : []
-        if (options.length > 0) {
-          const maxPrice = Math.max(...options.map(o => o.logisticPrice))
-          const maxDays  = Math.max(...options.map(o => o.agingMax ?? o.agingMin ?? 30))
-          const best = options
-            .map(o => ({ ...o, score: (o.logisticPrice / (maxPrice || 1)) * 0.7 + ((o.agingMax ?? o.agingMin ?? 30) / (maxDays || 1)) * 0.3 }))
-            .sort((a, b) => a.score - b.score)[0]
-          shippingFeeCAD = Math.round(best.logisticPrice * usdToCAD * 100) / 100
-        } else if (hasBakedData) {
-          shippingFeeCAD = Math.round(bakedUSD * usdToCAD * 100) / 100
-        } else {
-          shippingFeeCAD = getShippingFeeCAD(destCountry, usdToCAD)
-        }
-      } catch {
-        shippingFeeCAD = hasBakedData
-          ? Math.round(bakedUSD * usdToCAD * 100) / 100
-          : getShippingFeeCAD(destCountry, usdToCAD)
-      }
-    } else if (hasBakedData) {
-      shippingFeeCAD = Math.round(bakedUSD * usdToCAD * 100) / 100
-    } else {
-      shippingFeeCAD = getShippingFeeCAD(destCountry, usdToCAD)
-    }
+    // Shipping: SINGLE SOURCE OF TRUTH — identical function, CJ request, option
+    // selection and base USD value as /api/shipping-estimate (product + cart pages).
+    // Convert USD → CAD with the same usdToCAD and rounding so the value matches exactly.
+    const shippingResult = await computeShippingUSD(
+      items.map((i: { productId: string; size: string; quantity: number }) => ({ productId: i.productId, size: i.size, quantity: i.quantity })),
+      country,
+      usdToCAD,
+    )
+    const shippingFeeCAD = Math.round(shippingResult.shippingUSD * usdToCAD * 100) / 100
 
     const subtotal = Math.round(subtotalCAD * fxRate * 100) / 100
     const shippingFee = Math.round(shippingFeeCAD * fxRate * 100) / 100

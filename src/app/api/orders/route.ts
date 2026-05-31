@@ -9,7 +9,7 @@ import { generateOrderNumber } from '@/lib/utils/generateOrderNumber'
 import { sendOrderConfirmationEmail, sendAdminOrderNotification } from '@/lib/utils/email'
 import { analyzeOrderRisk } from '@/lib/utils/riskAgent'
 import { getCadRates } from '@/lib/utils/getRates'
-import { getShippingFeeCAD } from '@/lib/utils/shippingFee'
+import { computeShippingUSD } from '@/lib/utils/computeShipping'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/authOptions'
 
@@ -94,13 +94,22 @@ export async function POST(req: NextRequest) {
     }
     const usdToCAD = 1 / (rates['USD'] ?? 0.73)
 
-    // Use shipping fee from payment intent when available (includes live CJ API rate);
-    // fall back to static table for COD orders where it wasn't pre-calculated
+    // Use shipping fee from payment intent when available (already computed via the
+    // single source of truth). For COD orders without a pre-calculated fee, compute it
+    // with the SAME computeShippingUSD function so the value still matches the storefront.
     const clientShippingFee = typeof body.shippingFee === 'number' && body.shippingFee >= 0 ? body.shippingFee : null
     const destCountry = (body.customer?.country || 'CA').toUpperCase()
-    const shippingFee = clientShippingFee !== null
-      ? clientShippingFee
-      : Math.round(getShippingFeeCAD(destCountry, usdToCAD) * fxRate * 100) / 100
+    let shippingFee: number
+    if (clientShippingFee !== null) {
+      shippingFee = clientShippingFee
+    } else {
+      const shippingResult = await computeShippingUSD(
+        items.map((i: { productId: string; size: string; quantity: number }) => ({ productId: i.productId, size: i.size, quantity: i.quantity })),
+        destCountry,
+        usdToCAD,
+      )
+      shippingFee = Math.round(shippingResult.shippingUSD * usdToCAD * fxRate * 100) / 100
+    }
 
     // Settings needed only for emailNote now
     const settingsDoc = await Settings.findOne().lean() as { emailNote?: string } | null
