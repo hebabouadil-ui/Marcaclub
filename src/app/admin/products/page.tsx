@@ -198,6 +198,32 @@ export default function AdminProductsPage() {
     }
   }
 
+  // Export products + supplier identifiers (PID/SKU/VID) to CSV for reconciliation.
+  const exportCSV = () => {
+    const esc = (v: unknown) => {
+      const s = String(v ?? '')
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+    }
+    const header = ['Product', 'Category', 'Price', 'CJ PID', 'Size', 'Stock', 'SKU', 'VID']
+    const rows: string[] = [header.join(',')]
+    for (const p of products) {
+      const sizes = p.sizes?.length ? p.sizes : [{ size: '', stock: 0 } as SizeStock]
+      for (const s of sizes) {
+        rows.push([
+          esc(p.name), esc(p.category), esc(p.price), esc(p.cjPid),
+          esc(s.size), esc(s.stock), esc(s.cjSku), esc(s.cjVid),
+        ].join(','))
+      }
+    }
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `marcaclub-products-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const handleDelete = async (id: string) => {
     if (!confirm('Supprimer ce produit ?')) return
     const res = await fetch(`/api/products/${id}`, { method: 'DELETE', credentials: 'include' })
@@ -210,6 +236,15 @@ export default function AdminProductsPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-white text-2xl font-semibold">Produits</h1>
         <div className="flex gap-2">
+          <button
+            onClick={exportCSV}
+            disabled={products.length === 0}
+            title="Exporter produits + SKU/VID fournisseur (CSV)"
+            className="flex items-center gap-2 bg-white/10 text-white/60 px-3 py-2 text-xs font-semibold tracking-widest uppercase hover:bg-white/20 transition-colors disabled:opacity-40"
+          >
+            <Download size={13} />
+            Export CSV
+          </button>
           <button
             onClick={runMigration}
             disabled={migrating}
