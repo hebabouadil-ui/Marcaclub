@@ -668,6 +668,34 @@ export default function CheckoutPage() {
       toast.error('Please fill in all required fields')
       return
     }
+
+    // Auto-apply coupon if the user typed a code but didn't click Apply
+    let resolvedCoupon = appliedCoupon
+    if (!resolvedCoupon && couponInput.trim()) {
+      setCouponLoading(true)
+      try {
+        const vRes = await fetch('/api/coupons/validate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: couponInput.trim(), subtotalCAD: subtotal, customerEmail: shippingForm.email || customer?.email }),
+        })
+        const vData = await vRes.json()
+        if (!vData.valid) {
+          setCouponError(vData.error ?? 'Code invalide')
+          setCouponLoading(false)
+          return
+        }
+        resolvedCoupon = { code: vData.code, type: vData.type, value: vData.value, discountCAD: vData.discountCAD }
+        setAppliedCoupon(resolvedCoupon)
+        setCouponInput('')
+      } catch {
+        setCouponError('Erreur lors de la validation du code')
+        setCouponLoading(false)
+        return
+      } finally {
+        setCouponLoading(false)
+      }
+    }
     // Combine phone code + number for submission
     const fullPhone = `${shippingForm.phoneCode} ${shippingForm.phone.replace(/^\+\d[\d\s-]*\s*/, '').trim()}`
     setConfirmedPhone(fullPhone)
@@ -681,7 +709,7 @@ export default function CheckoutPage() {
           currency: currency.toLowerCase(),
           country: shippingForm.country,
           taxRate: taxComponents.reduce((s, c) => s + c.rate, 0),
-          couponCode: appliedCoupon?.code ?? null,
+          couponCode: resolvedCoupon?.code ?? null,
           storeCreditCAD: storeCreditAppliedCAD,
           customerEmail: shippingForm.email || customer?.email,
         }),
