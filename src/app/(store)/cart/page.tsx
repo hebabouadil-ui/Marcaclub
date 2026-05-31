@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useCartStore, cartTotal } from '@/lib/store/cartStore'
 import { useCurrency } from '@/lib/context/CurrencyContext'
 import { useLanguage } from '@/lib/i18n'
+import { useDeliveryMessage } from '@/lib/hooks/useDeliveryMessage'
 import { Trash2, ShoppingBag, ArrowRight, Truck, ShieldCheck, RotateCcw, Loader2 } from 'lucide-react'
 
 function shortSize(s: string) {
@@ -18,6 +19,7 @@ export default function CartPage() {
   const { items, removeItem, updateQuantity } = useCartStore()
   const { format, formatUSD, usdToCAD, geo } = useCurrency()
   const { tr } = useLanguage()
+  const { message: deliveryMsg } = useDeliveryMessage()
   const [continueHref, setContinueHref] = useState('/products')
   const [shippingFee, setShippingFee] = useState<number | null>(null)
   const [shippingDays, setShippingDays] = useState<{ min: number; max: number } | null>(null)
@@ -180,7 +182,7 @@ export default function CartPage() {
             {/* Trust badges */}
             <div className="mt-6 grid grid-cols-3 gap-3">
               {[
-                { icon: Truck, label: 'Livraison internationale' },
+                { icon: Truck, label: deliveryMsg || 'Livraison internationale' },
                 { icon: ShieldCheck, label: 'Paiement sécurisé' },
                 { icon: RotateCcw, label: 'Retours faciles' },
               ].map(({ icon: Icon, label }) => (
@@ -230,9 +232,9 @@ export default function CartPage() {
                         Livraison
                         {country && <span className="text-[10px] text-brand-light-gray uppercase">({country})</span>}
                       </span>
-                      {shippingDays && (
+                      {deliveryMsg && (
                         <p className="text-[10px] text-brand-gray mt-0.5 ml-[18px]">
-                          {shippingDays.min}–{shippingDays.max} jours ouvrés
+                          {deliveryMsg}
                         </p>
                       )}
                     </div>
