@@ -337,7 +337,7 @@ export default function CJImportPage() {
         }
         return Number(s) || 200
       }
-      const weight = parseWeight(product.productWeight)
+      const weight = firstVariant?.variantWeight ?? parseWeight(product.productWeight)
       const vidParam = firstVariant?.vid ? `&vid=${encodeURIComponent(firstVariant.vid)}` : ''
       const res = await fetch(
         `/api/cj/shipping?endCountryCode=${country}&weight=${weight}&quantity=1${vidParam}`,
@@ -681,7 +681,7 @@ export default function CJImportPage() {
                     </div>
                     <div className="bg-white/5 px-3 py-2">
                       <p className="text-white/40 text-[10px] mb-0.5">WEIGHT</p>
-                      <p className="text-white font-semibold">{preview.productWeight ?? '—'}g</p>
+                      <p className="text-white font-semibold">{preview.variants?.[0]?.variantWeight ?? preview.productWeight ?? '—'}g</p>
                     </div>
                     <div className="bg-white/5 px-3 py-2">
                       <p className="text-white/40 text-[10px] mb-0.5">CATEGORY</p>
