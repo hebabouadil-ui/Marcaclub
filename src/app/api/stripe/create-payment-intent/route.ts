@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { connectDB } from '@/lib/db'
 import Product from '@/lib/models/Product'
+import Coupon from '@/lib/models/Coupon'
 import { getCadRates } from '@/lib/utils/getRates'
 import { computeShippingUSD } from '@/lib/utils/computeShipping'
 
@@ -14,7 +15,7 @@ export async function POST(req: NextRequest) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' })
   try {
     const body = await req.json()
-    const { items, currency = 'cad', taxRate = 0, country = 'CA' } = body
+    const { items, currency = 'cad', taxRate = 0, country = 'CA', couponCode, storeCreditCAD = 0, customerEmail } = body
 
     if (!Array.isArray(items) || items.length === 0)
       return NextResponse.json({ error: 'No items' }, { status: 400 })
@@ -70,7 +71,36 @@ export async function POST(req: NextRequest) {
     // Clamp taxRate to 0–50% to prevent abuse
     const clampedRate = Math.min(Math.max(Number(taxRate) || 0, 0), 0.5)
     const taxAmount = Math.round(subtotal * clampedRate * 100) / 100
-    const total = subtotal + shippingFee + taxAmount
+
+    // Validate coupon server-side
+    let discountAmountCAD = 0
+    let validatedCoupon: { code: string; type: 'percent' | 'fixed'; value: number } | null = null
+    if (couponCode && typeof couponCode === 'string') {
+      const coupon = await Coupon.findOne({ code: couponCode.toUpperCase().trim() }).lean() as {
+        code: string; type: 'percent' | 'fixed'; value: number; active: boolean
+        expiresAt?: Date; usageLimit?: number; usageCount: number
+        minOrderAmount?: number; onePerCustomer: boolean; usedByCustomers: string[]
+      } | null
+      if (
+        coupon && coupon.active &&
+        (!coupon.expiresAt || new Date() <= new Date(coupon.expiresAt)) &&
+        (coupon.usageLimit == null || coupon.usageCount < coupon.usageLimit) &&
+        (!coupon.minOrderAmount || subtotalCAD >= coupon.minOrderAmount) &&
+        (!coupon.onePerCustomer || !customerEmail || !coupon.usedByCustomers.includes(String(customerEmail).toLowerCase()))
+      ) {
+        discountAmountCAD = coupon.type === 'percent'
+          ? Math.round(subtotalCAD * (coupon.value / 100) * 100) / 100
+          : Math.min(coupon.value, subtotalCAD)
+        validatedCoupon = { code: coupon.code, type: coupon.type, value: coupon.value }
+      }
+    }
+
+    // Apply store credit (capped at remaining total after coupon, must be >= 0)
+    const clampedStoreCreditCAD = Math.max(0, Math.min(Number(storeCreditCAD) || 0, subtotalCAD + (shippingFeeCAD / fxRate) - discountAmountCAD))
+    const discountDisplay = Math.round(discountAmountCAD * fxRate * 100) / 100
+    const storeCreditDisplay = Math.round(clampedStoreCreditCAD * fxRate * 100) / 100
+
+    const total = Math.max(0.50, subtotal + shippingFee + taxAmount - discountDisplay - storeCreditDisplay)
 
     const isZeroDecimal = ZERO_DECIMAL.has(currencyLower)
     const amountInCents = isZeroDecimal ? Math.round(total) : Math.round(total * 100)
@@ -88,10 +118,26 @@ export async function POST(req: NextRequest) {
         country: String(country).toUpperCase(),
         fxRate: String(fxRate),
         displayCurrency: currencyLower.toUpperCase(),
+        couponCode: validatedCoupon?.code ?? '',
+        discountAmount: String(discountDisplay),
+        storeCreditUsed: String(storeCreditDisplay),
       },
     })
 
-    return NextResponse.json({ clientSecret: paymentIntent.client_secret, amount: amountInCents, taxAmount, shippingFee, shippingFeeCAD, subtotal, fxRate, currency: currencyLower, debug: { resolvedItems, subtotalCAD } })
+    return NextResponse.json({
+      clientSecret: paymentIntent.client_secret,
+      amount: amountInCents,
+      taxAmount,
+      shippingFee,
+      shippingFeeCAD,
+      subtotal,
+      fxRate,
+      currency: currencyLower,
+      couponCode: validatedCoupon?.code ?? null,
+      discountAmount: discountDisplay,
+      storeCreditApplied: storeCreditDisplay,
+      debug: { resolvedItems, subtotalCAD },
+    })
   } catch (err) {
     console.error('create-payment-intent error:', err)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })

@@ -10,15 +10,30 @@ const SECRET = new TextEncoder().encode(process.env.NEXTAUTH_SECRET!)
 export async function GET(req: NextRequest) {
   try {
     const token = req.cookies.get('mc-customer')?.value
-    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+
     const { payload } = await jwtVerify(token, SECRET)
-    const customerId = payload.sub as string
-    if (!customerId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const customerId = payload.sub
+    if (!customerId) return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+
     await connectDB()
-    const customer = await Customer.findById(customerId).select('-passwordHash').lean()
+    const customer = await Customer.findById(customerId).select('name email storeCredit referralCode').lean() as {
+      _id: unknown
+      name: string
+      email: string
+      storeCredit: number
+      referralCode?: string
+    } | null
+
     if (!customer) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-    const c = customer as { _id: unknown; name: string; email: string }
-    return NextResponse.json({ _id: String(c._id), name: c.name, email: c.email })
+
+    return NextResponse.json({
+      _id: String(customer._id),
+      name: customer.name,
+      email: customer.email,
+      storeCredit: customer.storeCredit ?? 0,
+      referralCode: customer.referralCode ?? null,
+    })
   } catch {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }

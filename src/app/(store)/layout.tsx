@@ -2,6 +2,7 @@ import Navbar from '@/components/store/Navbar'
 import Footer from '@/components/store/Footer'
 import WhatsAppButton from '@/components/ui/WhatsAppButton'
 import VisitorTracker from '@/components/store/VisitorTracker'
+import ReferralBanner from '@/components/store/ReferralBanner'
 import { CurrencyProvider } from '@/lib/context/CurrencyContext'
 import { CustomerProvider } from '@/lib/context/CustomerContext'
 import { LanguageProvider } from '@/lib/i18n'
@@ -68,6 +69,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
         contactPhone={s.contactPhone ?? ''}
       />
       <WhatsAppButton phone={s.whatsappNumber ?? ''} />
+      <ReferralBanner />
     </div>
     </CustomerProvider>
     </CurrencyProvider>

@@ -10,7 +10,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import {
   ArrowLeft, Loader2, ShoppingBag,
-  Lock, ChevronRight, ChevronDown, Shield, RotateCcw, Mail, Eye, EyeOff, User,
+  Lock, ChevronRight, ChevronDown, Shield, RotateCcw, Mail, Eye, EyeOff, User, Tag, X as XIcon, Wallet,
 } from 'lucide-react'
 import GoogleButton from '@/components/store/GoogleButton'
 import { loadStripe } from '@stripe/stripe-js'
@@ -307,10 +307,11 @@ function AuthStep({
       } else {
         if (!form.name) { toast.error('Please enter your name'); return }
         if (form.password.length < 8) { toast.error('Password must be at least 8 characters'); return }
+        const refCode = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('ref') : null
         const res = await fetch('/api/auth/customer/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: form.name, email: form.email, password: form.password }),
+          body: JSON.stringify({ name: form.name, email: form.email, password: form.password, referredBy: refCode ?? undefined }),
         })
         const data = await res.json()
         if (!res.ok) { toast.error(data.error ?? 'Registration failed'); return }
@@ -426,7 +427,7 @@ function AuthStep({
   )
 }
 
-function PaymentStep({ clientSecret, customer, items, total, taxAmount, shippingFee, currency, symbol, onSuccess }: {
+function PaymentStep({ clientSecret, customer, items, total, taxAmount, shippingFee, currency, symbol, couponCode, discountAmount, storeCreditUsed, onSuccess }: {
   clientSecret: string
   customer: CustomerForm
   items: { productId: string; size: string; quantity: number }[]
@@ -435,6 +436,9 @@ function PaymentStep({ clientSecret, customer, items, total, taxAmount, shipping
   shippingFee: number
   currency: string
   symbol: string
+  couponCode?: string | null
+  discountAmount?: number
+  storeCreditUsed?: number
   onSuccess: (orderNumber: string) => void
 }) {
   const stripe = useStripe()
@@ -452,7 +456,7 @@ function PaymentStep({ clientSecret, customer, items, total, taxAmount, shipping
     const orderRes = await fetch('/api/orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ customer, items, stripeClientSecret: clientSecret, taxAmount, shippingFee, currency, currencySymbol: symbol }),
+      body: JSON.stringify({ customer, items, stripeClientSecret: clientSecret, taxAmount, shippingFee, currency, currencySymbol: symbol, couponCode, discountAmount, storeCreditUsed }),
     })
     const orderData = await orderRes.json()
     if (!orderRes.ok) { toast.error(orderData.message ?? 'Failed to create order'); setPaying(false); return }
@@ -508,8 +512,18 @@ export default function CheckoutPage() {
   const [confirmedPhone, setConfirmedPhone] = useState('')
   const [confirmedShippingFeeCAD, setConfirmedShippingFeeCAD] = useState<number | null>(null)
   const [confirmedShippingFee, setConfirmedShippingFee] = useState<number | null>(null)
-  const [confirmedSnapshot, setConfirmedSnapshot] = useState<{ subtotal: number; shipping: number; tax: number; total: number } | null>(null)
+  const [confirmedSnapshot, setConfirmedSnapshot] = useState<{ subtotal: number; shipping: number; tax: number; total: number; discount: number; storeCreditApplied: number } | null>(null)
   const [mobileOrderOpen, setMobileOrderOpen] = useState(false)
+
+  // Coupon
+  const [couponInput, setCouponInput] = useState('')
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; type: 'percent'|'fixed'; value: number; discountCAD: number } | null>(null)
+  const [couponLoading, setCouponLoading] = useState(false)
+  const [couponError, setCouponError] = useState('')
+
+  // Store credit
+  const [useStoreCredit, setUseStoreCredit] = useState(false)
+  const [customerStoreCredit, setCustomerStoreCredit] = useState(0)
 
   // Per-country shipping fee in CAD — fetches real CJ rates when country changes
   const [shippingFeeCAD, setShippingFeeCAD] = useState<number>(() => {
@@ -544,8 +558,22 @@ export default function CheckoutPage() {
   ) / 100
   // Use server-confirmed shipping once available (live FX), fallback to estimated
   const effectiveShippingCAD = confirmedShippingFeeCAD ?? shippingFeeCAD
+  // Coupon discount and store credit (all in CAD)
+  const couponDiscountCAD = appliedCoupon?.discountCAD ?? 0
+  const storeCreditAppliedCAD = useStoreCredit
+    ? Math.min(customerStoreCredit, Math.max(0, subtotal + effectiveShippingCAD + taxAmount - couponDiscountCAD))
+    : 0
   // All amounts in CAD; format() converts to display currency
-  const total = subtotal + effectiveShippingCAD + taxAmount
+  const total = Math.max(0, subtotal + effectiveShippingCAD + taxAmount - couponDiscountCAD - storeCreditAppliedCAD)
+
+  // Fetch customer store credit when logged in
+  useEffect(() => {
+    if (!customer) { setCustomerStoreCredit(0); return }
+    fetch('/api/auth/customer/me', { credentials: 'include' })
+      .then(r => r.json())
+      .then(d => { if (typeof d.storeCredit === 'number') setCustomerStoreCredit(d.storeCredit) })
+      .catch(() => {})
+  }, [customer])
 
   // Detect return from OAuth redirect (?auth=done)
   useEffect(() => {
@@ -611,6 +639,29 @@ export default function CheckoutPage() {
     })
   }, [])
 
+  const handleApplyCoupon = async () => {
+    if (!couponInput.trim()) return
+    setCouponLoading(true)
+    setCouponError('')
+    try {
+      const res = await fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: couponInput.trim(),
+          subtotalCAD: subtotal,
+          customerEmail: shippingForm.email || customer?.email,
+        }),
+      })
+      const data = await res.json()
+      if (!data.valid) { setCouponError(data.error ?? 'Code invalide'); return }
+      setAppliedCoupon({ code: data.code, type: data.type, value: data.value, discountCAD: data.discountCAD })
+      setCouponInput('')
+      toast.success(`Code applied! You save ${format(data.discountCAD)}`)
+    } catch { setCouponError('Erreur serveur') }
+    finally { setCouponLoading(false) }
+  }
+
   const handleInfoSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!shippingForm.name || !shippingForm.email || !shippingForm.phone || !shippingForm.address || !shippingForm.city || !shippingForm.postalCode) {
@@ -630,6 +681,9 @@ export default function CheckoutPage() {
           currency: currency.toLowerCase(),
           country: shippingForm.country,
           taxRate: taxComponents.reduce((s, c) => s + c.rate, 0),
+          couponCode: appliedCoupon?.code ?? null,
+          storeCreditCAD: storeCreditAppliedCAD,
+          customerEmail: shippingForm.email || customer?.email,
         }),
       })
       const data = await res.json()
@@ -643,8 +697,10 @@ export default function CheckoutPage() {
         const lockedTotal = data.amount / 100
         const lockedShipping = typeof data.shippingFee === 'number' ? data.shippingFee : 0
         const lockedTax = typeof data.taxAmount === 'number' ? data.taxAmount : 0
-        const lockedSubtotal = typeof data.subtotal === 'number' ? data.subtotal : lockedTotal - lockedShipping - lockedTax
-        setConfirmedSnapshot({ subtotal: lockedSubtotal, shipping: lockedShipping, tax: lockedTax, total: lockedTotal })
+        const lockedDiscount = typeof data.discountAmount === 'number' ? data.discountAmount : 0
+        const lockedCredit = typeof data.storeCreditApplied === 'number' ? data.storeCreditApplied : 0
+        const lockedSubtotal = typeof data.subtotal === 'number' ? data.subtotal : lockedTotal - lockedShipping - lockedTax + lockedDiscount + lockedCredit
+        setConfirmedSnapshot({ subtotal: lockedSubtotal, shipping: lockedShipping, tax: lockedTax, total: lockedTotal, discount: lockedDiscount, storeCreditApplied: lockedCredit })
       }
       setStep('payment')
     } catch { toast.error('Failed to initialize payment. Please try again.') }
@@ -764,6 +820,18 @@ export default function CheckoutPage() {
                     <span>{format(Math.round(subtotal * c.rate * 100) / 100)}</span>
                   </div>
                 ))}
+                {couponDiscountCAD > 0 && (
+                  <div className="flex justify-between text-sm text-green-600">
+                    <span className="flex items-center gap-1"><Tag size={11} /> {appliedCoupon?.code}</span>
+                    <span>-{format(couponDiscountCAD)}</span>
+                  </div>
+                )}
+                {storeCreditAppliedCAD > 0 && (
+                  <div className="flex justify-between text-sm text-brand-gold">
+                    <span>Store credit</span>
+                    <span>-{format(storeCreditAppliedCAD)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between font-bold text-gray-900 pt-2 border-t border-gray-100">
                   <span>Total</span><span>{format(total)}</span>
                 </div>
@@ -909,6 +977,54 @@ export default function CheckoutPage() {
                     </div>
                   )}
 
+                  {/* Coupon code input */}
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    {appliedCoupon ? (
+                      <div className="flex items-center justify-between px-4 py-3 bg-green-50">
+                        <div className="flex items-center gap-2">
+                          <Tag size={14} className="text-green-600" />
+                          <span className="text-sm font-semibold text-green-700">{appliedCoupon.code}</span>
+                          <span className="text-xs text-green-600">
+                            -{appliedCoupon.type === 'percent' ? `${appliedCoupon.value}%` : format(appliedCoupon.discountCAD)}
+                          </span>
+                        </div>
+                        <button type="button" onClick={() => setAppliedCoupon(null)}
+                          className="text-gray-400 hover:text-red-500 transition-colors">
+                          <XIcon size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex">
+                        <div className="flex items-center pl-3 text-gray-400"><Tag size={14} /></div>
+                        <input
+                          value={couponInput}
+                          onChange={e => { setCouponInput(e.target.value); setCouponError('') }}
+                          onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleApplyCoupon())}
+                          placeholder="Discount code"
+                          className="flex-1 px-3 py-2.5 text-sm focus:outline-none bg-transparent"
+                        />
+                        <button type="button" onClick={handleApplyCoupon} disabled={couponLoading || !couponInput.trim()}
+                          className="px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 border-l border-gray-200 transition-colors disabled:opacity-40">
+                          {couponLoading ? <Loader2 size={13} className="animate-spin" /> : 'Apply'}
+                        </button>
+                      </div>
+                    )}
+                    {couponError && <p className="text-xs text-red-500 px-4 pb-2">{couponError}</p>}
+                  </div>
+
+                  {/* Store credit toggle */}
+                  {customer && customerStoreCredit > 0 && (
+                    <label className="flex items-center justify-between px-4 py-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                      <div className="flex items-center gap-2">
+                        <Wallet size={14} className="text-brand-gold" />
+                        <span className="text-sm text-gray-700">
+                          Use store credit <span className="text-brand-gold font-semibold">({format(customerStoreCredit)} available)</span>
+                        </span>
+                      </div>
+                      <input type="checkbox" checked={useStoreCredit} onChange={e => setUseStoreCredit(e.target.checked)} className="accent-brand-gold w-4 h-4" />
+                    </label>
+                  )}
+
                   <button type="submit" disabled={loadingIntent}
                     className="w-full bg-gray-900 text-white py-4 font-semibold rounded-lg hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 mt-2">
                     {loadingIntent ? <Loader2 size={16} className="animate-spin" /> : null}
@@ -954,6 +1070,18 @@ export default function CheckoutPage() {
                         </div>
                       ))
                   }
+                  {(confirmedSnapshot?.discount ?? 0) > 0 && (
+                    <div className="flex justify-between text-sm text-green-600">
+                      <span className="flex items-center gap-1"><Tag size={11} /> Discount</span>
+                      <span>-{symbol}{confirmedSnapshot!.discount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {(confirmedSnapshot?.storeCreditApplied ?? 0) > 0 && (
+                    <div className="flex justify-between text-sm text-brand-gold">
+                      <span className="flex items-center gap-1"><Wallet size={11} /> Store credit</span>
+                      <span>-{symbol}{confirmedSnapshot!.storeCreditApplied.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between font-bold text-gray-900 pt-2 border-t border-gray-200">
                     <span>Total to pay</span>
                     <span className="text-lg">{confirmedSnapshot ? `${symbol}${confirmedSnapshot.total.toFixed(2)}` : format(total)}</span>
@@ -976,6 +1104,9 @@ export default function CheckoutPage() {
                     shippingFee={confirmedSnapshot?.shipping ?? confirmedShippingFee ?? Math.round(effectiveShippingCAD * rate * 100) / 100}
                     currency={currency}
                     symbol={symbol}
+                    couponCode={confirmedSnapshot ? (appliedCoupon?.code ?? null) : null}
+                    discountAmount={confirmedSnapshot?.discount}
+                    storeCreditUsed={confirmedSnapshot?.storeCreditApplied}
                     onSuccess={handleSuccess}
                   />
                 </Elements>
@@ -1039,6 +1170,18 @@ export default function CheckoutPage() {
                     </div>
                   : null
                 }
+                {couponDiscountCAD > 0 && (
+                  <div className="flex justify-between text-sm text-green-600">
+                    <span className="flex items-center gap-1"><Tag size={11} /> {appliedCoupon?.code}</span>
+                    <span>-{format(couponDiscountCAD)}</span>
+                  </div>
+                )}
+                {storeCreditAppliedCAD > 0 && (
+                  <div className="flex justify-between text-sm text-brand-gold">
+                    <span className="flex items-center gap-1"><Wallet size={11} /> Store credit</span>
+                    <span>-{format(storeCreditAppliedCAD)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between font-bold text-gray-900 text-base pt-2 border-t border-gray-100">
                   <span>Total</span><span>{format(total)}</span>
                 </div>

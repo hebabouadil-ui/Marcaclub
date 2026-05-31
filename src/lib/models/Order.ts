@@ -29,6 +29,9 @@ export interface IOrder extends Document {
   currencySymbol?: string
   stripePaymentIntentId?: string
   stripePaymentStatus?: string
+  couponCode?: string
+  discountAmount?: number
+  storeCreditUsed?: number
   cjOrderId?: string
   cjTrackingNumber?: string
   status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled'
@@ -77,6 +80,9 @@ const OrderSchema = new Schema<IOrder>(
     currencySymbol: { type: String, default: 'CA$' },
     stripePaymentIntentId: { type: String },
     stripePaymentStatus: { type: String },
+    couponCode: { type: String },
+    discountAmount: { type: Number },
+    storeCreditUsed: { type: Number },
     cjOrderId: { type: String },
     cjTrackingNumber: { type: String },
     status: {

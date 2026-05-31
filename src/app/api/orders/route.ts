@@ -5,6 +5,9 @@ import Product from '@/lib/models/Product'
 import Settings from '@/lib/models/Settings'
 import Blocklist from '@/lib/models/Blocklist'
 import BlockedIP from '@/lib/models/BlockedIP'
+import Coupon from '@/lib/models/Coupon'
+import Customer from '@/lib/models/Customer'
+import Referral from '@/lib/models/Referral'
 import { generateOrderNumber } from '@/lib/utils/generateOrderNumber'
 import { sendOrderConfirmationEmail, sendAdminOrderNotification } from '@/lib/utils/email'
 import { analyzeOrderRisk } from '@/lib/utils/riskAgent'
@@ -98,6 +101,9 @@ export async function POST(req: NextRequest) {
 
     // Accept tax amount passed from the client (validated against payment intent metadata)
     const clientTaxAmount = typeof body.taxAmount === 'number' && body.taxAmount >= 0 ? body.taxAmount : 0
+    const clientCouponCode = typeof body.couponCode === 'string' ? body.couponCode.toUpperCase().trim() : undefined
+    const clientDiscountAmount = typeof body.discountAmount === 'number' && body.discountAmount >= 0 ? body.discountAmount : 0
+    const clientStoreCreditUsed = typeof body.storeCreditUsed === 'number' && body.storeCreditUsed >= 0 ? body.storeCreditUsed : 0
 
     // Fetch live FX rate server-side: CAD → orderCurrency
     let fxRate = 1
@@ -335,6 +341,8 @@ export async function POST(req: NextRequest) {
       flagReason = `[${flagSeverity.toUpperCase()}] ${uniqueSignals.join(' · ')}${refList}`
     }
 
+    const orderTotal = Math.max(0, Math.round((serverTotal + shippingFee + clientTaxAmount - clientDiscountAmount - clientStoreCreditUsed) * 100) / 100)
+
     const order = await Order.create({
       customer: {
         name: c.name,
@@ -349,13 +357,16 @@ export async function POST(req: NextRequest) {
       items: trustedItems,
       notes: body.notes || undefined,
       orderNumber,
-      total: Math.round((serverTotal + shippingFee + clientTaxAmount) * 100) / 100,
+      total: orderTotal,
       taxAmount: clientTaxAmount > 0 ? clientTaxAmount : undefined,
       shippingFee,
       currency: orderCurrency.toLowerCase(),
       currencySymbol,
       stripePaymentIntentId: stripePaymentIntentId || undefined,
       stripePaymentStatus: stripePaymentIntentId ? 'pending' : undefined,
+      couponCode: clientCouponCode || undefined,
+      discountAmount: clientDiscountAmount > 0 ? clientDiscountAmount : undefined,
+      storeCreditUsed: clientStoreCreditUsed > 0 ? clientStoreCreditUsed : undefined,
       status: 'pending',
       flagged,
       flagSeverity: flagSeverity || undefined,
@@ -363,6 +374,52 @@ export async function POST(req: NextRequest) {
       flaggedOrderNumbers: flaggedOrderNumbers.length ? flaggedOrderNumbers : undefined,
       ip: ip !== 'unknown' ? ip : undefined,
     })
+
+    // Post-order async tasks: coupon usage, store credit deduction, referral reward
+    // emailNorm already declared above for duplicate detection; reuse it here
+    Promise.all([
+      // Increment coupon usage
+      clientCouponCode
+        ? Coupon.findOneAndUpdate(
+            { code: clientCouponCode },
+            { $inc: { usageCount: 1 }, ...(emailNorm ? { $addToSet: { usedByCustomers: emailNorm } } : {}) }
+          ).catch((err: unknown) => console.error('Coupon update error:', err))
+        : Promise.resolve(),
+
+      // Deduct store credit from customer balance
+      clientStoreCreditUsed > 0 && emailNorm
+        ? Customer.findOneAndUpdate(
+            { email: emailNorm },
+            {
+              $inc: { storeCredit: -clientStoreCreditUsed },
+              $push: { creditHistory: { amount: -clientStoreCreditUsed, reason: `Applied to order #${orderNumber}`, orderId: String(order._id), createdAt: new Date() } },
+            }
+          ).catch((err: unknown) => console.error('Store credit deduct error:', err))
+        : Promise.resolve(),
+
+      // Referral reward: if this is customer's first order, reward the referrer
+      emailNorm
+        ? (async () => {
+            try {
+              const customer_ = await Customer.findOne({ email: emailNorm }).select('referredBy').lean() as { referredBy?: string } | null
+              if (!customer_?.referredBy) return
+              const referral = await Referral.findOne({ referredEmail: emailNorm, status: 'registered', referrerRewarded: false }).lean() as { _id: unknown; referrerId: unknown } | null
+              if (!referral) return
+              // Check it's their first completed order
+              const priorOrders = await Order.countDocuments({ 'customer.email': emailNorm, status: { $nin: ['cancelled'] }, _id: { $ne: order._id } })
+              if (priorOrders > 0) return
+              // Award $10 CAD to referrer
+              await Customer.findByIdAndUpdate(referral.referrerId, {
+                $inc: { storeCredit: 10 },
+                $push: { creditHistory: { amount: 10, reason: `Referral reward — friend ${emailNorm} placed first order`, orderId: String(order._id), createdAt: new Date() } },
+              })
+              await Referral.findByIdAndUpdate(referral._id, { $set: { status: 'completed', referrerRewarded: true, referredOrderId: order._id } })
+            } catch (err) {
+              console.error('Referral reward error:', err)
+            }
+          })()
+        : Promise.resolve(),
+    ]).catch((err: unknown) => console.error('Post-order tasks error:', err))
 
     // Auto-run risk analysis in background — does not block the response
     const orderForRisk = {

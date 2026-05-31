@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { Loader2, User, Mail, Lock, Phone, Globe, Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -14,6 +14,12 @@ const COUNTRIES = [
 
 export default function RegisterPage() {
   const [form, setForm] = useState({ name: '', email: '', password: '', phone: '', country: '' })
+  const referredByRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    const ref = new URLSearchParams(window.location.search).get('ref')
+    if (ref) referredByRef.current = ref
+  }, [])
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
   const [registered, setRegistered] = useState(false)
@@ -30,7 +36,7 @@ export default function RegisterPage() {
       const res = await fetch('/api/auth/customer/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, referredBy: referredByRef.current ?? undefined }),
       })
       const data = await res.json()
       if (!res.ok) { toast.error(data.error ?? 'Erreur lors de la création du compte'); return }

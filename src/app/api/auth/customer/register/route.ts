@@ -5,7 +5,12 @@ import crypto from 'crypto'
 import { Resend } from 'resend'
 import { connectDB } from '@/lib/db'
 import Customer from '@/lib/models/Customer'
+import Referral from '@/lib/models/Referral'
 import { rateLimit } from '@/lib/utils/rateLimit'
+
+function generateReferralCode(): string {
+  return crypto.randomBytes(4).toString('hex').toUpperCase()
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -18,7 +23,7 @@ export async function POST(req: NextRequest) {
   }
   const resend = new Resend(process.env.RESEND_API_KEY)
   try {
-    const { email, name, password } = await req.json()
+    const { email, name, password, referredBy } = await req.json()
     if (!email || !name || !password) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
     }
@@ -29,14 +34,44 @@ export async function POST(req: NextRequest) {
     }
     const passwordHash = await bcrypt.hash(password, 12)
     const verificationToken = crypto.randomBytes(32).toString('hex')
+    const referralCode = generateReferralCode()
+
+    // Validate referredBy code if provided
+    let referrerId: string | undefined
+    let referrerCustomer: { _id: unknown; name: string; email: string } | null = null
+    if (referredBy && typeof referredBy === 'string') {
+      referrerCustomer = await Customer.findOne({ referralCode: referredBy.toUpperCase() }).select('_id name email').lean() as { _id: unknown; name: string; email: string } | null
+      if (referrerCustomer) referrerId = String(referrerCustomer._id)
+    }
+
+    const creditHistory = referrerId
+      ? [{ amount: 10, reason: 'Referral bonus — welcome gift', createdAt: new Date() }]
+      : []
+
     const customer = await Customer.create({
       name,
       email: email.toLowerCase(),
       passwordHash,
       emailVerified: false,
       emailVerificationToken: verificationToken,
-      emailVerificationExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24h
+      emailVerificationExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      referralCode,
+      referredBy: referrerId ? referredBy.toUpperCase() : undefined,
+      storeCredit: referrerId ? 10 : 0,
+      creditHistory,
     })
+
+    // Create referral tracking document
+    if (referrerId && referrerCustomer) {
+      await Referral.create({
+        referrerId,
+        referrerCode: referredBy.toUpperCase(),
+        referredEmail: email.toLowerCase(),
+        referredId: customer._id,
+        status: 'registered',
+        referredRewarded: true,
+      }).catch((err: unknown) => console.error('Referral create error:', err))
+    }
 
     // Send verification email
     if (!process.env.RESEND_API_KEY) {
