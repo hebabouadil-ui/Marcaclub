@@ -9,7 +9,6 @@ declare global {
       accounts: {
         id: {
           initialize: (cfg: { client_id: string; callback: (r: { credential: string }) => void }) => void
-          renderButton: (el: HTMLElement, opts: object) => void
           prompt: () => void
         }
       }
