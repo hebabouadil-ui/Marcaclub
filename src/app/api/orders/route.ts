@@ -10,6 +10,7 @@ import { sendOrderConfirmationEmail, sendAdminOrderNotification } from '@/lib/ut
 import { analyzeOrderRisk } from '@/lib/utils/riskAgent'
 import { getCadRates } from '@/lib/utils/getRates'
 import { computeShippingUSD } from '@/lib/utils/computeShipping'
+import { validateCartWeight, CART_WEIGHT_LIMIT_KG } from '@/lib/utils/cartWeight'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/authOptions'
 
@@ -58,6 +59,18 @@ export async function POST(req: NextRequest) {
       (body.notes && (typeof body.notes !== 'string' || body.notes.length > 1000))
     ) {
       return NextResponse.json({ message: 'Invalid data' }, { status: 400 })
+    }
+
+    // Cart weight hard limit — backend enforcement
+    const weightResult = await validateCartWeight(
+      (body.items as Array<{ productId: string; size: string; quantity: number }>)
+        .map((i) => ({ productId: i.productId, size: i.size, quantity: i.quantity }))
+    )
+    if (!weightResult.ok) {
+      return NextResponse.json(
+        { message: `Commande trop lourde (${weightResult.weightKg.toFixed(2)} kg). Limite: ${CART_WEIGHT_LIMIT_KG} kg par commande.` },
+        { status: 400 },
+      )
     }
 
     // Extract Stripe payment intent ID from clientSecret

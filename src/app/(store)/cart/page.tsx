@@ -24,6 +24,7 @@ export default function CartPage() {
   const [shippingFee, setShippingFee] = useState<number | null>(null)
   const [shippingDays, setShippingDays] = useState<{ min: number; max: number } | null>(null)
   const [shippingLoading, setShippingLoading] = useState(false)
+  const [weightExceeded, setWeightExceeded] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
 
   // country from CurrencyContext — already resolved server-side, no race condition
@@ -41,7 +42,7 @@ export default function CartPage() {
 
   // Fetch shipping whenever items or country changes — abort previous in-flight request
   useEffect(() => {
-    if (items.length === 0) { setShippingFee(null); setShippingDays(null); return }
+    if (items.length === 0) { setShippingFee(null); setShippingDays(null); setWeightExceeded(false); return }
     if (!country) return // wait for country to be known
 
     abortRef.current?.abort()
@@ -58,9 +59,16 @@ export default function CartPage() {
       }),
       signal: ctrl.signal,
     })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (!data) return
+      .then(r => r.json().then(data => ({ ok: r.ok, data })))
+      .then(({ ok, data }) => {
+        if (!ok) {
+          if (data?.error === 'weight_exceeded') {
+            setWeightExceeded(true)
+            setShippingFee(null)
+          }
+          return
+        }
+        setWeightExceeded(false)
         // SINGLE SOURCE OF TRUTH: consume the server-computed CAD value only.
         // Currency was already converted once (USD→CAD) server-side from the snapshot.
         // The UI never re-derives CAD from USD — that would use the client FX rate and
@@ -265,11 +273,24 @@ export default function CartPage() {
                   )}
                 </div>
 
+                {/* Weight exceeded warning */}
+                {weightExceeded && (
+                  <div className="bg-red-50 border border-red-200 px-4 py-3 text-xs text-red-700 leading-snug">
+                    ⚠️ Votre panier dépasse la limite de 1,9 kg par commande. Retirez des articles pour continuer.
+                  </div>
+                )}
+
                 {/* CTA */}
-                <Link href="/checkout"
-                  className="block w-full text-center bg-brand-black text-white py-4 text-[11px] tracking-[0.25em] uppercase font-bold hover:bg-brand-gold hover:text-brand-black transition-all duration-300">
-                  {tr.cart.checkout} →
-                </Link>
+                {weightExceeded ? (
+                  <div className="block w-full text-center bg-brand-light-gray text-brand-gray py-4 text-[11px] tracking-[0.25em] uppercase font-bold cursor-not-allowed select-none">
+                    Panier trop lourd
+                  </div>
+                ) : (
+                  <Link href="/checkout"
+                    className="block w-full text-center bg-brand-black text-white py-4 text-[11px] tracking-[0.25em] uppercase font-bold hover:bg-brand-gold hover:text-brand-black transition-all duration-300">
+                    {tr.cart.checkout} →
+                  </Link>
+                )}
 
                 <p className="text-center text-[10px] text-brand-gray tracking-wide">
                   🔒 Paiement 100% sécurisé

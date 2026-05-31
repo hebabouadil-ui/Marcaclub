@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCadRates } from '@/lib/utils/getRates'
 import { computeShippingUSD } from '@/lib/utils/computeShipping'
+import { validateCartWeight, CART_WEIGHT_LIMIT_KG } from '@/lib/utils/cartWeight'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,6 +10,15 @@ export async function POST(req: NextRequest) {
     const { items, country } = await req.json()
     if (!Array.isArray(items) || !country) {
       return NextResponse.json({ error: 'Missing params' }, { status: 400 })
+    }
+
+    // Weight check — inform the client before checkout
+    const weightResult = await validateCartWeight(items)
+    if (!weightResult.ok) {
+      return NextResponse.json(
+        { error: 'weight_exceeded', weightKg: weightResult.weightKg, limitKg: CART_WEIGHT_LIMIT_KG },
+        { status: 400 },
+      )
     }
 
     const rates = await getCadRates()
@@ -27,6 +37,7 @@ export async function POST(req: NextRequest) {
       agingMax: result.agingMax,
       logisticName: result.logisticName,
       source: result.source,
+      weightKg: weightResult.weightKg,
     })
   } catch (err) {
     console.error('shipping-estimate error:', err)
