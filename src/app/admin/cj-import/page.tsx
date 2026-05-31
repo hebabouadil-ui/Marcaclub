@@ -705,6 +705,18 @@ export default function CJImportPage() {
                   )}
                 </div>
 
+                {/* Supplier reference — PID for the whole product */}
+                <div className="mt-3 bg-white/5 px-3 py-2">
+                  <p className="text-white/40 text-[10px] mb-0.5">SUPPLIER PID</p>
+                  <button
+                    onClick={() => { navigator.clipboard?.writeText(preview.pid); toast.success('PID copié') }}
+                    className="text-white font-mono text-xs hover:text-brand-gold transition-colors break-all text-left"
+                    title="Cliquer pour copier"
+                  >
+                    {preview.pid || '—'}
+                  </button>
+                </div>
+
                 {/* All variants table */}
                 {(preview.variants?.length ?? 0) > 0 && (
                   <div className="mt-4">
@@ -715,11 +727,34 @@ export default function CJImportPage() {
                       </div>
                       <div className="max-h-48 overflow-y-auto">
                         {preview.variants!.map((v) => (
-                          <div key={v.vid} className="grid grid-cols-4 text-[11px] px-3 py-1.5 border-b border-white/5 hover:bg-white/3">
-                            <span className="text-white truncate">{v.variantNameEn}</span>
-                            <span className="text-brand-gold">{cadUSD(v.variantPrice ?? 0)}</span>
-                            <span className={v.variantStock > 0 ? 'text-green-400' : 'text-red-400'}>{v.variantStock}</span>
-                            <span className="text-white/40">{v.variantWeight}g</span>
+                          <div key={v.vid} className="px-3 py-1.5 border-b border-white/5 hover:bg-white/3">
+                            <div className="grid grid-cols-4 text-[11px]">
+                              <span className="text-white truncate">{v.variantNameEn}</span>
+                              <span className="text-brand-gold">{cadUSD(v.variantPrice ?? 0)}</span>
+                              <span className={v.variantStock > 0 ? 'text-green-400' : 'text-red-400'}>{v.variantStock}</span>
+                              <span className="text-white/40">{v.variantWeight}g</span>
+                            </div>
+                            {/* Supplier identifiers — SKU + VID */}
+                            <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1 text-[9px] font-mono text-white/35">
+                              {v.variantSku && (
+                                <button
+                                  onClick={() => { navigator.clipboard?.writeText(v.variantSku!); toast.success('SKU copié') }}
+                                  className="hover:text-brand-gold transition-colors"
+                                  title="Cliquer pour copier le SKU"
+                                >
+                                  SKU: {v.variantSku}
+                                </button>
+                              )}
+                              {v.vid && (
+                                <button
+                                  onClick={() => { navigator.clipboard?.writeText(v.vid); toast.success('VID copié') }}
+                                  className="hover:text-brand-gold transition-colors"
+                                  title="Cliquer pour copier le VID"
+                                >
+                                  VID: {v.vid}
+                                </button>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>
