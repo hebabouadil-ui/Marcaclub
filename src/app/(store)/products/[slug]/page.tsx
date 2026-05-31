@@ -25,9 +25,9 @@ export async function generateMetadata({ params }: Props) {
   }
 }
 
-function normalizeSizes(sizes: unknown[]): { size: string; stock: number; cjVid?: string; variantPrice?: number }[] {
+function normalizeSizes(sizes: unknown[]): { size: string; stock: number; cjVid?: string; variantPrice?: number; variantWeight?: number }[] {
   return sizes.map((s) =>
-    typeof s === 'string' ? { size: s, stock: 0 } : (s as { size: string; stock: number; cjVid?: string; variantPrice?: number })
+    typeof s === 'string' ? { size: s, stock: 0 } : (s as { size: string; stock: number; cjVid?: string; variantPrice?: number; variantWeight?: number })
   )
 }
 

@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ShoppingBag, ChevronLeft, ChevronRight, ArrowRight, ShoppingCart, Truck, Play, Star } from 'lucide-react'
+import { ShoppingBag, ChevronLeft, ChevronRight, ArrowRight, ShoppingCart, Truck, Play, Star, Package } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cartStore'
 import { useCurrency } from '@/lib/context/CurrencyContext'
 import { useLanguage } from '@/lib/i18n'
@@ -20,6 +20,7 @@ interface SizeEntry {
   cjVid?: string
   variantPrice?: number
   baseVariantPrice?: number
+  variantWeight?: number
 }
 
 interface Product {
@@ -323,6 +324,12 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
   // Same CAD base as cart and checkout — only CAD→display conversion happens in format().
   const effectiveShipCAD = shipping ? shipping.logisticPrice : 0
 
+  // Real product weight (grams). Prefer the selected variant weight when present.
+  const weightG = (selectedSizeEntry?.variantWeight ?? product.productWeight) ?? null
+  const weightLabel = weightG != null && weightG > 0
+    ? (weightG >= 1000 ? `${(weightG / 1000).toFixed(2)} kg` : `${Math.round(weightG)} g`)
+    : null
+
   const originalPrice = product.originalPrice
   const discount = originalPrice && displayPrice < originalPrice
     ? Math.round(((originalPrice - displayPrice) / originalPrice) * 100)
@@ -623,6 +630,14 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                       )
                     })}
                   </div>
+                </div>
+              )}
+
+              {/* Real product weight */}
+              {weightLabel && (
+                <div className="flex items-center gap-2 mb-4 text-xs text-brand-gray">
+                  <Package size={13} className="text-brand-gold flex-shrink-0" />
+                  <span className="tracking-wide"><span className="font-semibold text-brand-black">Poids</span> · {weightLabel}</span>
                 </div>
               )}
 
