@@ -1,18 +1,50 @@
 'use client'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useSpring, useTransform, motionValue } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useCartStore, cartTotal } from '@/lib/store/cartStore'
 import { useCurrency } from '@/lib/context/CurrencyContext'
 import { useLanguage } from '@/lib/i18n'
 import { useDeliveryMessage } from '@/lib/hooks/useDeliveryMessage'
-import { Trash2, ShoppingBag, ArrowRight, Truck, ShieldCheck, RotateCcw, Loader2 } from 'lucide-react'
+import {
+  Trash2, ShoppingBag, ArrowRight, Truck, ShieldCheck,
+  RotateCcw, Loader2, Minus, Plus, Package, Lock,
+} from 'lucide-react'
 
 function shortSize(s: string) {
   if (s.length <= 25) return s
   const last = s.split(',').pop()?.trim() ?? s
   return last.replace(/^\s*\d+\s*/, '').trim() || s.slice(-20)
+}
+
+// Animated number that smoothly counts to new value
+function AnimatedPrice({ value, format }: { value: number; format: (n: number) => string }) {
+  const [displayed, setDisplayed] = useState(value)
+  const [prev, setPrev] = useState(value)
+  const [dir, setDir] = useState(0)
+
+  useEffect(() => {
+    if (value === prev) return
+    setDir(value > prev ? 1 : -1)
+    setPrev(value)
+    setDisplayed(value)
+  }, [value, prev])
+
+  return (
+    <AnimatePresence mode="popLayout" initial={false}>
+      <motion.span
+        key={value}
+        initial={{ y: dir * 12, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: dir * -12, opacity: 0 }}
+        transition={{ duration: 0.2, ease: 'easeOut' }}
+        className="inline-block tabular-nums"
+      >
+        {format(displayed)}
+      </motion.span>
+    </AnimatePresence>
+  )
 }
 
 export default function CartPage() {
@@ -25,9 +57,9 @@ export default function CartPage() {
   const [shippingDays, setShippingDays] = useState<{ min: number; max: number } | null>(null)
   const [shippingLoading, setShippingLoading] = useState(false)
   const [weightExceeded, setWeightExceeded] = useState(false)
+  const [removingId, setRemovingId] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 
-  // country from CurrencyContext — already resolved server-side, no race condition
   const country = geo?.countryCode || ''
 
   useEffect(() => {
@@ -40,10 +72,9 @@ export default function CartPage() {
     }
   }, [items])
 
-  // Fetch shipping whenever items or country changes — abort previous in-flight request
   useEffect(() => {
     if (items.length === 0) { setShippingFee(null); setShippingDays(null); setWeightExceeded(false); return }
-    if (!country) return // wait for country to be known
+    if (!country) return
 
     abortRef.current?.abort()
     const ctrl = new AbortController()
@@ -62,17 +93,10 @@ export default function CartPage() {
       .then(r => r.json().then(data => ({ ok: r.ok, data })))
       .then(({ ok, data }) => {
         if (!ok) {
-          if (data?.error === 'weight_exceeded') {
-            setWeightExceeded(true)
-            setShippingFee(null)
-          }
+          if (data?.error === 'weight_exceeded') { setWeightExceeded(true); setShippingFee(null) }
           return
         }
         setWeightExceeded(false)
-        // SINGLE SOURCE OF TRUTH: consume the server-computed CAD value only.
-        // Currency was already converted once (USD→CAD) server-side from the snapshot.
-        // The UI never re-derives CAD from USD — that would use the client FX rate and
-        // drift from checkout. We only apply the shared CAD→display rate via format().
         const cad = typeof data.shippingFeeCAD === 'number' ? data.shippingFeeCAD : null
         setShippingFee(cad)
         setShippingDays(data.agingMin && data.agingMax ? { min: data.agingMin, max: data.agingMax } : null)
@@ -83,178 +107,294 @@ export default function CartPage() {
     return () => ctrl.abort()
   }, [items, country])
 
-  const subtotal = cartTotal(items)
-  // shippingFee is already in CAD (server-computed) — same base as checkout.
-  const total = subtotal + (shippingFee != null ? shippingFee : 0)
+  const handleRemove = useCallback((productId: string, size: string) => {
+    setRemovingId(`${productId}-${size}`)
+    setTimeout(() => {
+      removeItem(productId, size)
+      setRemovingId(null)
+    }, 300)
+  }, [removeItem])
 
+  const subtotal = cartTotal(items)
+  const total = subtotal + (shippingFee ?? 0)
+  const totalItems = items.reduce((s, i) => s + i.quantity, 0)
+
+  // ─── Empty state ────────────────────────────────────────────────
   if (items.length === 0) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center text-center px-4">
-        <ShoppingBag size={48} className="text-brand-light-gray mb-6" strokeWidth={1} />
-        <h1 className="font-display text-3xl text-brand-black mb-3">{tr.cart.empty}</h1>
-        <p className="text-brand-gray text-sm mb-8">{tr.cart.emptySub}</p>
-        <Link href="/products"
-          className="inline-flex items-center gap-2 bg-brand-black text-brand-white px-8 py-4 text-xs tracking-[0.2em] uppercase hover:bg-brand-gold hover:text-brand-black transition-colors">
-          {tr.cart.shopNow} <ArrowRight size={14} />
-        </Link>
+      <div className="min-h-screen flex flex-col items-center justify-center text-center px-4 bg-[#faf8f5]">
+        <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 200, damping: 20 }}>
+          <div className="w-24 h-24 rounded-full bg-brand-light-gray flex items-center justify-center mx-auto mb-6">
+            <ShoppingBag size={36} className="text-brand-gray" strokeWidth={1} />
+          </div>
+        </motion.div>
+        <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.15 }}>
+          <h1 className="font-display text-3xl text-brand-black mb-2">{tr.cart.empty}</h1>
+          <p className="text-brand-gray text-sm mb-8 max-w-xs mx-auto">{tr.cart.emptySub}</p>
+          <Link href="/products"
+            className="inline-flex items-center gap-2 bg-brand-black text-brand-white px-8 py-4 text-[11px] tracking-[0.2em] uppercase font-bold hover:bg-brand-gold hover:text-brand-black transition-all duration-300">
+            {tr.cart.shopNow} <ArrowRight size={13} />
+          </Link>
+        </motion.div>
       </div>
     )
   }
 
+  // ─── Cart ────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#faf8f5]">
-      {/* Header */}
-      <div className="bg-brand-black text-brand-white py-4 md:py-6">
-        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
-          <h1 className="font-display text-xl md:text-2xl">{tr.cart.title}</h1>
-          <span className="text-white/40 text-xs tracking-widest">{items.length} article{items.length > 1 ? 's' : ''}{country && ` · ${country}`}</span>
+
+      {/* ── Top bar ─────────────────────────────────────── */}
+      <div className="bg-brand-black text-brand-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <ShoppingBag size={18} strokeWidth={1.5} />
+            <h1 className="font-display text-lg tracking-wide">{tr.cart.title}</h1>
+            <span className="bg-brand-gold text-brand-black text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
+              {totalItems}
+            </span>
+          </div>
+          <Link href={continueHref} className="flex items-center gap-1.5 text-white/50 hover:text-brand-gold transition-colors text-[11px] tracking-widest uppercase">
+            <ArrowRight size={11} /> Continuer mes achats
+          </Link>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8 md:py-12">
-        <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 items-start">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 md:py-10">
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-10 items-start">
 
-          {/* LEFT — Items */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between mb-5">
-              <span className="text-[10px] tracking-[0.25em] text-brand-gray uppercase">Vos articles</span>
-              <Link href={continueHref} className="flex items-center gap-1 text-[10px] tracking-widest uppercase text-brand-gray hover:text-brand-black transition-colors">
-                <ArrowRight size={11} /> Continuer mes achats
-              </Link>
+          {/* ── LEFT — Items ────────────────────────────── */}
+          <div className="flex-1 min-w-0 w-full">
+
+            {/* Column headers — desktop only */}
+            <div className="hidden md:grid grid-cols-[1fr_auto_auto] gap-4 mb-3 px-1">
+              <span className="text-[9px] tracking-[0.3em] uppercase text-brand-gray">Article</span>
+              <span className="text-[9px] tracking-[0.3em] uppercase text-brand-gray w-28 text-center">Quantité</span>
+              <span className="text-[9px] tracking-[0.3em] uppercase text-brand-gray w-20 text-right">Prix</span>
             </div>
 
-            <AnimatePresence>
-              {items.map((item) => (
-                <motion.div
-                  key={`${item.productId}-${item.size}`}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, x: -20, transition: { duration: 0.2 } }}
-                  className="flex gap-4 bg-white border border-brand-light-gray p-4 mb-3"
-                >
-                  {/* Image */}
-                  <Link href={`/products/${item.productId}`} className="w-24 h-24 flex-shrink-0 bg-[#f5f0ea] border border-brand-light-gray overflow-hidden relative block">
-                    {item.image ? (
-                      <Image src={item.image} alt={item.name} fill
-                        style={{ objectFit: 'contain' }}
-                        unoptimized={!item.image.includes('cloudinary.com')}
-                        sizes="96px" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <span className="text-[8px] text-brand-gray uppercase tracking-widest">MC</span>
-                      </div>
-                    )}
-                  </Link>
+            <AnimatePresence initial={false}>
+              {items.map((item, idx) => {
+                const key = `${item.productId}-${item.size}`
+                const isRemoving = removingId === key
+                return (
+                  <motion.div
+                    key={key}
+                    layout
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: isRemoving ? 0 : 1, x: isRemoving ? -40 : 0, y: 0 }}
+                    exit={{ opacity: 0, height: 0, marginBottom: 0, transition: { duration: 0.25 } }}
+                    transition={{ duration: 0.3, delay: idx * 0.04 }}
+                    className="group relative bg-white border border-brand-light-gray mb-3 overflow-hidden"
+                  >
+                    {/* Gold left accent on hover */}
+                    <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-brand-gold scale-y-0 group-hover:scale-y-100 transition-transform duration-300 origin-center" />
 
-                  {/* Info */}
-                  <div className="flex-1 min-w-0 flex flex-col justify-between">
-                    <div>
-                      <p className="text-sm font-medium leading-snug line-clamp-2">{item.name}</p>
-                      <p className="text-[11px] text-brand-gray mt-1 uppercase tracking-wider">{tr.cart.size}: {shortSize(item.size)}</p>
-                      {item.category && (
-                        <p className="text-[10px] text-brand-gold uppercase tracking-widest mt-0.5">{item.category}</p>
-                      )}
+                    <div className="flex gap-0 md:gap-0">
+                      {/* Image */}
+                      <Link href={`/products/${item.productId}`}
+                        className="w-28 h-28 md:w-36 md:h-36 flex-shrink-0 bg-[#f5f0ea] overflow-hidden relative block">
+                        {item.image ? (
+                          <Image src={item.image} alt={item.name} fill
+                            className="object-contain p-2 group-hover:scale-105 transition-transform duration-500"
+                            unoptimized={!item.image.includes('cloudinary.com')}
+                            sizes="144px" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <span className="text-[8px] text-brand-gray uppercase tracking-widest">MC</span>
+                          </div>
+                        )}
+                      </Link>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0 flex flex-col justify-between p-4 md:p-5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <Link href={`/products/${item.productId}`}>
+                              <p className="text-sm font-semibold leading-snug line-clamp-2 hover:text-brand-gold transition-colors">{item.name}</p>
+                            </Link>
+                            <div className="flex items-center gap-2 mt-2 flex-wrap">
+                              <span className="inline-flex items-center gap-1 text-[10px] bg-brand-light-gray text-brand-gray px-2 py-0.5 tracking-wider uppercase">
+                                <Package size={9} /> {shortSize(item.size)}
+                              </span>
+                              {item.category && (
+                                <span className="text-[10px] text-brand-gold uppercase tracking-widest">{item.category}</span>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-brand-gray mt-1.5">
+                              {format(item.price)} / unité
+                            </p>
+                          </div>
+
+                          {/* Delete — top-right */}
+                          <button
+                            onClick={() => handleRemove(item.productId, item.size)}
+                            className="flex-shrink-0 text-brand-light-gray hover:text-red-400 transition-colors p-1 -mt-0.5 -mr-0.5 md:hidden"
+                            aria-label="Supprimer">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+
+                        <div className="flex items-center justify-between mt-4">
+                          {/* Qty stepper */}
+                          <div className="flex items-center border border-brand-light-gray h-9">
+                            <motion.button
+                              whileTap={{ scale: 0.85 }}
+                              onClick={() => updateQuantity(item.productId, item.size, item.quantity - 1)}
+                              className="w-9 h-full flex items-center justify-center text-brand-gray hover:text-brand-black hover:bg-brand-light-gray transition-colors"
+                              aria-label="Diminuer">
+                              <Minus size={12} />
+                            </motion.button>
+                            <AnimatePresence mode="popLayout" initial={false}>
+                              <motion.span
+                                key={item.quantity}
+                                initial={{ y: -8, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                exit={{ y: 8, opacity: 0 }}
+                                transition={{ duration: 0.15 }}
+                                className="w-10 h-full flex items-center justify-center text-sm font-semibold tabular-nums"
+                              >
+                                {item.quantity}
+                              </motion.span>
+                            </AnimatePresence>
+                            <motion.button
+                              whileTap={{ scale: 0.85 }}
+                              onClick={() => updateQuantity(item.productId, item.size, Math.min(item.quantity + 1, item.stock))}
+                              className="w-9 h-full flex items-center justify-center text-brand-gray hover:text-brand-black hover:bg-brand-light-gray transition-colors"
+                              aria-label="Augmenter">
+                              <Plus size={12} />
+                            </motion.button>
+                          </div>
+
+                          <div className="flex items-center gap-4">
+                            <div className="text-right">
+                              <div className="text-base font-bold">
+                                <AnimatedPrice value={item.price * item.quantity} format={format} />
+                              </div>
+                              {item.quantity > 1 && (
+                                <p className="text-[10px] text-brand-gray">{format(item.price)} × {item.quantity}</p>
+                              )}
+                            </div>
+                            {/* Delete — desktop */}
+                            <button
+                              onClick={() => handleRemove(item.productId, item.size)}
+                              className="hidden md:flex text-brand-light-gray hover:text-red-400 transition-colors p-1.5 hover:bg-red-50 rounded"
+                              aria-label="Supprimer">
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-
-                    <div className="flex items-center justify-between mt-3">
-                      {/* Qty stepper */}
-                      <div className="flex items-center border border-brand-light-gray">
-                        <button
-                          onClick={() => updateQuantity(item.productId, item.size, item.quantity - 1)}
-                          className="w-8 h-8 flex items-center justify-center text-brand-gray hover:text-brand-black hover:bg-brand-light-gray transition-colors text-base"
-                          aria-label="Diminuer la quantité">
-                          −
-                        </button>
-                        <span className="w-8 h-8 flex items-center justify-center text-sm font-medium">{item.quantity}</span>
-                        <button
-                          onClick={() => updateQuantity(item.productId, item.size, Math.min(item.quantity + 1, item.stock))}
-                          className="w-8 h-8 flex items-center justify-center text-brand-gray hover:text-brand-black hover:bg-brand-light-gray transition-colors text-base"
-                          aria-label="Augmenter la quantité">
-                          +
-                        </button>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <span className="text-base font-bold">{format(item.price * item.quantity)}</span>
-                        <button
-                          onClick={() => removeItem(item.productId, item.size)}
-                          className="text-brand-light-gray hover:text-red-400 transition-colors p-1"
-                          aria-label="Supprimer l'article">
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
+                  </motion.div>
+                )
+              })}
             </AnimatePresence>
 
             {/* Trust badges */}
-            <div className="mt-6 grid grid-cols-3 gap-3">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="mt-6 grid grid-cols-3 gap-3"
+            >
               {[
-                { icon: Truck, label: deliveryMsg || 'Livraison internationale' },
-                { icon: ShieldCheck, label: 'Paiement sécurisé' },
-                { icon: RotateCcw, label: 'Retours faciles' },
-              ].map(({ icon: Icon, label }) => (
-                <div key={label} className="flex flex-col items-center gap-1.5 border border-brand-light-gray py-3 bg-white">
-                  <Icon size={16} className="text-brand-gold" strokeWidth={1.5} />
-                  <span className="text-[9px] tracking-widest uppercase text-brand-gray text-center">{label}</span>
+                { icon: Truck, label: deliveryMsg || 'Livraison internationale', sub: 'Suivi inclus' },
+                { icon: ShieldCheck, label: 'Paiement sécurisé', sub: 'Stripe · SSL' },
+                { icon: RotateCcw, label: 'Retours faciles', sub: '30 jours' },
+              ].map(({ icon: Icon, label, sub }) => (
+                <div key={label} className="flex flex-col items-center gap-2 border border-brand-light-gray py-4 bg-white text-center group hover:border-brand-gold transition-colors">
+                  <Icon size={18} className="text-brand-gold" strokeWidth={1.5} />
+                  <div>
+                    <p className="text-[9px] tracking-widest uppercase text-brand-black font-semibold leading-snug">{label}</p>
+                    <p className="text-[9px] text-brand-gray mt-0.5">{sub}</p>
+                  </div>
                 </div>
               ))}
-            </div>
+            </motion.div>
           </div>
 
-          {/* RIGHT — Order summary */}
-          <div className="w-full lg:w-[380px] flex-shrink-0 lg:sticky lg:top-24">
-            <div className="bg-white border border-brand-light-gray">
-              {/* Header */}
-              <div className="bg-brand-black text-brand-white px-5 py-4">
-                <p className="text-[10px] tracking-[0.25em] uppercase text-white/50 mb-1">Récapitulatif</p>
-                <p className="text-lg font-display">Votre commande</p>
+          {/* ── RIGHT — Order summary ──────────────────── */}
+          <div className="w-full lg:w-[360px] xl:w-[400px] flex-shrink-0 lg:sticky lg:top-24">
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="bg-white border border-brand-light-gray overflow-hidden"
+            >
+              {/* Panel header */}
+              <div className="bg-brand-black text-white px-5 pt-5 pb-4">
+                <p className="text-[9px] tracking-[0.3em] uppercase text-white/40 mb-1">Récapitulatif</p>
+                <p className="font-display text-xl tracking-wide">Votre commande</p>
+              </div>
+
+              {/* Thumbnail strip */}
+              <div className="bg-brand-black/5 border-b border-brand-light-gray px-5 py-3 flex gap-2 flex-wrap">
+                {items.map(item => (
+                  <div key={`${item.productId}-${item.size}`}
+                    className="relative w-10 h-10 border border-brand-light-gray bg-[#f5f0ea] overflow-hidden flex-shrink-0">
+                    {item.image
+                      ? <Image src={item.image} alt={item.name} fill className="object-contain p-0.5"
+                          unoptimized={!item.image.includes('cloudinary.com')} sizes="40px" />
+                      : <div className="w-full h-full flex items-center justify-center text-[6px] text-brand-gray">MC</div>
+                    }
+                    {item.quantity > 1 && (
+                      <span className="absolute -top-1 -right-1 bg-brand-gold text-brand-black text-[8px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                        {item.quantity}
+                      </span>
+                    )}
+                  </div>
+                ))}
               </div>
 
               <div className="px-5 py-5 space-y-4">
                 {/* Line items */}
-                <div className="space-y-2.5">
-                  {items.map((item) => (
-                    <div key={`${item.productId}-${item.size}`} className="flex justify-between gap-3 text-sm">
-                      <span className="text-brand-gray truncate flex-1 leading-snug">
+                <div className="space-y-2">
+                  {items.map(item => (
+                    <div key={`${item.productId}-${item.size}`} className="flex justify-between gap-2 text-sm">
+                      <span className="text-brand-gray truncate flex-1 min-w-0 text-[13px]">
                         {item.name}
-                        <span className="text-brand-light-gray"> ×{item.quantity}</span>
+                        {item.quantity > 1 && <span className="text-brand-light-gray text-[11px]"> ×{item.quantity}</span>}
                       </span>
-                      <span className="font-semibold flex-shrink-0">{format(item.price * item.quantity)}</span>
+                      <span className="font-semibold flex-shrink-0 text-[13px] tabular-nums">
+                        <AnimatedPrice value={item.price * item.quantity} format={format} />
+                      </span>
                     </div>
                   ))}
                 </div>
 
-                <div className="border-t border-brand-light-gray pt-4 space-y-3">
-                  {/* Subtotal */}
+                {/* Divider + subtotal + shipping */}
+                <div className="border-t border-dashed border-brand-light-gray pt-4 space-y-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-brand-gray">Sous-total</span>
-                    <span className="font-semibold">{format(subtotal)}</span>
+                    <span className="font-semibold tabular-nums">
+                      <AnimatedPrice value={subtotal} format={format} />
+                    </span>
                   </div>
 
-                  {/* Shipping */}
                   <div className="flex justify-between text-sm items-start gap-2">
-                    <div>
+                    <div className="min-w-0">
                       <span className="text-brand-gray flex items-center gap-1.5">
-                        <Truck size={13} className="text-brand-gold flex-shrink-0" />
+                        <Truck size={12} className="text-brand-gold flex-shrink-0" />
                         Livraison
                         {country && <span className="text-[10px] text-brand-light-gray uppercase">({country})</span>}
                       </span>
-                      {deliveryMsg && (
-                        <p className="text-[10px] text-brand-gray mt-0.5 ml-[18px]">
-                          {deliveryMsg}
+                      {shippingDays && (
+                        <p className="text-[10px] text-brand-gray mt-0.5 ml-4">
+                          Estimé {shippingDays.min}–{shippingDays.max} jours
                         </p>
                       )}
+                      {deliveryMsg && !shippingDays && (
+                        <p className="text-[10px] text-brand-gray mt-0.5 ml-4">{deliveryMsg}</p>
+                      )}
                     </div>
-                    <span className="font-semibold flex-shrink-0">
+                    <span className="font-semibold flex-shrink-0 text-sm tabular-nums">
                       {shippingLoading ? (
-                        <Loader2 size={14} className="animate-spin text-brand-gray" />
+                        <Loader2 size={13} className="animate-spin text-brand-gray" />
                       ) : shippingFee !== null ? (
-                        format(shippingFee)
+                        <AnimatedPrice value={shippingFee} format={format} />
                       ) : (
-                        <span className="text-brand-gray text-xs">Calculé au checkout</span>
+                        <span className="text-brand-gray text-xs">Calculé</span>
                       )}
                     </span>
                   </div>
@@ -262,45 +402,95 @@ export default function CartPage() {
 
                 {/* Total */}
                 <div className="border-t-2 border-brand-black pt-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[11px] tracking-[0.2em] uppercase font-semibold">Total estimé</span>
-                    <span className="text-2xl font-display font-bold">
-                      {shippingFee !== null ? format(total) : format(subtotal)}
-                    </span>
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-[10px] tracking-[0.25em] uppercase font-bold text-brand-gray">Total estimé</span>
+                    <div className="text-2xl font-display font-bold overflow-hidden">
+                      <AnimatedPrice value={shippingFee !== null ? total : subtotal} format={format} />
+                    </div>
                   </div>
-                  {shippingFee === null && (
-                    <p className="text-[10px] text-brand-gray mt-1">+ frais de livraison</p>
+                  {shippingFee === null && !shippingLoading && (
+                    <p className="text-[10px] text-brand-gray mt-1 text-right">+ frais de livraison</p>
                   )}
                 </div>
 
-                {/* Weight exceeded warning */}
+                {/* Weight warning */}
                 {weightExceeded && (
-                  <div className="bg-red-50 border border-red-200 px-4 py-3 text-xs text-red-700 leading-snug">
-                    ⚠️ Votre panier dépasse la limite de 1,9 kg par commande. Retirez des articles pour continuer.
-                  </div>
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="bg-red-50 border border-red-200 px-4 py-3 text-xs text-red-700 leading-snug"
+                  >
+                    ⚠️ Votre panier dépasse 1,9 kg. Retirez des articles pour continuer.
+                  </motion.div>
                 )}
 
                 {/* CTA */}
                 {weightExceeded ? (
-                  <div className="block w-full text-center bg-brand-light-gray text-brand-gray py-4 text-[11px] tracking-[0.25em] uppercase font-bold cursor-not-allowed select-none">
+                  <div className="w-full text-center bg-brand-light-gray text-brand-gray py-4 text-[11px] tracking-[0.25em] uppercase font-bold cursor-not-allowed select-none">
                     Panier trop lourd
                   </div>
                 ) : (
-                  <Link href="/checkout"
-                    className="block w-full text-center bg-brand-black text-white py-4 text-[11px] tracking-[0.25em] uppercase font-bold hover:bg-brand-gold hover:text-brand-black transition-all duration-300">
-                    {tr.cart.checkout} →
+                  <Link href="/checkout">
+                    <motion.div
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="w-full text-center bg-brand-black text-white py-4 text-[11px] tracking-[0.3em] uppercase font-bold hover:bg-brand-gold hover:text-brand-black transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      {tr.cart.checkout}
+                      <ArrowRight size={13} />
+                    </motion.div>
                   </Link>
                 )}
 
-                <p className="text-center text-[10px] text-brand-gray tracking-wide">
-                  🔒 Paiement 100% sécurisé
-                </p>
+                {/* Security row */}
+                <div className="flex items-center justify-center gap-4 pt-1">
+                  <span className="flex items-center gap-1 text-[10px] text-brand-gray">
+                    <Lock size={9} className="text-brand-gold" /> SSL sécurisé
+                  </span>
+                  <span className="w-px h-3 bg-brand-light-gray" />
+                  <span className="flex items-center gap-1 text-[10px] text-brand-gray">
+                    <ShieldCheck size={9} className="text-brand-gold" /> Stripe
+                  </span>
+                  <span className="w-px h-3 bg-brand-light-gray" />
+                  <span className="flex items-center gap-1 text-[10px] text-brand-gray">
+                    <RotateCcw size={9} className="text-brand-gold" /> Retours 30j
+                  </span>
+                </div>
               </div>
-            </div>
+            </motion.div>
           </div>
 
         </div>
       </div>
+
+      {/* ── Mobile sticky bottom bar ──────────────────── */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-brand-light-gray shadow-[0_-4px_24px_rgba(0,0,0,0.08)]">
+        <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-[9px] text-brand-gray uppercase tracking-widest">Total estimé</p>
+            <p className="font-bold text-lg leading-tight tabular-nums">
+              <AnimatedPrice value={shippingFee !== null ? total : subtotal} format={format} />
+            </p>
+          </div>
+          {weightExceeded ? (
+            <div className="flex-shrink-0 bg-brand-light-gray text-brand-gray px-6 py-3 text-[11px] tracking-widest uppercase font-bold cursor-not-allowed">
+              Trop lourd
+            </div>
+          ) : (
+            <Link href="/checkout" className="flex-shrink-0">
+              <motion.div
+                whileTap={{ scale: 0.96 }}
+                className="bg-brand-black text-white px-6 py-3 text-[11px] tracking-[0.2em] uppercase font-bold flex items-center gap-2 hover:bg-brand-gold hover:text-brand-black transition-all duration-300"
+              >
+                {tr.cart.checkout} <ArrowRight size={12} />
+              </motion.div>
+            </Link>
+          )}
+        </div>
+      </div>
+
+      {/* Bottom padding for mobile sticky bar */}
+      <div className="lg:hidden h-20" />
     </div>
   )
 }
