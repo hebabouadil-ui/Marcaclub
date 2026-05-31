@@ -440,7 +440,6 @@ function PaymentStep({ clientSecret, customer, items, total, taxAmount, shipping
   const stripe = useStripe()
   const elements = useElements()
   const [paying, setPaying] = useState(false)
-  const { format } = useCurrency()
 
   const handlePay = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -484,7 +483,7 @@ function PaymentStep({ clientSecret, customer, items, total, taxAmount, shipping
       <button type="submit" disabled={paying || !stripe}
         className="w-full bg-gray-900 text-white font-semibold py-4 text-sm flex items-center justify-center gap-2 hover:bg-gray-800 transition-colors disabled:opacity-50 rounded-lg">
         {paying ? <Loader2 size={16} className="animate-spin" /> : <Lock size={14} />}
-        {paying ? 'Processing payment...' : `Pay ${format(total)} now`}
+        {paying ? 'Processing payment...' : `Pay ${symbol}${total.toFixed(2)} now`}
       </button>
       <div className="flex items-center justify-center gap-4 text-gray-400 text-xs">
         <span className="flex items-center gap-1"><Shield size={11} /> SSL Secured</span>
@@ -509,6 +508,7 @@ export default function CheckoutPage() {
   const [confirmedPhone, setConfirmedPhone] = useState('')
   const [confirmedShippingFeeCAD, setConfirmedShippingFeeCAD] = useState<number | null>(null)
   const [confirmedShippingFee, setConfirmedShippingFee] = useState<number | null>(null)
+  const [confirmedSnapshot, setConfirmedSnapshot] = useState<{ subtotal: number; shipping: number; tax: number; total: number } | null>(null)
   const [mobileOrderOpen, setMobileOrderOpen] = useState(false)
 
   // Per-country shipping fee in CAD — fetches real CJ rates when country changes
@@ -652,6 +652,14 @@ export default function CheckoutPage() {
       // Store server-confirmed shipping fee (uses live FX rate)
       if (typeof data.shippingFeeCAD === 'number') setConfirmedShippingFeeCAD(data.shippingFeeCAD)
       if (typeof data.shippingFee === 'number') setConfirmedShippingFee(data.shippingFee)
+      // Lock the displayed total to the server's snapshot — prevents FX rate drift after render
+      if (typeof data.amount === 'number') {
+        const lockedTotal = data.amount / 100
+        const lockedShipping = typeof data.shippingFee === 'number' ? data.shippingFee : 0
+        const lockedTax = typeof data.taxAmount === 'number' ? data.taxAmount : 0
+        const lockedSubtotal = typeof data.subtotal === 'number' ? data.subtotal : lockedTotal - lockedShipping - lockedTax
+        setConfirmedSnapshot({ subtotal: lockedSubtotal, shipping: lockedShipping, tax: lockedTax, total: lockedTotal })
+      }
       setStep('payment')
     } catch { toast.error('Failed to initialize payment. Please try again.') }
     finally { setLoadingIntent(false) }
@@ -986,23 +994,33 @@ export default function CheckoutPage() {
                   </div>
                   <button onClick={() => setStep('info')} className="text-xs text-gray-400 hover:text-gray-600 underline">Change</button>
                 </div>
-                {/* Confirmed order breakdown */}
+                {/* Confirmed order breakdown — uses server snapshot to prevent FX rate drift */}
                 <div className="bg-gray-50 rounded-lg px-4 py-3 mb-5 space-y-2">
                   <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold mb-2">Order Summary</p>
                   <div className="flex justify-between text-sm text-gray-600">
-                    <span>Subtotal</span><span>{format(subtotal)}</span>
+                    <span>Subtotal</span>
+                    <span>{confirmedSnapshot ? `${symbol}${confirmedSnapshot.subtotal.toFixed(2)}` : format(subtotal)}</span>
                   </div>
                   <div className="flex justify-between text-sm text-gray-600">
-                    <span>Shipping</span><span>{format(effectiveShippingCAD)}</span>
+                    <span>Shipping</span>
+                    <span>{confirmedSnapshot ? `${symbol}${confirmedSnapshot.shipping.toFixed(2)}` : format(effectiveShippingCAD)}</span>
                   </div>
-                  {taxComponents.filter(c => c.rate > 0).map(c => (
-                    <div key={c.label} className="flex justify-between text-sm text-gray-600">
-                      <span>{c.label}</span>
-                      <span>{format(Math.round(subtotal * c.rate * 100) / 100)}</span>
-                    </div>
-                  ))}
+                  {confirmedSnapshot
+                    ? confirmedSnapshot.tax > 0 && (
+                        <div className="flex justify-between text-sm text-gray-600">
+                          <span>Tax</span><span>{symbol}{confirmedSnapshot.tax.toFixed(2)}</span>
+                        </div>
+                      )
+                    : taxComponents.filter(c => c.rate > 0).map(c => (
+                        <div key={c.label} className="flex justify-between text-sm text-gray-600">
+                          <span>{c.label}</span>
+                          <span>{format(Math.round(subtotal * c.rate * 100) / 100)}</span>
+                        </div>
+                      ))
+                  }
                   <div className="flex justify-between font-bold text-gray-900 pt-2 border-t border-gray-200">
-                    <span>Total to pay</span><span className="text-lg">{format(total)}</span>
+                    <span>Total to pay</span>
+                    <span className="text-lg">{confirmedSnapshot ? `${symbol}${confirmedSnapshot.total.toFixed(2)}` : format(total)}</span>
                   </div>
                 </div>
                 <h2 className="font-semibold text-gray-900 mb-5">Payment</h2>
@@ -1017,9 +1035,9 @@ export default function CheckoutPage() {
                     clientSecret={clientSecret}
                     customer={{ ...shippingForm, phone: confirmedPhone || `${shippingForm.phoneCode} ${shippingForm.phone}` }}
                     items={items.map((i) => ({ productId: i.productId, size: i.size, quantity: i.quantity }))}
-                    total={total}
-                    taxAmount={taxAmount}
-                    shippingFee={confirmedShippingFee ?? Math.round(effectiveShippingCAD * rate * 100) / 100}
+                    total={confirmedSnapshot?.total ?? total}
+                    taxAmount={confirmedSnapshot?.tax ?? taxAmount}
+                    shippingFee={confirmedSnapshot?.shipping ?? confirmedShippingFee ?? Math.round(effectiveShippingCAD * rate * 100) / 100}
                     currency={currency}
                     symbol={symbol}
                     onSuccess={handleSuccess}
