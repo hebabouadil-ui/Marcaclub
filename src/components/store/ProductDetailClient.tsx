@@ -325,7 +325,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
   const effectiveShipCAD = shipping ? shipping.logisticPrice : 0
 
   // Real product weight (grams). Prefer the selected variant weight when present.
-  const weightG = (selectedSizeEntry?.variantWeight ?? product.productWeight) ?? null
+  const weightG = (selectedSizeEntry?.variantWeight ?? sizes[0]?.variantWeight ?? product.productWeight) ?? null
   const weightLabel = weightG != null && weightG > 0
     ? (weightG >= 1000 ? `${(weightG / 1000).toFixed(2)} kg` : `${Math.round(weightG)} g`)
     : null
