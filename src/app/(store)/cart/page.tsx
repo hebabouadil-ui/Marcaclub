@@ -17,7 +17,7 @@ function shortSize(s: string) {
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity } = useCartStore()
-  const { format, formatUSD, usdToCAD, geo } = useCurrency()
+  const { format, geo } = useCurrency()
   const { tr } = useLanguage()
   const { message: deliveryMsg } = useDeliveryMessage()
   const [continueHref, setContinueHref] = useState('/products')
@@ -61,10 +61,12 @@ export default function CartPage() {
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (!data) return
-        // Prefer USD so client rate is used for display (avoids server/client rate drift)
-        const usd = typeof data.shippingFeeUSD === 'number' ? data.shippingFeeUSD : null
+        // SINGLE SOURCE OF TRUTH: consume the server-computed CAD value only.
+        // Currency was already converted once (USD→CAD) server-side from the snapshot.
+        // The UI never re-derives CAD from USD — that would use the client FX rate and
+        // drift from checkout. We only apply the shared CAD→display rate via format().
         const cad = typeof data.shippingFeeCAD === 'number' ? data.shippingFeeCAD : null
-        setShippingFee(usd ?? cad)
+        setShippingFee(cad)
         setShippingDays(data.agingMin && data.agingMax ? { min: data.agingMin, max: data.agingMax } : null)
       })
       .catch(e => { if (e.name !== 'AbortError') setShippingFee(null) })
@@ -74,8 +76,8 @@ export default function CartPage() {
   }, [items, country])
 
   const subtotal = cartTotal(items)
-  // shippingFee is in USD; subtotal is in CAD — convert before summing
-  const total = subtotal + (shippingFee != null ? shippingFee * usdToCAD : 0)
+  // shippingFee is already in CAD (server-computed) — same base as checkout.
+  const total = subtotal + (shippingFee != null ? shippingFee : 0)
 
   if (items.length === 0) {
     return (
@@ -242,7 +244,7 @@ export default function CartPage() {
                       {shippingLoading ? (
                         <Loader2 size={14} className="animate-spin text-brand-gray" />
                       ) : shippingFee !== null ? (
-                        formatUSD(shippingFee)
+                        format(shippingFee)
                       ) : (
                         <span className="text-brand-gray text-xs">Calculé au checkout</span>
                       )}

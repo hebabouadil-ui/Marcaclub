@@ -12,7 +12,6 @@ interface CurrencyCtx {
   setCurrency: (code: string) => void
   geo: GeoInfo | null
   available: { code: string; name: string; symbol: string }[]
-  shippingCostUSD: number
   usdToCAD: number
 }
 
@@ -42,32 +41,6 @@ const COUNTRY_CURRENCY: Record<string, string> = {
   BR: 'BRL', MX: 'MXN', IN: 'INR',
 }
 
-// Hardcoded shipping fallback (USD) — used instantly while CJ API loads.
-// Based on typical CJ Dropshipping rates from China per country/region.
-// Exported so components can scale per-product stored shipping by country ratio.
-export const SHIPPING_FALLBACK_USD: Record<string, number> = {
-  // North Africa
-  MA: 2.5, DZ: 3.0, TN: 3.0, LY: 3.5, EG: 3.5,
-  // Middle East
-  AE: 5.5, SA: 5.5, QA: 5.5, KW: 5.5, BH: 5.5, OM: 6.0, JO: 6.0,
-  // North America
-  US: 6.5, CA: 7.0, MX: 7.5,
-  // Western Europe
-  FR: 8.5, DE: 8.5, GB: 8.0, ES: 8.5, IT: 8.5, NL: 8.5, BE: 8.5,
-  PT: 9.0, CH: 9.0, AT: 9.0, IE: 9.0,
-  // Oceania
-  AU: 9.5, NZ: 10.0,
-  // Asia
-  JP: 5.0, SG: 4.5, IN: 4.0,
-  // South America
-  BR: 9.0,
-}
-export const SHIPPING_DEFAULT_USD = 7.5
-
-function getShippingFallback(countryCode: string): number {
-  return SHIPPING_FALLBACK_USD[countryCode] ?? SHIPPING_DEFAULT_USD
-}
-
 const FALLBACK_RATES: Record<string, number> = {
   CAD: 1, USD: 0.73, EUR: 0.68, GBP: 0.58, AUD: 1.10,
   CHF: 0.66, JPY: 108, AED: 2.68, SAR: 2.74, BRL: 3.65,
@@ -88,32 +61,7 @@ const DEFAULT: CurrencyCtx = {
   setCurrency: () => {},
   geo: null,
   available: CURRENCIES,
-  shippingCostUSD: SHIPPING_DEFAULT_USD,
   usdToCAD: 1 / 0.73,
-}
-
-// Module-level cache: country → shipping cost USD
-const shippingCache: Record<string, number> = {}
-
-async function fetchBestShippingUSD(countryCode: string): Promise<number> {
-  if (shippingCache[countryCode] !== undefined) return shippingCache[countryCode]
-  try {
-    const res = await fetch(`/api/shipping?country=${countryCode}&weight=500`)
-    if (!res.ok) return getShippingFallback(countryCode)
-    const data = await res.json()
-    const options: Array<{ logisticPrice: number; agingMax?: number; agingMin?: number }> = data.options ?? []
-    if (options.length === 0) return getShippingFallback(countryCode)
-    const maxPrice = Math.max(...options.map(o => o.logisticPrice), 1)
-    const maxDays = Math.max(...options.map(o => o.agingMax ?? o.agingMin ?? 30), 1)
-    const best = options
-      .map(o => ({ ...o, score: (o.logisticPrice / maxPrice) * 0.7 + ((o.agingMax ?? o.agingMin ?? 30) / maxDays) * 0.3 }))
-      .sort((a, b) => a.score - b.score)[0]
-    const cost = best?.logisticPrice ?? getShippingFallback(countryCode)
-    shippingCache[countryCode] = cost
-    return cost
-  } catch {
-    return getShippingFallback(countryCode)
-  }
 }
 
 const Ctx = createContext<CurrencyCtx>(DEFAULT)
@@ -134,13 +82,11 @@ export function CurrencyProvider({ children, initialCountry }: { children: React
   // Prefer server-passed initialCountry (no flash), fallback to client cookie read
   const cookieCountry = initialCountry || readCountryCookie() || 'CA'
   const initialCurrency = COUNTRY_CURRENCY[cookieCountry] ?? 'CAD'
-  const initialShipping = getShippingFallback(cookieCountry)
 
   const [currency, setCurrencyState] = useState(initialCurrency)
   const [rate, setRate] = useState(FALLBACK_RATES[initialCurrency] ?? 1)
   const [geo, setGeo] = useState<GeoInfo | null>({ countryCode: cookieCountry })
   const [rates, setRates] = useState<Record<string, number>>(FALLBACK_RATES)
-  const [shippingCostUSD, setShippingCostUSD] = useState(initialShipping)
 
   const applyCode = useCallback((code: string, ratesMap: Record<string, number>) => {
     const r = ratesMap[code] ?? FALLBACK_RATES[code] ?? 1
@@ -173,10 +119,8 @@ export function CurrencyProvider({ children, initialCountry }: { children: React
       // 3. Always use geo-detected currency — ignore any saved localStorage value
       // (localStorage overrides caused CAD to stick for non-Canadian visitors)
       applyCode(detectedCurrency, ratesMap)
-
-      // 4. Fetch real CJ shipping for this country
-      const realShipping = await fetchBestShippingUSD(country)
-      setShippingCostUSD(realShipping)
+      // Shipping is NEVER computed here. It comes only from /api/shipping-estimate
+      // (→ computeShippingUSD snapshot), the single source of truth.
     }
     init()
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -195,7 +139,6 @@ export function CurrencyProvider({ children, initialCountry }: { children: React
       setCurrency,
       geo,
       available: CURRENCIES,
-      shippingCostUSD,
       usdToCAD,
     }}>
       {children}

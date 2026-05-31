@@ -126,7 +126,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
   const [activeTab, setActiveTab] = useState<'description' | 'video'>(hasDescription ? 'description' : 'video')
   const addItem = useCartStore((s) => s.addItem)
   const router = useRouter()
-  const { format, formatUSD, usdToCAD } = useCurrency()
+  const { format } = useCurrency()
   const { tr, lang } = useLanguage()
   const { message: deliveryMsg } = useDeliveryMessage()
 
@@ -195,14 +195,14 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
         }),
       })
       const data = await res.json()
-      // Prefer USD so display uses client-side rate (avoids server/client rate drift)
-      const feeUSD = typeof data.shippingFeeUSD === 'number' ? data.shippingFeeUSD : null
+      // SINGLE SOURCE OF TRUTH: consume the server-computed CAD value only.
+      // Conversion USD→CAD already happened once server-side from the snapshot;
+      // the UI never re-derives CAD with the client FX rate (that drifts from checkout).
       const feeCAD = typeof data.shippingFeeCAD === 'number' ? data.shippingFeeCAD : null
-      const fee = feeUSD ?? feeCAD
-      if (fee != null) {
+      if (feeCAD != null) {
         setShipping({
-          logisticPrice: fee,
-          isUSD: feeUSD != null,
+          logisticPrice: feeCAD,
+          isUSD: false,
           logisticName: data.logisticName ?? '',
           logisticNameEn: data.logisticName ?? '',
           agingMin: data.agingMin ?? 0,
@@ -319,10 +319,9 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
   // displayPrice = admin-set price only (no CJ shipping baked in)
   // Shipping is charged separately at checkout via shippingFeeCAD in Settings
   const displayPrice = basePrice
-  // logisticPrice is USD when isUSD=true, CAD otherwise (legacy fallback)
-  const effectiveShipUSD = shipping
-    ? (shipping.isUSD ? shipping.logisticPrice : shipping.logisticPrice / usdToCAD)
-    : 0
+  // shipping.logisticPrice is the server-computed CAD value (single source of truth).
+  // Same CAD base as cart and checkout — only CAD→display conversion happens in format().
+  const effectiveShipCAD = shipping ? shipping.logisticPrice : 0
 
   const originalPrice = product.originalPrice
   const discount = originalPrice && displayPrice < originalPrice
@@ -538,8 +537,8 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                     <span className="text-base font-semibold text-brand-black">
                       {shippingLoading
                         ? <span className="text-xs text-brand-gray animate-pulse">...</span>
-                        : effectiveShipUSD > 0
-                          ? formatUSD(effectiveShipUSD)
+                        : effectiveShipCAD > 0
+                          ? format(effectiveShipCAD)
                           : '—'}
                     </span>
                   </div>
@@ -548,14 +547,14 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                     <div className="flex items-center gap-2">
                       {originalPrice && originalPrice > displayPrice && (
                         <>
-                          <span className="text-brand-gray line-through text-sm">{format(originalPrice + effectiveShipUSD * usdToCAD)}</span>
+                          <span className="text-brand-gray line-through text-sm">{format(originalPrice + effectiveShipCAD)}</span>
                           {discount && <span className="bg-brand-gold text-brand-black text-[10px] font-bold px-1.5 py-0.5">-{discount}%</span>}
                         </>
                       )}
                       <span className="text-2xl font-bold text-brand-black">
                         {shippingLoading
                           ? <span className="text-base text-brand-gray animate-pulse">...</span>
-                          : format(displayPrice + (effectiveShipUSD > 0 ? effectiveShipUSD * usdToCAD : 0))}
+                          : format(displayPrice + effectiveShipCAD)}
                       </span>
                     </div>
                   </div>
@@ -617,7 +616,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                           <span>{label}</span>
                           {vp && vp !== product.price && (
                             <span className="block text-[9px] leading-none opacity-60 mt-0.5">
-                              {format(product.cjPid && effectiveShipUSD > 0 ? vp + effectiveShipUSD * usdToCAD : vp)}
+                              {format(product.cjPid && effectiveShipCAD > 0 ? vp + effectiveShipCAD : vp)}
                             </span>
                           )}
                         </button>
