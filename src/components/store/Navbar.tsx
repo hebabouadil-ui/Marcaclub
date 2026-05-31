@@ -165,7 +165,7 @@ export default function Navbar() {
               </button>
               <CurrencySwitcher />
               <AccountMenu />
-              <Link href="/checkout" className="relative" aria-label={`Panier${cartCount > 0 ? ` (${cartCount})` : ''}`}>
+              <Link href="/cart" className="relative" aria-label={`Panier${cartCount > 0 ? ` (${cartCount})` : ''}`}>
                 <ShoppingBag size={20} className="text-brand-white hover:text-brand-gold transition-colors" />
                 <AnimatePresence>
                   {cartCount > 0 && (

@@ -373,7 +373,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
         category: product.category,
       })
     }
-    router.push('/checkout')
+    router.push('/cart')
   }
 
   return (
