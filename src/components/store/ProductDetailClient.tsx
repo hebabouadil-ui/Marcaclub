@@ -136,6 +136,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
   const [reviews, setReviews] = useState<Review[]>([])
   const [translatedDescription, setTranslatedDescription] = useState<string | null>(null)
   const [translatedDescriptionHtml, setTranslatedDescriptionHtml] = useState<string | null>(null)
+  const [translatedName, setTranslatedName] = useState<string | null>(null)
   const { customer } = useCustomer()
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [reviewRating, setReviewRating] = useState(5)
@@ -216,6 +217,20 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
       setShippingLoading(false)
     }
   }, [product._id, product.sizes, selectedSize, qty])
+
+  // Translate product name when language changes
+  useEffect(() => {
+    if (lang === 'en') {
+      fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: product.name, targetLang: 'en' }),
+      }).then(r => r.json()).then(d => { if (d.translated) setTranslatedName(d.translated) }).catch(() => {})
+    } else {
+      setTranslatedName(null)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang, product._id])
 
   // Auto-translate description when language changes
   useEffect(() => {
@@ -364,8 +379,8 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
           <span>/</span>
           <Link href="/products" className="hover:text-brand-black transition-colors">Collection</Link>
           <span>/</span>
-          <span className="text-brand-black truncate max-w-[120px]" title={product.name}>
-            {product.name.length > 25 ? product.name.slice(0, 25) + '…' : product.name}
+          <span className="text-brand-black truncate max-w-[120px]" title={translatedName || product.name}>
+            {(translatedName || product.name).length > 25 ? (translatedName || product.name).slice(0, 25) + '…' : (translatedName || product.name)}
           </span>
         </div>
 
@@ -497,7 +512,7 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
                   </span>
                 )}
               </div>
-              <h1 className="font-display text-2xl md:text-3xl text-brand-black leading-tight mb-3" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{product.name}</h1>
+              <h1 className="font-display text-2xl md:text-3xl text-brand-black leading-tight mb-3" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{translatedName || product.name}</h1>
 
               {/* Price breakdown */}
               {product.cjPid ? (
@@ -657,16 +672,16 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
               {/* Payment trust */}
               <div className="mt-4 pt-3 border-t border-brand-light-gray">
                 <div className="flex items-center gap-3 flex-wrap">
-                  <span className="text-[10px] text-brand-gray">🔒 Paiement sécurisé</span>
-                  <div className="flex items-center gap-2 opacity-40">
-                    <svg viewBox="0 0 50 16" height="14" aria-label="Visa"><text x="0" y="13" fontFamily="Arial" fontSize="13" fontWeight="bold" fill="currentColor" letterSpacing="1">VISA</text></svg>
+                  <span className="text-[10px] text-brand-gray tracking-wide">🔒 Paiement sécurisé</span>
+                  <div className="flex items-center gap-2.5" style={{ opacity: 0.55 }}>
+                    <svg viewBox="0 0 50 16" height="13" aria-label="Visa"><text x="0" y="13" fontFamily="Arial" fontSize="13" fontWeight="bold" fill="currentColor" letterSpacing="1">VISA</text></svg>
                     <svg viewBox="0 0 34 22" height="18" aria-label="Mastercard">
                       <circle cx="11" cy="11" r="10" fill="#EB001B"/>
                       <circle cx="23" cy="11" r="10" fill="#F79E1B"/>
                       <path d="M17 3.8a10 10 0 0 1 0 14.4A10 10 0 0 1 17 3.8z" fill="#FF5F00"/>
                     </svg>
-                    <svg viewBox="0 0 52 16" height="14" aria-label="PayPal"><text x="0" y="13" fontFamily="Arial" fontSize="11" fontWeight="bold" fill="currentColor">PayPal</text></svg>
-                    <svg viewBox="0 0 28 16" height="14" aria-label="CB"><text x="0" y="13" fontFamily="Arial" fontSize="12" fontWeight="bold" fill="currentColor">CB</text></svg>
+                    <svg viewBox="0 0 52 16" height="13" aria-label="PayPal"><text x="0" y="13" fontFamily="Arial" fontSize="11" fontWeight="bold" fill="currentColor">PayPal</text></svg>
+                    <svg viewBox="0 0 28 16" height="13" aria-label="CB"><text x="0" y="13" fontFamily="Arial" fontSize="12" fontWeight="bold" fill="currentColor">CB</text></svg>
                   </div>
                 </div>
               </div>
