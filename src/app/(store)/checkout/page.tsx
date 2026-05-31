@@ -671,9 +671,19 @@ export default function CheckoutPage() {
   const countryName = COUNTRIES.find(c => c.code === shippingForm.country)?.name ?? shippingForm.country
   const returnToUrl = `/checkout?auth=done`
 
-  // Breadcrumb labels
-  const stepLabels = { auth: 'Account', info: 'Information', payment: 'Payment' }
-  const stepOrder = ['auth', 'info', 'payment'] as const
+  // Breadcrumb labels — 'cart' navigates back to /cart page
+  const stepLabels = { cart: 'Panier', auth: 'Account', info: 'Information', payment: 'Payment' }
+  const allSteps = ['cart', 'auth', 'info', 'payment'] as const
+  const stepOrder = allSteps.filter(s => s !== 'auth' || (!authLoading && !customer))
+  // Steps that are before the current step (can navigate back)
+  const currentIdx = allSteps.indexOf(step as typeof allSteps[number])
+  const canGoBack = (s: string) => allSteps.indexOf(s as typeof allSteps[number]) < currentIdx && step !== 'payment'
+
+  const handleBreadcrumb = (s: string) => {
+    if (!canGoBack(s)) return
+    if (s === 'cart') { router.push('/cart'); return }
+    setStep(s as 'auth' | 'info')
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -682,9 +692,21 @@ export default function CheckoutPage() {
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="font-display font-bold text-xl tracking-widest text-gray-900">MARCACLUB</Link>
           <div className="flex items-center gap-2 text-xs text-gray-400 flex-wrap justify-end">
-            {stepOrder.filter(s => s !== 'auth' || (!authLoading && !customer)).map((s, i, arr) => (
+            {stepOrder.map((s, i, arr) => (
               <span key={s} className="flex items-center gap-2">
-                <span className={step === s ? 'text-gray-900 font-semibold' : 'text-gray-400'}>{stepLabels[s]}</span>
+                <button
+                  onClick={() => handleBreadcrumb(s)}
+                  disabled={!canGoBack(s)}
+                  className={
+                    step === s
+                      ? 'text-gray-900 font-semibold cursor-default'
+                      : canGoBack(s)
+                      ? 'text-brand-gold hover:underline cursor-pointer'
+                      : 'text-gray-400 cursor-default'
+                  }
+                >
+                  {stepLabels[s]}
+                </button>
                 {i < arr.length - 1 && <ChevronRight size={12} />}
               </span>
             ))}
