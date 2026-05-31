@@ -9,7 +9,7 @@ import toast from 'react-hot-toast'
 import Link from 'next/link'
 import Image from 'next/image'
 import {
-  ArrowLeft, Loader2, Trash2, Plus, Minus, ShoppingBag,
+  ArrowLeft, Loader2, ShoppingBag,
   Lock, ChevronRight, ChevronDown, Shield, RotateCcw, Mail, Eye, EyeOff, User,
 } from 'lucide-react'
 import GoogleButton from '@/components/store/GoogleButton'
@@ -495,13 +495,13 @@ function PaymentStep({ clientSecret, customer, items, total, taxAmount, shipping
 
 export default function CheckoutPage() {
   const router = useRouter()
-  const { items, removeItem, updateQuantity, clearCart } = useCartStore()
+  const { items, clearCart } = useCartStore()
   const subtotal = cartTotal(items)
   const { format, currency, symbol, rate, geo, usdToCAD } = useCurrency()
   const { customer, loading: authLoading } = useCustomer()
   const [shippingForm, setShippingForm] = useState<CustomerForm>(emptyForm)
   const [clientSecret, setClientSecret] = useState<string | null>(null)
-  const [step, setStep] = useState<'cart' | 'auth' | 'info' | 'payment'>('cart')
+  const [step, setStep] = useState<'auth' | 'info' | 'payment'>('auth')
   const [loadingIntent, setLoadingIntent] = useState(false)
   const [authReturnFromOAuth, setAuthReturnFromOAuth] = useState(false)
   const [taxComponents, setTaxComponents] = useState<TaxComponent[]>([])
@@ -611,20 +611,6 @@ export default function CheckoutPage() {
     })
   }, [])
 
-  const handleProceedFromCart = () => {
-    // If already logged in, skip auth step
-    if (!authLoading && customer) {
-      setShippingForm(prev => ({
-        ...prev,
-        name: prev.name || customer.name,
-        email: prev.email || customer.email,
-      }))
-      setStep('info')
-    } else {
-      setStep('auth')
-    }
-  }
-
   const handleInfoSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!shippingForm.name || !shippingForm.email || !shippingForm.phone || !shippingForm.address || !shippingForm.city || !shippingForm.postalCode) {
@@ -670,7 +656,7 @@ export default function CheckoutPage() {
     router.push(`/order-confirmation?order=${orderNumber}`)
   }
 
-  if (items.length === 0 && step === 'cart') {
+  if (items.length === 0 && step !== 'payment') {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-4">
         <ShoppingBag size={48} className="text-gray-200" />
@@ -686,8 +672,8 @@ export default function CheckoutPage() {
   const returnToUrl = `/checkout?auth=done`
 
   // Breadcrumb labels
-  const stepLabels = { cart: 'Cart', auth: 'Account', info: 'Information', payment: 'Payment' }
-  const stepOrder = ['cart', 'auth', 'info', 'payment'] as const
+  const stepLabels = { auth: 'Account', info: 'Information', payment: 'Payment' }
+  const stepOrder = ['auth', 'info', 'payment'] as const
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -707,7 +693,7 @@ export default function CheckoutPage() {
       </div>
 
       {/* Mobile order summary toggle — visible only below lg */}
-      {step !== 'cart' && (
+      {(
         <div className="lg:hidden border-b border-gray-200 bg-gray-50">
           <button
             type="button"
@@ -768,78 +754,6 @@ export default function CheckoutPage() {
       <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-8">
           <div className="lg:col-span-3">
-
-            {/* STEP: Cart */}
-            {step === 'cart' && (
-              <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
-                <div className="flex items-center justify-between mb-4 sm:mb-6">
-                  <h2 className="font-semibold text-gray-900">Your Cart ({items.length} {items.length === 1 ? 'item' : 'items'})</h2>
-                  <Link href="/" className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1"><ArrowLeft size={12} /> Continue shopping</Link>
-                </div>
-                <div className="divide-y divide-gray-100">
-                  {items.map((item) => (
-                    <div key={`${item.productId}-${item.size}`} className="py-4 flex gap-4">
-                      {item.image && (
-                        <div className="w-20 h-20 relative rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                          <Image src={item.image} alt={item.name} fill className="object-cover" />
-                        </div>
-                      )}
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900 text-sm">{item.name}</p>
-                        <p className="text-gray-400 text-xs mt-0.5">Size: {item.size}</p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <button onClick={() => updateQuantity(item.productId, item.size, item.quantity - 1)} className="w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50"><Minus size={10} /></button>
-                          <span className="text-sm font-medium w-6 text-center">{item.quantity}</span>
-                          <button onClick={() => updateQuantity(item.productId, item.size, item.quantity + 1)} className="w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50"><Plus size={10} /></button>
-                          <button onClick={() => removeItem(item.productId, item.size)} className="ml-2 text-gray-300 hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-gray-900">{format(item.price * item.quantity)}</p>
-                        {item.quantity > 1 && <p className="text-xs text-gray-400">{format(item.price)} each</p>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Order summary with live shipping */}
-                <div className="mt-4 border-t border-gray-100 pt-4 space-y-2.5">
-                  <div className="flex justify-between text-sm text-gray-600">
-                    <span>Subtotal</span><span className="font-medium">{format(subtotal)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm text-gray-600">
-                    <span className="flex items-center gap-1">
-                      Shipping
-                      {shippingForm.country && !shippingFeeLoading && !geo && (
-                        <span className="text-[10px] text-gray-400">(detecting location…)</span>
-                      )}
-                      {shippingForm.country && !shippingFeeLoading && geo && (
-                        <span className="text-[10px] text-gray-400">({COUNTRIES.find(c => c.code === shippingForm.country)?.name ?? shippingForm.country})</span>
-                      )}
-                    </span>
-                    <span className="font-medium">
-                      {shippingFeeLoading
-                        ? <span className="text-gray-400 text-xs animate-pulse">Calculating…</span>
-                        : format(effectiveShippingCAD)}
-                    </span>
-                  </div>
-                  {taxComponents.filter(c => c.rate > 0).map(c => (
-                    <div key={c.label} className="flex justify-between text-sm text-gray-600">
-                      <span>{c.label}</span>
-                      <span className="font-medium">{format(Math.round(subtotal * c.rate * 100) / 100)}</span>
-                    </div>
-                  ))}
-                  <div className="flex justify-between font-bold text-gray-900 text-lg pt-3 border-t border-gray-200">
-                    <span>Total</span><span>{format(total)}</span>
-                  </div>
-                </div>
-
-                <button onClick={handleProceedFromCart}
-                  className="w-full mt-4 bg-gray-900 text-white py-4 font-semibold rounded-lg hover:bg-gray-800 transition-colors flex items-center justify-center gap-2">
-                  Proceed to Checkout <ChevronRight size={16} />
-                </button>
-              </div>
-            )}
 
             {/* STEP: Auth / Account choice */}
             {step === 'auth' && (
