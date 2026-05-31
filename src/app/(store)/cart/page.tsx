@@ -1,5 +1,5 @@
 'use client'
-import { motion, AnimatePresence, useSpring, useTransform, motionValue } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useState, useEffect, useRef, useCallback } from 'react'
@@ -18,9 +18,7 @@ function shortSize(s: string) {
   return last.replace(/^\s*\d+\s*/, '').trim() || s.slice(-20)
 }
 
-// Animated number that smoothly counts to new value
 function AnimatedPrice({ value, format }: { value: number; format: (n: number) => string }) {
-  const [displayed, setDisplayed] = useState(value)
   const [prev, setPrev] = useState(value)
   const [dir, setDir] = useState(0)
 
@@ -28,7 +26,6 @@ function AnimatedPrice({ value, format }: { value: number; format: (n: number) =
     if (value === prev) return
     setDir(value > prev ? 1 : -1)
     setPrev(value)
-    setDisplayed(value)
   }, [value, prev])
 
   return (
@@ -41,7 +38,7 @@ function AnimatedPrice({ value, format }: { value: number; format: (n: number) =
         transition={{ duration: 0.2, ease: 'easeOut' }}
         className="inline-block tabular-nums"
       >
-        {format(displayed)}
+        {format(value)}
       </motion.span>
     </AnimatePresence>
   )
@@ -109,17 +106,14 @@ export default function CartPage() {
 
   const handleRemove = useCallback((productId: string, size: string) => {
     setRemovingId(`${productId}-${size}`)
-    setTimeout(() => {
-      removeItem(productId, size)
-      setRemovingId(null)
-    }, 300)
+    setTimeout(() => { removeItem(productId, size); setRemovingId(null) }, 300)
   }, [removeItem])
 
   const subtotal = cartTotal(items)
   const total = subtotal + (shippingFee ?? 0)
   const totalItems = items.reduce((s, i) => s + i.quantity, 0)
 
-  // ─── Empty state ────────────────────────────────────────────────
+  // ─── Empty state ─────────────────────────────────────────────────
   if (items.length === 0) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center text-center px-4 bg-[#faf8f5]">
@@ -140,7 +134,7 @@ export default function CartPage() {
     )
   }
 
-  // ─── Cart ────────────────────────────────────────────────────────
+  // ─── Cart ─────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#faf8f5]">
 
@@ -155,7 +149,7 @@ export default function CartPage() {
             </span>
           </div>
           <Link href={continueHref} className="flex items-center gap-1.5 text-white/50 hover:text-brand-gold transition-colors text-[11px] tracking-widest uppercase">
-            <ArrowRight size={11} /> Continuer mes achats
+            <ArrowRight size={11} /> {tr.cart.continueShopping}
           </Link>
         </div>
       </div>
@@ -168,9 +162,9 @@ export default function CartPage() {
 
             {/* Column headers — desktop only */}
             <div className="hidden md:grid grid-cols-[1fr_auto_auto] gap-4 mb-3 px-1">
-              <span className="text-[9px] tracking-[0.3em] uppercase text-brand-gray">Article</span>
-              <span className="text-[9px] tracking-[0.3em] uppercase text-brand-gray w-28 text-center">Quantité</span>
-              <span className="text-[9px] tracking-[0.3em] uppercase text-brand-gray w-20 text-right">Prix</span>
+              <span className="text-[9px] tracking-[0.3em] uppercase text-brand-gray">{tr.cart.colItem}</span>
+              <span className="text-[9px] tracking-[0.3em] uppercase text-brand-gray w-28 text-center">{tr.cart.colQty}</span>
+              <span className="text-[9px] tracking-[0.3em] uppercase text-brand-gray w-20 text-right">{tr.cart.colPrice}</span>
             </div>
 
             <AnimatePresence initial={false}>
@@ -187,10 +181,9 @@ export default function CartPage() {
                     transition={{ duration: 0.3, delay: idx * 0.04 }}
                     className="group relative bg-white border border-brand-light-gray mb-3 overflow-hidden"
                   >
-                    {/* Gold left accent on hover */}
                     <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-brand-gold scale-y-0 group-hover:scale-y-100 transition-transform duration-300 origin-center" />
 
-                    <div className="flex gap-0 md:gap-0">
+                    <div className="flex">
                       {/* Image */}
                       <Link href={`/products/${item.productId}`}
                         className="w-28 h-28 md:w-36 md:h-36 flex-shrink-0 bg-[#f5f0ea] overflow-hidden relative block">
@@ -222,27 +215,23 @@ export default function CartPage() {
                               )}
                             </div>
                             <p className="text-[10px] text-brand-gray mt-1.5">
-                              {format(item.price)} / unité
+                              {format(item.price)} {tr.cart.unit}
                             </p>
                           </div>
-
-                          {/* Delete — top-right */}
                           <button
                             onClick={() => handleRemove(item.productId, item.size)}
                             className="flex-shrink-0 text-brand-light-gray hover:text-red-400 transition-colors p-1 -mt-0.5 -mr-0.5 md:hidden"
-                            aria-label="Supprimer">
+                            aria-label="Remove">
                             <Trash2 size={14} />
                           </button>
                         </div>
 
                         <div className="flex items-center justify-between mt-4">
-                          {/* Qty stepper */}
                           <div className="flex items-center border border-brand-light-gray h-9">
-                            <motion.button
-                              whileTap={{ scale: 0.85 }}
+                            <motion.button whileTap={{ scale: 0.85 }}
                               onClick={() => updateQuantity(item.productId, item.size, item.quantity - 1)}
                               className="w-9 h-full flex items-center justify-center text-brand-gray hover:text-brand-black hover:bg-brand-light-gray transition-colors"
-                              aria-label="Diminuer">
+                              aria-label="Decrease">
                               <Minus size={12} />
                             </motion.button>
                             <AnimatePresence mode="popLayout" initial={false}>
@@ -257,11 +246,10 @@ export default function CartPage() {
                                 {item.quantity}
                               </motion.span>
                             </AnimatePresence>
-                            <motion.button
-                              whileTap={{ scale: 0.85 }}
+                            <motion.button whileTap={{ scale: 0.85 }}
                               onClick={() => updateQuantity(item.productId, item.size, Math.min(item.quantity + 1, item.stock))}
                               className="w-9 h-full flex items-center justify-center text-brand-gray hover:text-brand-black hover:bg-brand-light-gray transition-colors"
-                              aria-label="Augmenter">
+                              aria-label="Increase">
                               <Plus size={12} />
                             </motion.button>
                           </div>
@@ -275,11 +263,10 @@ export default function CartPage() {
                                 <p className="text-[10px] text-brand-gray">{format(item.price)} × {item.quantity}</p>
                               )}
                             </div>
-                            {/* Delete — desktop */}
                             <button
                               onClick={() => handleRemove(item.productId, item.size)}
                               className="hidden md:flex text-brand-light-gray hover:text-red-400 transition-colors p-1.5 hover:bg-red-50 rounded"
-                              aria-label="Supprimer">
+                              aria-label="Remove">
                               <Trash2 size={14} />
                             </button>
                           </div>
@@ -292,18 +279,14 @@ export default function CartPage() {
             </AnimatePresence>
 
             {/* Trust badges */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              className="mt-6 grid grid-cols-3 gap-3"
-            >
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
+              className="mt-6 grid grid-cols-3 gap-3">
               {[
-                { icon: Truck, label: deliveryMsg || 'Livraison internationale', sub: 'Suivi inclus' },
-                { icon: ShieldCheck, label: 'Paiement sécurisé', sub: 'Stripe · SSL' },
-                { icon: RotateCcw, label: 'Retours faciles', sub: '30 jours' },
+                { icon: Truck,       label: deliveryMsg || tr.cart.internationalShipping, sub: tr.cart.trackingIncluded },
+                { icon: ShieldCheck, label: tr.cart.securePayment,                        sub: `${tr.cart.stripe} · ${tr.cart.sslLabel}` },
+                { icon: RotateCcw,   label: tr.cart.easyReturns,                          sub: tr.cart.returns30 },
               ].map(({ icon: Icon, label, sub }) => (
-                <div key={label} className="flex flex-col items-center gap-2 border border-brand-light-gray py-4 bg-white text-center group hover:border-brand-gold transition-colors">
+                <div key={label} className="flex flex-col items-center gap-2 border border-brand-light-gray py-4 bg-white text-center hover:border-brand-gold transition-colors">
                   <Icon size={18} className="text-brand-gold" strokeWidth={1.5} />
                   <div>
                     <p className="text-[9px] tracking-widest uppercase text-brand-black font-semibold leading-snug">{label}</p>
@@ -316,16 +299,12 @@ export default function CartPage() {
 
           {/* ── RIGHT — Order summary ──────────────────── */}
           <div className="w-full lg:w-[360px] xl:w-[400px] flex-shrink-0 lg:sticky lg:top-24">
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="bg-white border border-brand-light-gray overflow-hidden"
-            >
-              {/* Panel header */}
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+              className="bg-white border border-brand-light-gray overflow-hidden">
+
               <div className="bg-brand-black text-white px-5 pt-5 pb-4">
-                <p className="text-[9px] tracking-[0.3em] uppercase text-white/40 mb-1">Récapitulatif</p>
-                <p className="font-display text-xl tracking-wide">Votre commande</p>
+                <p className="text-[9px] tracking-[0.3em] uppercase text-white/40 mb-1">{tr.cart.summary}</p>
+                <p className="font-display text-xl tracking-wide">{tr.cart.yourOrder}</p>
               </div>
 
               {/* Thumbnail strip */}
@@ -351,7 +330,7 @@ export default function CartPage() {
                 {/* Line items */}
                 <div className="space-y-2">
                   {items.map(item => (
-                    <div key={`${item.productId}-${item.size}`} className="flex justify-between gap-2 text-sm">
+                    <div key={`${item.productId}-${item.size}`} className="flex justify-between gap-2">
                       <span className="text-brand-gray truncate flex-1 min-w-0 text-[13px]">
                         {item.name}
                         {item.quantity > 1 && <span className="text-brand-light-gray text-[11px]"> ×{item.quantity}</span>}
@@ -363,10 +342,9 @@ export default function CartPage() {
                   ))}
                 </div>
 
-                {/* Divider + subtotal + shipping */}
                 <div className="border-t border-dashed border-brand-light-gray pt-4 space-y-3">
                   <div className="flex justify-between text-sm">
-                    <span className="text-brand-gray">Sous-total</span>
+                    <span className="text-brand-gray">{tr.cart.subtotal}</span>
                     <span className="font-semibold tabular-nums">
                       <AnimatedPrice value={subtotal} format={format} />
                     </span>
@@ -376,12 +354,12 @@ export default function CartPage() {
                     <div className="min-w-0">
                       <span className="text-brand-gray flex items-center gap-1.5">
                         <Truck size={12} className="text-brand-gold flex-shrink-0" />
-                        Livraison
+                        {tr.cart.shippingLabel}
                         {country && <span className="text-[10px] text-brand-light-gray uppercase">({country})</span>}
                       </span>
                       {shippingDays && (
                         <p className="text-[10px] text-brand-gray mt-0.5 ml-4">
-                          Estimé {shippingDays.min}–{shippingDays.max} jours
+                          {tr.cart.estimatedDays} {shippingDays.min}–{shippingDays.max} {tr.cart.days}
                         </p>
                       )}
                       {deliveryMsg && !shippingDays && (
@@ -394,7 +372,7 @@ export default function CartPage() {
                       ) : shippingFee !== null ? (
                         <AnimatedPrice value={shippingFee} format={format} />
                       ) : (
-                        <span className="text-brand-gray text-xs">Calculé</span>
+                        <span className="text-brand-gray text-xs">{tr.cart.calculated}</span>
                       )}
                     </span>
                   </div>
@@ -403,57 +381,47 @@ export default function CartPage() {
                 {/* Total */}
                 <div className="border-t-2 border-brand-black pt-4">
                   <div className="flex justify-between items-baseline">
-                    <span className="text-[10px] tracking-[0.25em] uppercase font-bold text-brand-gray">Total estimé</span>
+                    <span className="text-[10px] tracking-[0.25em] uppercase font-bold text-brand-gray">{tr.cart.estimatedTotal}</span>
                     <div className="text-2xl font-display font-bold overflow-hidden">
                       <AnimatedPrice value={shippingFee !== null ? total : subtotal} format={format} />
                     </div>
                   </div>
                   {shippingFee === null && !shippingLoading && (
-                    <p className="text-[10px] text-brand-gray mt-1 text-right">+ frais de livraison</p>
+                    <p className="text-[10px] text-brand-gray mt-1 text-right">{tr.cart.plusShipping}</p>
                   )}
                 </div>
 
-                {/* Weight warning */}
                 {weightExceeded && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    className="bg-red-50 border border-red-200 px-4 py-3 text-xs text-red-700 leading-snug"
-                  >
-                    ⚠️ Votre panier dépasse 1,9 kg. Retirez des articles pour continuer.
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+                    className="bg-red-50 border border-red-200 px-4 py-3 text-xs text-red-700 leading-snug">
+                    ⚠️ {tr.cart.weightExceeded}
                   </motion.div>
                 )}
 
-                {/* CTA */}
                 {weightExceeded ? (
                   <div className="w-full text-center bg-brand-light-gray text-brand-gray py-4 text-[11px] tracking-[0.25em] uppercase font-bold cursor-not-allowed select-none">
-                    Panier trop lourd
+                    {tr.cart.cartTooHeavy}
                   </div>
                 ) : (
                   <Link href="/checkout">
-                    <motion.div
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="w-full text-center bg-brand-black text-white py-4 text-[11px] tracking-[0.3em] uppercase font-bold hover:bg-brand-gold hover:text-brand-black transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      {tr.cart.checkout}
-                      <ArrowRight size={13} />
+                    <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+                      className="w-full text-center bg-brand-black text-white py-4 text-[11px] tracking-[0.3em] uppercase font-bold hover:bg-brand-gold hover:text-brand-black transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer">
+                      {tr.cart.checkout} <ArrowRight size={13} />
                     </motion.div>
                   </Link>
                 )}
 
-                {/* Security row */}
                 <div className="flex items-center justify-center gap-4 pt-1">
                   <span className="flex items-center gap-1 text-[10px] text-brand-gray">
-                    <Lock size={9} className="text-brand-gold" /> SSL sécurisé
+                    <Lock size={9} className="text-brand-gold" /> {tr.cart.sslSecured}
                   </span>
                   <span className="w-px h-3 bg-brand-light-gray" />
                   <span className="flex items-center gap-1 text-[10px] text-brand-gray">
-                    <ShieldCheck size={9} className="text-brand-gold" /> Stripe
+                    <ShieldCheck size={9} className="text-brand-gold" /> {tr.cart.stripe}
                   </span>
                   <span className="w-px h-3 bg-brand-light-gray" />
                   <span className="flex items-center gap-1 text-[10px] text-brand-gray">
-                    <RotateCcw size={9} className="text-brand-gold" /> Retours 30j
+                    <RotateCcw size={9} className="text-brand-gold" /> {tr.cart.returns30}
                   </span>
                 </div>
               </div>
@@ -467,21 +435,19 @@ export default function CartPage() {
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-brand-light-gray shadow-[0_-4px_24px_rgba(0,0,0,0.08)]">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
           <div className="flex-1 min-w-0">
-            <p className="text-[9px] text-brand-gray uppercase tracking-widest">Total estimé</p>
+            <p className="text-[9px] text-brand-gray uppercase tracking-widest">{tr.cart.estimatedTotal}</p>
             <p className="font-bold text-lg leading-tight tabular-nums">
               <AnimatedPrice value={shippingFee !== null ? total : subtotal} format={format} />
             </p>
           </div>
           {weightExceeded ? (
             <div className="flex-shrink-0 bg-brand-light-gray text-brand-gray px-6 py-3 text-[11px] tracking-widest uppercase font-bold cursor-not-allowed">
-              Trop lourd
+              {tr.cart.cartTooHeavy}
             </div>
           ) : (
             <Link href="/checkout" className="flex-shrink-0">
-              <motion.div
-                whileTap={{ scale: 0.96 }}
-                className="bg-brand-black text-white px-6 py-3 text-[11px] tracking-[0.2em] uppercase font-bold flex items-center gap-2 hover:bg-brand-gold hover:text-brand-black transition-all duration-300"
-              >
+              <motion.div whileTap={{ scale: 0.96 }}
+                className="bg-brand-black text-white px-6 py-3 text-[11px] tracking-[0.2em] uppercase font-bold flex items-center gap-2 hover:bg-brand-gold hover:text-brand-black transition-all duration-300">
                 {tr.cart.checkout} <ArrowRight size={12} />
               </motion.div>
             </Link>
@@ -489,7 +455,6 @@ export default function CartPage() {
         </div>
       </div>
 
-      {/* Bottom padding for mobile sticky bar */}
       <div className="lg:hidden h-20" />
     </div>
   )
