@@ -250,12 +250,6 @@ export default function ProductDetailClient({ product, detectedCountry }: { prod
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text: product.description, targetLang: 'en' }),
         }).then(r => r.json()).then(d => { if (d.translated) setTranslatedDescription(d.translated) }).catch(() => {})
-      } else if (lang === 'fr' && product.descriptionEn) {
-        fetch('/api/translate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: product.descriptionEn, targetLang: 'fr' }),
-        }).then(r => r.json()).then(d => { if (d.translated) setTranslatedDescription(d.translated) }).catch(() => {})
       }
     }
 
