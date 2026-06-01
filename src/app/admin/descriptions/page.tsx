@@ -13,7 +13,8 @@ interface Product {
 
 function ProductRow({ product }: { product: Product }) {
   const [open, setOpen] = useState(false)
-  const [desc, setDesc] = useState(product.description || '')
+  const [descFr, setDescFr] = useState(product.description || '')
+  const [descEn, setDescEn] = useState(product.descriptionEn || '')
   const [generating, setGenerating] = useState(false)
   const [saving, setSaving] = useState(false)
   const [savedAt, setSavedAt] = useState<string | null>(null)
@@ -30,7 +31,7 @@ function ProductRow({ product }: { product: Product }) {
       })
       const data = await res.json()
       if (data.description) {
-        setDesc(data.description)
+        setDescFr(data.description)
         setOpen(true)
       } else {
         setError(data.error || 'Erreur génération')
@@ -43,13 +44,14 @@ function ProductRow({ product }: { product: Product }) {
   }
 
   const save = async () => {
+    if (!descFr.trim()) { setError('La description FR est requise'); return }
     setSaving(true)
     setError('')
     try {
       const res = await fetch('/api/admin/update-description', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId: product._id, description: desc }),
+        body: JSON.stringify({ productId: product._id, description: descFr, descriptionEn: descEn || undefined }),
       })
       const data = await res.json()
       if (data.ok) {
@@ -65,6 +67,7 @@ function ProductRow({ product }: { product: Product }) {
   }
 
   const img = product.images?.[0] || null
+  const hasEn = !!descEn.trim()
 
   return (
     <div className="border border-gray-200 rounded-lg overflow-hidden">
@@ -81,6 +84,10 @@ function ProductRow({ product }: { product: Product }) {
         {/* Name */}
         <div className="flex-1 min-w-0">
           <p className="font-medium text-sm text-gray-900 truncate">{product.name}</p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className={`text-[10px] px-1.5 py-0.5 rounded ${descFr ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>FR</span>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded ${hasEn ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-400'}`}>EN</span>
+          </div>
           {savedAt && <p className="text-[10px] text-green-600 mt-0.5">✓ Sauvegardé à {savedAt}</p>}
           {error && <p className="text-[10px] text-red-500 mt-0.5">{error}</p>}
         </div>
@@ -90,10 +97,11 @@ function ProductRow({ product }: { product: Product }) {
           <button
             onClick={generate}
             disabled={generating}
+            title="Générer FR via IA (nécessite crédits Anthropic)"
             className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs px-3 py-2 rounded font-medium transition-colors disabled:opacity-50"
           >
             {generating ? <Loader2 size={12} className="animate-spin" /> : <Wand2 size={12} />}
-            {generating ? 'Génération…' : 'Générer FR'}
+            {generating ? 'Génération…' : 'IA'}
           </button>
           <button
             onClick={() => setOpen(!open)}
@@ -105,22 +113,43 @@ function ProductRow({ product }: { product: Product }) {
       </div>
 
       {open && (
-        <div className="border-t border-gray-100 p-4 bg-gray-50">
-          <label className="block text-[10px] tracking-widest uppercase text-gray-400 mb-2">Description FR</label>
-          <textarea
-            value={desc}
-            onChange={(e) => setDesc(e.target.value)}
-            rows={10}
-            className="w-full border border-gray-200 rounded p-3 text-sm font-mono resize-y focus:outline-none focus:border-amber-400 bg-white"
-          />
-          <div className="flex justify-end mt-3">
+        <div className="border-t border-gray-100 p-4 bg-gray-50 space-y-4">
+          {/* FR */}
+          <div>
+            <label className="block text-[10px] tracking-widest uppercase text-gray-400 mb-2">
+              🇫🇷 Description Français *
+            </label>
+            <textarea
+              value={descFr}
+              onChange={(e) => setDescFr(e.target.value)}
+              rows={8}
+              placeholder="Description en français…"
+              className="w-full border border-gray-200 rounded p-3 text-sm font-mono resize-y focus:outline-none focus:border-amber-400 bg-white"
+            />
+          </div>
+
+          {/* EN */}
+          <div>
+            <label className="block text-[10px] tracking-widest uppercase text-gray-400 mb-2">
+              🇬🇧 Description English <span className="text-gray-300 normal-case not-italic">(optional — shown when customer switches to EN)</span>
+            </label>
+            <textarea
+              value={descEn}
+              onChange={(e) => setDescEn(e.target.value)}
+              rows={8}
+              placeholder="English description… (paste your translation here)"
+              className="w-full border border-gray-200 rounded p-3 text-sm font-mono resize-y focus:outline-none focus:border-blue-400 bg-white"
+            />
+          </div>
+
+          <div className="flex justify-end">
             <button
               onClick={save}
-              disabled={saving || !desc.trim()}
+              disabled={saving || !descFr.trim()}
               className="flex items-center gap-1.5 bg-gray-900 hover:bg-gray-700 text-white text-xs px-4 py-2.5 rounded font-medium transition-colors disabled:opacity-40"
             >
               {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
-              {saving ? 'Sauvegarde…' : 'Sauvegarder'}
+              {saving ? 'Sauvegarde…' : 'Sauvegarder FR + EN'}
             </button>
           </div>
         </div>
@@ -154,11 +183,14 @@ export default function DescriptionsPage() {
     ? products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
     : products
 
+  const withFr = filtered.filter(p => p.description).length
+  const withEn = filtered.filter(p => p.descriptionEn).length
+
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-1">Descriptions produits</h1>
-        <p className="text-sm text-gray-500">Générez et sauvegardez des descriptions professionnelles en français via IA.</p>
+        <p className="text-sm text-gray-500">Rédigez les descriptions FR et EN pour chaque produit. Le bouton IA nécessite des crédits Anthropic.</p>
       </div>
 
       <div className="mb-6">
@@ -169,7 +201,9 @@ export default function DescriptionsPage() {
           onChange={(e) => setSearch(e.target.value)}
           className="w-full max-w-md border border-gray-200 rounded px-4 py-2.5 text-sm focus:outline-none focus:border-amber-400"
         />
-        <p className="text-[11px] text-gray-400 mt-1">{filtered.length} produit{filtered.length !== 1 ? 's' : ''}</p>
+        <p className="text-[11px] text-gray-400 mt-1">
+          {filtered.length} produit{filtered.length !== 1 ? 's' : ''} — <span className="text-green-600">{withFr} avec FR</span> — <span className="text-blue-600">{withEn} avec EN</span>
+        </p>
       </div>
 
       {loading ? (

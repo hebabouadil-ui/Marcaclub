@@ -3,8 +3,6 @@ import Anthropic from '@anthropic-ai/sdk'
 
 export const dynamic = 'force-dynamic'
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
 // Simple in-memory cache to avoid re-translating the same content
 const cache = new Map<string, string>()
 
@@ -18,10 +16,16 @@ export async function POST(req: NextRequest) {
     const cacheKey = `${targetLang}:${text.slice(0, 120)}`
     if (cache.has(cacheKey)) return NextResponse.json({ translated: cache.get(cacheKey) })
 
+    if (!process.env.ANTHROPIC_API_KEY) {
+      // No API key — return original text so the page doesn't break
+      return NextResponse.json({ translated: text })
+    }
+
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
     const langName = targetLang === 'en' ? 'English' : 'French'
 
     const msg = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-sonnet-4-6',
       max_tokens: 2048,
       messages: [{
         role: 'user',
@@ -41,6 +45,7 @@ ${text}`,
     return NextResponse.json({ translated })
   } catch (err) {
     console.error('Translate error:', err)
-    return NextResponse.json({ error: 'Translation failed' }, { status: 500 })
+    // On failure, return original text so the product page doesn't break
+    return NextResponse.json({ translated: null, error: 'Translation failed' })
   }
 }
